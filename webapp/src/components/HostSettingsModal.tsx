@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { useAuth } from '../context/AuthContext';
 import { 
   Settings, 
   X, 
@@ -25,7 +24,7 @@ const AGENT_API_URL = 'http://127.0.0.1:5500/api';
 
 export const HostSettingsModal: React.FC<HostSettingsModalProps> = ({ isOpen, onClose }) => {
   const { isAgentConnected, refreshAgentData } = useApp();
-  const { isHost } = useAuth();
+  const isHost = true;
 
   const [scPath, setScPath] = useState<string>('C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE');
   const [callsign, setCallsign] = useState<string>('Host-MasterCrafter');

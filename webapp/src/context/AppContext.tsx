@@ -2,37 +2,27 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { 
   Blueprint, 
   InventoryItem, 
-  MasterInventoryItem,
-  ResourceRequest, 
   Order, 
   GameTelemetry, 
-  OrderStatus 
+  OrderStatus,
+  DiscountType,
+  MineralQualityTier,
+  MINERAL_QUALITY_OPTIONS
 } from '../types';
-import { useAuth } from './AuthContext';
+import { STAR_CITIZEN_DATABASE, SCItemDefinition } from '../data/starCitizenDatabase';
 
 const AGENT_API_URL = 'http://127.0.0.1:5500/api';
 
 interface AppContextType {
   blueprints: Blueprint[];
   inventory: InventoryItem[];
-  generalInventory: MasterInventoryItem[];
-  resourceRequests: ResourceRequest[];
   orders: Order[];
   telemetry: GameTelemetry | null;
   isAgentConnected: boolean;
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  createOrder: (data: Omit<Order, 'id' | 'createdAt' | 'status'>) => Promise<boolean>;
-  updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<boolean>;
-  updateOrderPrice: (
-    orderId: string, 
-    discountType: 'none' | 'percent' | 'fixed' | 'free' | 'custom', 
-    discountValue: number, 
-    discountReason?: string,
-    customPrice?: number
-  ) => Promise<boolean>;
-  createResourceRequest: (data: Omit<ResourceRequest, 'id' | 'createdAt' | 'collectedQuantity' | 'status' | 'contributors'>) => Promise<boolean>;
-  contributeToRequest: (requestId: string, quantity: number) => Promise<boolean>;
+  
+  // Stock operations
   updateInventoryItem: (itemData: {
     name: string;
     quantity: number;
@@ -50,6 +40,7 @@ interface AppContextType {
     googleDriveUrl?: string;
     notes?: string;
   }) => Promise<boolean>;
+  deleteInventoryItem: (id: string) => Promise<boolean>;
   importExtractedItems: (items: {
     name: string;
     quantity: number;
@@ -62,498 +53,271 @@ interface AppContextType {
     notes?: string;
   }[]) => Promise<boolean>;
   resetInventory: (mode?: 'default' | 'zero' | 'empty') => Promise<boolean>;
+
+  // Blueprint operations
   addBlueprint: (bp: Omit<Blueprint, 'id'>) => Promise<boolean>;
   updateBlueprint: (id: string, updates: Partial<Blueprint>) => Promise<boolean>;
   deleteBlueprint: (id: string) => Promise<boolean>;
+  importBlueprintFromDatabase: (dbItem: SCItemDefinition) => Promise<boolean>;
+  resetBlueprints: () => Promise<boolean>;
+
+  // Order operations
+  createOrder: (data: {
+    clientName: string;
+    blueprintName: string;
+    blueprintId?: string;
+    quantity: number;
+    mineralQuality: MineralQualityTier;
+    userProvidesMaterials: boolean;
+    materialContributionPercent?: number;
+    discountType?: DiscountType;
+    discountValue?: number;
+    discountReason?: string;
+    customPrice?: number;
+    deliveryLocation: string;
+    craftTimeMinutes?: number;
+    notes?: string;
+  }) => Promise<boolean>;
+  updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<boolean>;
+  updateOrderPrice: (
+    orderId: string, 
+    discountType: DiscountType, 
+    discountValue: number, 
+    discountReason?: string,
+    customPrice?: number
+  ) => Promise<boolean>;
+  deleteOrder: (orderId: string) => Promise<boolean>;
+  resetOrders: () => Promise<boolean>;
+
   refreshAgentData: () => Promise<void>;
 }
 
-const DEFAULT_BLUEPRINTS: Blueprint[] = [
+const DEFAULT_HOST_BLUEPRINTS: Blueprint[] = [
   {
     id: 'bp-001',
     name: 'Behring S7 Laser Cannon (Omnisky)',
     category: 'Armement Vaisseau',
-    description: 'Canon laser lourd taille 7 à haute cadence et pénétration de bouclier.',
-    icon: 'Crosshair',
+    manufacturer: 'Behring Applied Technology',
+    description: 'Canon laser lourd taille 7 pour vaisseaux capitaux.',
     requiredMaterials: [
-      { name: 'Quantainium Raffiné', quantity: 15, unit: 'SCU' },
-      { name: 'Bexalite Raffiné', quantity: 25, unit: 'SCU' },
-      { name: 'Titanium', quantity: 40, unit: 'SCU' }
+      { name: 'Quantainium Raffiné', quantity: 18, unit: 'SCU' },
+      { name: 'Bexalite Raffiné', quantity: 28, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 45, unit: 'SCU' },
+      { name: 'RMC (Recycled Material Composite)', quantity: 20, unit: 'SCU' }
     ],
-    craftTimeMinutes: 45,
-    feeUEC: 125000,
-    available: true
+    craftTimeMinutes: 50,
+    feeUEC: 145000,
+    available: true,
+    isKnownByHost: true
   },
   {
     id: 'bp-002',
-    name: 'Bouclier Industriel S3 (FR-86 Militarized)',
-    category: 'Composant Vaisseau',
-    description: 'Générateur de bouclier taille 3 offrant une régénération ultra-rapide.',
-    icon: 'Shield',
+    name: 'Klaus & Werner CF-337 Panther Laser Repeater (Size 3)',
+    category: 'Armement Vaisseau',
+    manufacturer: 'Klaus & Werner',
+    description: 'Répéteur laser taille 3 de référence pour chasseurs légers et moyens.',
     requiredMaterials: [
-      { name: 'Laranite Raffinée', quantity: 20, unit: 'SCU' },
-      { name: 'Taranite Raffinée', quantity: 12, unit: 'SCU' },
-      { name: 'RMC (Matériaux Recyclés)', quantity: 30, unit: 'SCU' }
+      { name: 'Agricium Raffiné', quantity: 8, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 12, unit: 'SCU' },
+      { name: 'Copper (Cuivre Raffiné)', quantity: 6, unit: 'SCU' }
     ],
-    craftTimeMinutes: 60,
-    feeUEC: 180000,
-    available: true
+    craftTimeMinutes: 25,
+    feeUEC: 48000,
+    available: true,
+    isKnownByHost: true
   },
   {
     id: 'bp-003',
-    name: 'Fusil de Précision Behring P6-LR (Mastercraft)',
-    category: 'Arme FPS',
-    description: 'Fusil sniper lourd anti-matériel avec optique thermique x16.',
-    icon: 'Target',
+    name: 'Générateur de Bouclier FR-86 (Size 3 Militaire)',
+    category: 'Composant Vaisseau',
+    subCategory: 'Générateur de Bouclier',
+    manufacturer: 'Basilisk Armor',
+    description: 'Bouclier lourd taille 3 à régénération instantanée de grade militaire.',
     requiredMaterials: [
-      { name: 'Agricium Raffiné', quantity: 4, unit: 'SCU' },
-      { name: 'Titanium', quantity: 6, unit: 'SCU' },
-      { name: 'Gold Raffiné', quantity: 2, unit: 'SCU' }
+      { name: 'Laranite Raffinée', quantity: 20, unit: 'SCU' },
+      { name: 'Taranite Raffinée', quantity: 14, unit: 'SCU' },
+      { name: 'RMC (Recycled Material Composite)', quantity: 30, unit: 'SCU' }
     ],
-    craftTimeMinutes: 20,
-    feeUEC: 35000,
-    available: true
+    craftTimeMinutes: 60,
+    feeUEC: 190000,
+    available: true,
+    isKnownByHost: true
   },
   {
     id: 'bp-004',
-    name: 'Armure Lourde Citadel Exec (Full Set)',
-    category: 'Armure FPS',
-    description: 'Combinaison et armure lourde intégrale avec absorption balistique maximale.',
-    icon: 'ShieldAlert',
-    requiredMaterials: [
-      { name: 'RMC (Matériaux Recyclés)', quantity: 12, unit: 'SCU' },
-      { name: 'Titanium', quantity: 18, unit: 'SCU' },
-      { name: 'Copper', quantity: 8, unit: 'SCU' }
-    ],
-    craftTimeMinutes: 30,
-    feeUEC: 45000,
-    available: true
-  },
-  {
-    id: 'bp-005',
-    name: 'Quantum Drive S2 (Crossfield Overcharged)',
+    name: 'Quantum Drive Crossfield (Size 2 Militaire Rapide)',
     category: 'Composant Vaisseau',
-    description: 'Moteur Quantum militaire haute vitesse pour sauts rapides dans Stanton et Pyro.',
-    icon: 'Zap',
+    subCategory: 'Moteur Quantum Drive',
+    manufacturer: 'RSI Components',
+    description: 'Moteur de saut militaire pour traverser Stanton et Pyro à vitesse maximale.',
     requiredMaterials: [
       { name: 'Quantainium Raffiné', quantity: 30, unit: 'SCU' },
       { name: 'Bexalite Raffiné', quantity: 15, unit: 'SCU' },
       { name: 'Agricium Raffiné', quantity: 10, unit: 'SCU' }
     ],
     craftTimeMinutes: 75,
-    feeUEC: 250000,
-    available: true
+    feeUEC: 260000,
+    available: true,
+    isKnownByHost: true
+  },
+  {
+    id: 'bp-005',
+    name: 'Fusil de Précision Behring P6-LR',
+    category: 'Arme FPS',
+    manufacturer: 'Behring Applied Technology',
+    description: 'Fusil de précision lourd capable de neutraliser une cible à travers les blindages lourds.',
+    requiredMaterials: [
+      { name: 'Titanium Raffiné', quantity: 5, unit: 'SCU' },
+      { name: 'Tungsten Raffiné', quantity: 4, unit: 'SCU' },
+      { name: 'Diamond (Diamant Industriel)', quantity: 2, unit: 'SCU' }
+    ],
+    craftTimeMinutes: 25,
+    feeUEC: 45000,
+    available: true,
+    isKnownByHost: true
   },
   {
     id: 'bp-006',
-    name: 'Multi-Tool Pyro RRS + Module Salvage',
-    category: 'Utilitaire',
-    description: 'Outil multifonction avec rayon tracteur renforcé et module de réparation thermique.',
-    icon: 'Wrench',
+    name: 'Ensemble Armure Lourde ADP-mk4 (Plastron + Casque + Jambes)',
+    category: 'Armure FPS',
+    manufacturer: 'Clark Defense Systems',
+    description: 'Armure de combat lourd avec blindage composite Titanium résistant aux impacts.',
     requiredMaterials: [
-      { name: 'RMC (Matériaux Recyclés)', quantity: 5, unit: 'SCU' },
-      { name: 'Copper', quantity: 5, unit: 'SCU' }
+      { name: 'Titanium Raffiné', quantity: 10, unit: 'SCU' },
+      { name: 'RMC (Recycled Material Composite)', quantity: 8, unit: 'SCU' },
+      { name: 'Tungsten Raffiné', quantity: 4, unit: 'SCU' }
     ],
-    craftTimeMinutes: 10,
-    feeUEC: 15000,
-    available: true
-  }
-];
-
-const DEFAULT_INVENTORY: InventoryItem[] = [
-  { id: 'mat-01', name: 'Quantainium Raffiné', category: 'Minerai Exotique', quantity: 142, unit: 'SCU', location: 'HUR-L1 Refinery', unitValueUEC: 88000 },
-  { id: 'mat-02', name: 'Bexalite Raffiné', category: 'Minerai Rare', quantity: 210, unit: 'SCU', location: 'CRU-L1', unitValueUEC: 44000 },
-  { id: 'mat-03', name: 'Taranite Raffinée', category: 'Minerai Rare', quantity: 95, unit: 'SCU', location: 'ARC-L1', unitValueUEC: 32000 },
-  { id: 'mat-04', name: 'Laranite Raffinée', category: 'Minerai Précieux', quantity: 340, unit: 'SCU', location: 'Lorville Cargo', unitValueUEC: 28500 },
-  { id: 'mat-05', name: 'Agricium Raffiné', category: 'Minerai Industriel', quantity: 180, unit: 'SCU', location: 'HUR-L1', unitValueUEC: 25000 },
-  { id: 'mat-06', name: 'RMC (Matériaux Recyclés)', category: 'Salvage Composite', quantity: 520, unit: 'SCU', location: 'Grim HEX Depot', unitValueUEC: 14500 },
-  { id: 'mat-07', name: 'Titanium', category: 'Métal Industriel', quantity: 890, unit: 'SCU', location: 'Area18 TDD', unitValueUEC: 8200 },
-  { id: 'mat-08', name: 'Gold Raffiné', category: 'Métal Précieux', quantity: 75, unit: 'SCU', location: 'Orison Industrial', unitValueUEC: 22000 },
-  { id: 'mat-09', name: 'Copper', category: 'Métal Industriel', quantity: 640, unit: 'SCU', location: 'New Babbage', unitValueUEC: 4500 }
-];
-
-const DEFAULT_RESOURCE_REQUESTS: ResourceRequest[] = [
-  {
-    id: 'req-001',
-    resourceName: 'Quantainium Brut ou Raffiné',
-    targetQuantity: 100,
-    collectedQuantity: 45,
-    unit: 'SCU',
-    rewardOrPriceUEC: 90000,
-    urgency: 'Urgent',
-    dropoffLocation: 'HUR-L1 Green Glade Station',
-    notes: 'Nécessaire pour fabriquer la série de Quantum Drives militaires S2 demandés par l\'escouade.',
-    status: 'open',
-    createdAt: '2026-08-19 06:30',
-    contributors: [
-      { userId: 'member-001', userName: 'StarPilot_Max', quantity: 25, timestamp: '2026-08-19 07:12' },
-      { userId: 'member-002', userName: 'Miner_Ghost', quantity: 20, timestamp: '2026-08-19 07:45' }
-    ]
-  },
-  {
-    id: 'req-002',
-    resourceName: 'RMC (Recycled Material Composite)',
-    targetQuantity: 200,
-    collectedQuantity: 160,
-    unit: 'SCU',
-    rewardOrPriceUEC: 15000,
-    urgency: 'Normal',
-    dropoffLocation: 'Lorville L19 Hub',
-    notes: 'Pour fabrication des armures lourdes Citadel et modules d\'armes.',
-    status: 'open',
-    createdAt: '2026-08-18 21:00',
-    contributors: [
-      { userId: 'member-001', userName: 'StarPilot_Max', quantity: 80, timestamp: '2026-08-19 01:15' },
-      { userId: 'user-ext', userName: 'Reclaimer_Crew', quantity: 80, timestamp: '2026-08-19 03:40' }
-    ]
+    craftTimeMinutes: 30,
+    feeUEC: 65000,
+    available: true,
+    isKnownByHost: true
   }
 ];
 
 const DEFAULT_ORDERS: Order[] = [
   {
     id: 'ord-101',
-    blueprintId: 'bp-005',
-    blueprintName: 'Quantum Drive S2 (Crossfield Overcharged)',
-    clientId: 'discord-member-001',
-    clientName: 'StarPilot_Max',
-    clientEmail: 'pilot1@discord.sc',
+    blueprintName: 'Quantum Drive Crossfield (Size 2 Militaire Rapide)',
+    clientName: 'StarPilot_Ghost',
     quantity: 1,
     status: 'crafting',
     userProvidesMaterials: true,
+    materialContributionPercent: 100,
     mineralQuality: 'maximum_purity',
     qualityMultiplier: 1.5,
-    baseFeeUEC: 375000,
+    baseFeeUEC: 260000,
     discountType: 'percent',
-    discountValue: 20,
-    discountReason: 'Remise Guilde (-20%)',
-    totalFeeUEC: 300000,
-    deliveryLocation: 'Everus Harbor - Pad 04',
-    notes: 'Priorité pour opération escadron de ce soir.',
-    createdAt: '2026-08-19 07:05',
-    updatedAt: '2026-08-19 07:30'
+    discountValue: 50,
+    discountReason: 'Apport 100% Minerais + Membre Escouade',
+    totalFeeUEC: 130000,
+    deliveryLocation: 'HUR-L1 Green Glade',
+    craftTimeMinutes: 75,
+    notes: 'Client a déposé 30 SCU Quantainium et 15 SCU Bexalite dans le hangar.',
+    createdAt: '2026-08-30T10:15:00Z'
   },
   {
     id: 'ord-102',
-    blueprintId: 'bp-003',
-    blueprintName: 'Fusil de Précision Behring P6-LR (Mastercraft)',
-    clientId: 'discord-member-002',
-    clientName: 'Miner_Ghost',
-    clientEmail: 'miner@discord.sc',
+    blueprintName: 'Behring S7 Laser Cannon (Omnisky)',
+    clientName: 'Vanguard_Leader',
     quantity: 2,
     status: 'pending',
     userProvidesMaterials: false,
-    mineralQuality: 'standard',
-    qualityMultiplier: 1.0,
-    baseFeeUEC: 70000,
+    materialContributionPercent: 0,
+    mineralQuality: 'high_grade',
+    qualityMultiplier: 1.25,
+    baseFeeUEC: 290000,
     discountType: 'none',
     discountValue: 0,
-    totalFeeUEC: 70000,
-    deliveryLocation: 'HUR-L1 Refinery Deck',
-    notes: 'À livrer dès que le raffinage d\'Agricium est prêt.',
-    createdAt: '2026-08-19 07:50'
+    totalFeeUEC: 362500,
+    deliveryLocation: 'Port Tressler',
+    craftTimeMinutes: 100,
+    notes: 'Livraison express demandée avant opération de flotte ce soir.',
+    createdAt: '2026-08-30T11:40:00Z'
   }
 ];
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<string>('catalog');
+  const [activeTab, setActiveTab] = useState<string>('inventory');
   const [isAgentConnected, setIsAgentConnected] = useState<boolean>(false);
   const [telemetry, setTelemetry] = useState<GameTelemetry | null>(null);
 
-  const [blueprints, setBlueprints] = useState<Blueprint[]>(() => {
-    const saved = localStorage.getItem('sc_blueprints');
-    return saved ? JSON.parse(saved) : DEFAULT_BLUEPRINTS;
-  });
-
+  // 1. Stocks & Minerals
   const [inventory, setInventory] = useState<InventoryItem[]>(() => {
     const saved = localStorage.getItem('sc_inventory');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [generalInventory, setGeneralInventory] = useState<MasterInventoryItem[]>(() => {
-    const saved = localStorage.getItem('sc_general_inventory');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [resourceRequests, setResourceRequests] = useState<ResourceRequest[]>(() => {
-    const saved = localStorage.getItem('sc_resource_requests');
-    return saved ? JSON.parse(saved) : DEFAULT_RESOURCE_REQUESTS;
-  });
-
-  const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem('sc_orders');
-    return saved ? JSON.parse(saved) : DEFAULT_ORDERS;
-  });
-
-  // Persist to local storage with quota protection
-  useEffect(() => { 
-    try { localStorage.setItem('sc_blueprints', JSON.stringify(blueprints)); } catch (_) {}
-  }, [blueprints]);
-
-  useEffect(() => { 
-    try {
-      localStorage.setItem('sc_inventory', JSON.stringify(inventory)); 
-    } catch (e) {
-      console.warn('LocalStorage quota exceeded for inventory, saving lightweight metadata', e);
-      const lightweight = inventory.map(({ attachedFileData, ...rest }) => rest);
-      try { localStorage.setItem('sc_inventory', JSON.stringify(lightweight)); } catch (_) {}
+    if (saved) {
+      try { return JSON.parse(saved); } catch (_) {}
     }
+    return [];
+  });
+
+  // 2. Owned Blueprints
+  const [blueprints, setBlueprints] = useState<Blueprint[]>(() => {
+    const saved = localStorage.getItem('sc_host_blueprints');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (_) {}
+    }
+    return DEFAULT_HOST_BLUEPRINTS;
+  });
+
+  // 3. Orders
+  const [orders, setOrders] = useState<Order[]>(() => {
+    const saved = localStorage.getItem('sc_host_orders');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (_) {}
+    }
+    return DEFAULT_ORDERS;
+  });
+
+  // Persist state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('sc_inventory', JSON.stringify(inventory));
+    } catch (_) {}
   }, [inventory]);
 
-  useEffect(() => { 
-    try { localStorage.setItem('sc_general_inventory', JSON.stringify(generalInventory)); } catch (_) {}
-  }, [generalInventory]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('sc_host_blueprints', JSON.stringify(blueprints));
+    } catch (_) {}
+  }, [blueprints]);
 
-  useEffect(() => { 
-    try { localStorage.setItem('sc_resource_requests', JSON.stringify(resourceRequests)); } catch (_) {}
-  }, [resourceRequests]);
-
-  useEffect(() => { 
-    try { localStorage.setItem('sc_orders', JSON.stringify(orders)); } catch (_) {}
+  useEffect(() => {
+    try {
+      localStorage.setItem('sc_host_orders', JSON.stringify(orders));
+    } catch (_) {}
   }, [orders]);
 
-  // Connect to local python agent
+  // Sync with Local Python Agent
   const refreshAgentData = useCallback(async () => {
     try {
-      const statusRes = await fetch(`${AGENT_API_URL}/status`, { signal: AbortSignal.timeout(2000) });
-      if (statusRes.ok) {
-        const statusData = await statusRes.json();
-        setTelemetry(statusData);
+      const res = await fetch(`${AGENT_API_URL}/status`, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
         setIsAgentConnected(true);
-
-        // Sync general inventory from agent
-        try {
-          const genRes = await fetch(`${AGENT_API_URL}/general-inventory`, { signal: AbortSignal.timeout(2000) });
-          if (genRes.ok) {
-            const genData = await genRes.json();
-            if (genData.general_inventory) {
-              setGeneralInventory(genData.general_inventory);
-            }
-          }
-        } catch (_) {}
-
-        // Fetch blueprints, inventory, requests, orders from agent
-        try {
-          const [bpRes, invRes, reqRes, ordRes] = await Promise.all([
-            fetch(`${AGENT_API_URL}/blueprints`),
-            fetch(`${AGENT_API_URL}/inventory`),
-            fetch(`${AGENT_API_URL}/resource-requests`),
-            fetch(`${AGENT_API_URL}/orders`)
-          ]);
-          if (bpRes.ok) {
-            const data = await bpRes.json();
-            if (data.blueprints?.length) setBlueprints(data.blueprints);
-          }
-          if (invRes.ok) {
-            const data = await invRes.json();
-            if (data.inventory?.length) setInventory(data.inventory);
-          }
-          if (reqRes.ok) {
-            const data = await reqRes.json();
-            if (data.resource_requests?.length) setResourceRequests(data.resource_requests);
-          }
-          if (ordRes.ok) {
-            const data = await ordRes.json();
-            if (data.orders?.length) setOrders(data.orders);
-          }
-        } catch (e) {
-          console.warn('Sub-endpoints fetch notice:', e);
+        const data = await res.json();
+        if (data.telemetry) setTelemetry(data.telemetry);
+        if (data.inventory && Array.isArray(data.inventory) && data.inventory.length > 0) {
+          // If local agent has inventory, sync it
+          setInventory(data.inventory);
         }
       } else {
         setIsAgentConnected(false);
       }
-    } catch (e) {
+    } catch (_) {
       setIsAgentConnected(false);
     }
   }, []);
 
-  // Periodic polling of Python agent (every 2.5s)
   useEffect(() => {
     refreshAgentData();
-    const interval = setInterval(refreshAgentData, 2500);
+    const interval = setInterval(refreshAgentData, 5000);
     return () => clearInterval(interval);
   }, [refreshAgentData]);
 
-  // Create Order
-  const createOrder = async (orderData: Omit<Order, 'id' | 'createdAt' | 'status'>): Promise<boolean> => {
-    const newOrder: Order = {
-      ...orderData,
-      id: `ord-${Date.now()}`,
-      status: 'pending',
-      mineralQuality: orderData.mineralQuality || 'standard',
-      qualityMultiplier: orderData.qualityMultiplier || 1.0,
-      baseFeeUEC: orderData.baseFeeUEC || orderData.totalFeeUEC,
-      totalFeeUEC: orderData.totalFeeUEC,
-      discountType: orderData.discountType || 'none',
-      discountValue: orderData.discountValue || 0,
-      discountReason: orderData.discountReason || '',
-      createdAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
-    };
-
-    setOrders(prev => [newOrder, ...prev]);
-
-    // Push to agent if connected
-    if (isAgentConnected) {
-      try {
-        await fetch(`${AGENT_API_URL}/orders`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newOrder)
-        });
-      } catch (e) {
-        console.warn('Failed to push order to local agent', e);
-      }
-    }
-    return true;
-  };
-
-  // Update Order Price (Host modifier: % discount, fixed discount, free, custom price)
-  const updateOrderPrice = async (
-    orderId: string,
-    discountType: 'none' | 'percent' | 'fixed' | 'free' | 'custom',
-    discountValue: number,
-    discountReason: string = '',
-    customPrice?: number
-  ): Promise<boolean> => {
-    const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-
-    setOrders(prev => prev.map(ord => {
-      if (ord.id === orderId) {
-        const base = ord.baseFeeUEC || ord.totalFeeUEC;
-        let newTotal = base;
-
-        if (discountType === 'free') {
-          newTotal = 0;
-        } else if (discountType === 'percent') {
-          const discountAmt = Math.round((base * discountValue) / 100);
-          newTotal = Math.max(0, base - discountAmt);
-        } else if (discountType === 'fixed') {
-          newTotal = Math.max(0, base - discountValue);
-        } else if (discountType === 'custom' && customPrice !== undefined) {
-          newTotal = Math.max(0, customPrice);
-        }
-
-        return {
-          ...ord,
-          baseFeeUEC: base,
-          discountType,
-          discountValue,
-          discountReason,
-          totalFeeUEC: newTotal,
-          updatedAt: timeStr
-        };
-      }
-      return ord;
-    }));
-
-    if (isAgentConnected) {
-      try {
-        await fetch(`${AGENT_API_URL}/orders/price`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId, discountType, discountValue, discountReason, customPrice })
-        });
-      } catch (e) {
-        console.warn('Failed to update order price on agent', e);
-      }
-    }
-    return true;
-  };
-
-  // Update Order Status
-  const updateOrderStatus = async (orderId: string, status: OrderStatus): Promise<boolean> => {
-    const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, updatedAt: timeStr } : o));
-
-    if (isAgentConnected) {
-      try {
-        await fetch(`${AGENT_API_URL}/orders/status`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId, status })
-        });
-      } catch (e) {
-        console.warn('Failed to update order status on agent', e);
-      }
-    }
-    return true;
-  };
-
-  // Create Resource Request
-  const createResourceRequest = async (reqData: Omit<ResourceRequest, 'id' | 'createdAt' | 'collectedQuantity' | 'status' | 'contributors'>): Promise<boolean> => {
-    const newReq: ResourceRequest = {
-      ...reqData,
-      id: `req-${Date.now()}`,
-      collectedQuantity: 0,
-      status: 'open',
-      createdAt: new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + ' ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-      contributors: []
-    };
-
-    setResourceRequests(prev => [newReq, ...prev]);
-
-    if (isAgentConnected) {
-      try {
-        await fetch(`${AGENT_API_URL}/resource-requests`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newReq)
-        });
-      } catch (e) {
-        console.warn('Failed to push resource request to local agent', e);
-      }
-    }
-    return true;
-  };
-
-  // Contribute to Resource Request
-  const contributeToRequest = async (requestId: string, quantity: number): Promise<boolean> => {
-    if (!currentUser) return false;
-    const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-
-    setResourceRequests(prev => prev.map(req => {
-      if (req.id === requestId) {
-        const newCollected = req.collectedQuantity + quantity;
-        return {
-          ...req,
-          collectedQuantity: newCollected,
-          status: newCollected >= req.targetQuantity ? 'fulfilled' : 'open',
-          contributors: [
-            ...req.contributors,
-            {
-              userId: currentUser.uid,
-              userName: currentUser.displayName,
-              quantity,
-              timestamp: now
-            }
-          ]
-        };
-      }
-      return req;
-    }));
-
-    if (isAgentConnected) {
-      try {
-        await fetch(`${AGENT_API_URL}/resource-requests/contribute`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            requestId,
-            userId: currentUser.uid,
-            userName: currentUser.displayName,
-            quantity
-          })
-        });
-      } catch (e) {
-        console.warn('Failed to submit contribution to agent', e);
-      }
-    }
-    return true;
-  };
-
-  // Update / Add Inventory Item
+  // ==========================================
+  // --- INVENTORY / STOCK OPERATIONS ---
+  // ==========================================
   const updateInventoryItem = async (itemData: {
     name: string;
     quantity: number;
@@ -575,10 +339,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       name,
       quantity,
       unit = 'SCU',
-      location = 'Station',
+      location = 'HUR-L1 Refinery',
       category = 'Ressource',
       unitValueUEC = 10000,
-      qualityTier = 'Standard (x1.0)',
+      qualityTier = 'Standard',
       purityPercent,
       recommendedShip,
       extractionType,
@@ -613,7 +377,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return [
         ...prev,
         {
-          id: `mat-${Date.now()}`,
+          id: `mat-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
           name,
           category,
           quantity,
@@ -638,32 +402,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await fetch(`${AGENT_API_URL}/inventory/update`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name,
-            quantity,
-            unit,
-            location,
-            category,
-            unitValueUEC,
-            qualityTier,
-            purityPercent,
-            recommendedShip,
-            extractionType,
-            attachedFileType,
-            attachedFileName,
-            attachedFileData,
-            googleDriveUrl,
-            notes
-          })
+          body: JSON.stringify(itemData)
         });
       } catch (e) {
-        console.warn('Failed to update inventory on agent', e);
+        console.warn('Failed to sync item to agent', e);
       }
     }
     return true;
   };
 
-  // Import batch of extracted items from file - 100% faithful 1-to-1 mapping with preview
+  const deleteInventoryItem = async (id: string): Promise<boolean> => {
+    setInventory(prev => prev.filter(item => item.id !== id));
+    return true;
+  };
+
   const importExtractedItems = async (items: {
     name: string;
     quantity: number;
@@ -690,7 +442,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notes: item.notes
     }));
 
-    // Atomically set all extracted items in inventory (no duplicates overwritten)
     setInventory(formattedNewItems);
     try {
       localStorage.setItem('sc_inventory', JSON.stringify(formattedNewItems));
@@ -710,21 +461,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
-  // Reset Inventory (Clear all or restore default)
   const resetInventory = async (mode: 'default' | 'zero' | 'empty' = 'empty'): Promise<boolean> => {
     let newItems: InventoryItem[] = [];
     if (mode === 'default') {
       newItems = [
-        { id: 'mat-01', name: 'Quantainium Raffiné', category: 'Minerai Exotique', quantity: 142, unit: 'SCU', location: 'HUR-L1 Refinery', unitValueUEC: 88000 },
-        { id: 'mat-02', name: 'Bexalite Raffiné', category: 'Minerai Rare', quantity: 210, unit: 'SCU', location: 'CRU-L1', unitValueUEC: 44000 },
-        { id: 'mat-03', name: 'Taranite Raffinée', category: 'Minerai Rare', quantity: 95, unit: 'SCU', location: 'ARC-L1', unitValueUEC: 32000 },
-        { id: 'mat-04', name: 'Laranite Raffinée', category: 'Minerai Précieux', quantity: 340, unit: 'SCU', location: 'Lorville Cargo', unitValueUEC: 28500 }
+        { id: 'mat-01', name: 'Quantainium Raffiné', category: 'Minerai Exotique', quantity: 142, unit: 'SCU', location: 'HUR-L1 Refinery', unitValueUEC: 88000, qualityTier: 'Pur (99.2%)', extractionType: 'Minable Vaisseau', recommendedShip: 'MISC Prospector / ARGO MOLE' },
+        { id: 'mat-02', name: 'Bexalite Raffiné', category: 'Minerai Rare', quantity: 210, unit: 'SCU', location: 'CRU-L1', unitValueUEC: 44000, qualityTier: 'Haute (88%)', extractionType: 'Minable Vaisseau', recommendedShip: 'MISC Prospector / ARGO MOLE' },
+        { id: 'mat-03', name: 'RMC (Recycled Material Composite)', category: 'Salvage', quantity: 350, unit: 'SCU', location: 'Orison Cargo', unitValueUEC: 14500, qualityTier: 'Standard', extractionType: 'Salvage Coque (RMC)', recommendedShip: 'Drake Vulture / Aegis Reclaimer' }
       ];
     } else {
       newItems = [];
     }
     setInventory(newItems);
-    localStorage.setItem('sc_inventory', JSON.stringify(newItems));
+    try {
+      localStorage.setItem('sc_inventory', JSON.stringify(newItems));
+    } catch (_) {}
 
     if (isAgentConnected) {
       try {
@@ -740,172 +491,189 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
-  // Reload data from local source file (Game.log & inventory_store.json)
-  const reloadFromSource = async (): Promise<{ success: boolean; message: string; count?: number }> => {
-    if (isAgentConnected) {
-      try {
-        const res = await fetch(`${AGENT_API_URL}/reload-source`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.inventory) setInventory(data.inventory);
-          if (data.telemetry) setTelemetry(data.telemetry);
-          await refreshAgentData();
-          return {
-            success: true,
-            message: `Fichier source Game.log et base locale rechargés avec succès (${data.inventory?.length || 0} ressources chargées)`,
-            count: data.inventory?.length || 0
-          };
-        }
-      } catch (e) {
-        console.warn('Error calling reload-source on agent', e);
-      }
-    }
-
-    // Local storage fallback reload
-    const saved = localStorage.getItem('sc_inventory');
-    if (saved) {
-      setInventory(JSON.parse(saved));
-    }
-    return {
-      success: true,
-      message: 'Données rechargées depuis le stockage local',
-      count: inventory.length
-    };
-  };
-
-  // Add General Inventory Item (Ship, Weapon, Component, Gear...)
-  const addGeneralItem = async (itemData: Omit<MasterInventoryItem, 'id'>): Promise<boolean> => {
-    const newItem: MasterInventoryItem = {
-      ...itemData,
-      id: `gen-${Date.now()}`
-    };
-
-    setGeneralInventory(prev => [newItem, ...prev]);
-
-    if (isAgentConnected) {
-      try {
-        await fetch(`${AGENT_API_URL}/general-inventory`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newItem)
-        });
-      } catch (e) {
-        console.warn('Failed to add general item to agent', e);
-      }
-    }
-    return true;
-  };
-
-  // Update General Inventory Item
-  const updateGeneralItem = async (id: string, updates: Partial<MasterInventoryItem>): Promise<boolean> => {
-    setGeneralInventory(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
-
-    if (isAgentConnected) {
-      try {
-        await fetch(`${AGENT_API_URL}/general-inventory/update`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, updates })
-        });
-      } catch (e) {
-        console.warn('Failed to update general item on agent', e);
-      }
-    }
-    return true;
-  };
-
-  // Delete General Inventory Item
-  const deleteGeneralItem = async (id: string): Promise<boolean> => {
-    setGeneralInventory(prev => prev.filter(i => i.id !== id));
-
-    if (isAgentConnected) {
-      try {
-        await fetch(`${AGENT_API_URL}/general-inventory/delete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id })
-        });
-      } catch (e) {
-        console.warn('Failed to delete general item on agent', e);
-      }
-    }
-    return true;
-  };
-
-  // Reset General Inventory
-  const resetGeneralInventory = async (): Promise<boolean> => {
-    setGeneralInventory([]);
-    localStorage.removeItem('sc_general_inventory');
-
-    if (isAgentConnected) {
-      try {
-        await fetch(`${AGENT_API_URL}/general-inventory/reset`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-      } catch (e) {
-        console.warn('Failed to reset general inventory on agent', e);
-      }
-    }
-    return true;
-  };
-
-  // Add Blueprint
-  const addBlueprint = async (bpData: Omit<Blueprint, 'id'>): Promise<boolean> => {
+  // ==========================================
+  // --- BLUEPRINT OPERATIONS ---
+  // ==========================================
+  const addBlueprint = async (bp: Omit<Blueprint, 'id'>): Promise<boolean> => {
     const newBp: Blueprint = {
-      ...bpData,
-      id: `bp-${Date.now()}`
+      ...bp,
+      id: `bp-${Date.now()}`,
+      isKnownByHost: true
     };
-    setBlueprints(prev => [...prev, newBp]);
-
-    if (isAgentConnected) {
-      try {
-        await fetch(`${AGENT_API_URL}/blueprints`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newBp)
-        });
-      } catch (e) {
-        console.warn('Failed to add blueprint on agent', e);
-      }
-    }
+    setBlueprints(prev => [newBp, ...prev]);
     return true;
   };
 
-  // Update Blueprint
   const updateBlueprint = async (id: string, updates: Partial<Blueprint>): Promise<boolean> => {
-    setBlueprints(prev => prev.map(bp => bp.id === id ? { ...bp, ...updates } : bp));
-
-    if (isAgentConnected) {
-      try {
-        await fetch(`${AGENT_API_URL}/blueprints/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updates)
-        });
-      } catch (e) {
-        console.warn('Failed to update blueprint on agent', e);
-      }
-    }
+    setBlueprints(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
     return true;
   };
 
-  // Delete Blueprint
   const deleteBlueprint = async (id: string): Promise<boolean> => {
-    setBlueprints(prev => prev.filter(bp => bp.id !== id));
+    setBlueprints(prev => prev.filter(b => b.id !== id));
+    return true;
+  };
 
-    if (isAgentConnected) {
-      try {
-        await fetch(`${AGENT_API_URL}/blueprints/${id}`, {
-          method: 'DELETE'
-        });
-      } catch (e) {
-        console.warn('Failed to delete blueprint on agent', e);
-      }
+  const importBlueprintFromDatabase = async (dbItem: SCItemDefinition): Promise<boolean> => {
+    // Check if already in blueprints
+    const exists = blueprints.some(b => b.name.toLowerCase() === dbItem.name.toLowerCase());
+    if (exists) return false;
+
+    const newBp: Blueprint = {
+      id: `bp-${Date.now()}`,
+      name: dbItem.name,
+      category: dbItem.category,
+      subCategory: dbItem.subCategory,
+      manufacturer: dbItem.manufacturer || 'Industriel',
+      description: dbItem.description || 'Fabrication sur mesure.',
+      requiredMaterials: dbItem.suggestedMaterials || [
+        { name: 'Titanium Raffiné', quantity: 10, unit: 'SCU' },
+        { name: 'RMC (Recycled Material Composite)', quantity: 5, unit: 'SCU' }
+      ],
+      craftTimeMinutes: dbItem.suggestedCraftTimeMinutes || 30,
+      feeUEC: dbItem.unitValueUEC || 50000,
+      available: true,
+      isKnownByHost: true
+    };
+
+    setBlueprints(prev => [newBp, ...prev]);
+    return true;
+  };
+
+  const resetBlueprints = async (): Promise<boolean> => {
+    setBlueprints(DEFAULT_HOST_BLUEPRINTS);
+    try {
+      localStorage.setItem('sc_host_blueprints', JSON.stringify(DEFAULT_HOST_BLUEPRINTS));
+    } catch (_) {}
+    return true;
+  };
+
+  // ==========================================
+  // --- ORDER OPERATIONS ---
+  // ==========================================
+  const createOrder = async (data: {
+    clientName: string;
+    blueprintName: string;
+    blueprintId?: string;
+    quantity: number;
+    mineralQuality: MineralQualityTier;
+    userProvidesMaterials: boolean;
+    materialContributionPercent?: number;
+    discountType?: DiscountType;
+    discountValue?: number;
+    discountReason?: string;
+    customPrice?: number;
+    deliveryLocation: string;
+    craftTimeMinutes?: number;
+    notes?: string;
+  }): Promise<boolean> => {
+    const qualityOption = MINERAL_QUALITY_OPTIONS.find(q => q.tier === data.mineralQuality) || MINERAL_QUALITY_OPTIONS[0];
+    
+    // Find matching blueprint to get base fee and materials
+    const matchingBpInHost = blueprints.find(b => b.name.toLowerCase() === data.blueprintName.toLowerCase());
+    const matchingBpInDb = STAR_CITIZEN_DATABASE.find(b => b.name.toLowerCase() === data.blueprintName.toLowerCase());
+
+    const singleBaseFee = matchingBpInHost 
+      ? matchingBpInHost.feeUEC 
+      : matchingBpInDb?.unitValueUEC || 50000;
+    const baseTotalFee = singleBaseFee * data.quantity * qualityOption.multiplier;
+
+    let finalFee = baseTotalFee;
+    const discountType = data.discountType || 'none';
+
+    if (discountType === 'free') {
+      finalFee = 0;
+    } else if (discountType === 'custom' && data.customPrice !== undefined) {
+      finalFee = data.customPrice;
+    } else if (discountType === 'percent' && data.discountValue) {
+      finalFee = Math.max(0, baseTotalFee - Math.round((baseTotalFee * data.discountValue) / 100));
     }
+
+    // Material contribution discount if user provides materials and no specific discount set
+    if (data.userProvidesMaterials && discountType === 'none') {
+      const contrib = data.materialContributionPercent || 100;
+      const reduction = (baseTotalFee * 0.6) * (contrib / 100);
+      finalFee = Math.max(0, Math.round(baseTotalFee - reduction));
+    }
+
+    const requiredMaterials = matchingBpInHost 
+      ? matchingBpInHost.requiredMaterials 
+      : matchingBpInDb?.suggestedMaterials;
+
+    const newOrder: Order = {
+      id: `ord-${Date.now().toString().slice(-4)}`,
+      clientName: data.clientName.trim() || 'Client Anonyme',
+      blueprintName: data.blueprintName,
+      blueprintId: data.blueprintId,
+      quantity: data.quantity,
+      status: 'pending',
+      userProvidesMaterials: data.userProvidesMaterials,
+      materialContributionPercent: data.materialContributionPercent || (data.userProvidesMaterials ? 100 : 0),
+      mineralQuality: data.mineralQuality,
+      qualityMultiplier: qualityOption.multiplier,
+      baseFeeUEC: baseTotalFee,
+      discountType: data.discountType || (data.userProvidesMaterials ? 'percent' : 'none'),
+      discountValue: data.discountValue || (data.userProvidesMaterials ? 60 : 0),
+      discountReason: data.discountReason || (data.userProvidesMaterials ? 'Apport Minerais Client (-60%)' : ''),
+      totalFeeUEC: finalFee,
+      deliveryLocation: data.deliveryLocation || 'HUR-L1 Green Glade',
+      craftTimeMinutes: (data.craftTimeMinutes || 30) * data.quantity,
+      requiredMaterials: requiredMaterials,
+      notes: data.notes,
+      createdAt: new Date().toISOString()
+    };
+
+    setOrders(prev => [newOrder, ...prev]);
+    return true;
+  };
+
+  const updateOrderStatus = async (orderId: string, status: OrderStatus): Promise<boolean> => {
+    setOrders(prev => prev.map(ord => ord.id === orderId ? { ...ord, status, updatedAt: new Date().toISOString() } : ord));
+    return true;
+  };
+
+  const updateOrderPrice = async (
+    orderId: string, 
+    discountType: DiscountType, 
+    discountValue: number, 
+    discountReason?: string,
+    customPrice?: number
+  ): Promise<boolean> => {
+    setOrders(prev => prev.map(ord => {
+      if (ord.id !== orderId) return ord;
+      const base = ord.baseFeeUEC || ord.totalFeeUEC;
+      let newTotal = base;
+
+      if (discountType === 'free') {
+        newTotal = 0;
+      } else if (discountType === 'custom' && customPrice !== undefined) {
+        newTotal = customPrice;
+      } else if (discountType === 'percent') {
+        newTotal = Math.max(0, base - Math.round((base * discountValue) / 100));
+      }
+
+      return {
+        ...ord,
+        discountType,
+        discountValue,
+        discountReason: discountReason || '',
+        totalFeeUEC: newTotal,
+        updatedAt: new Date().toISOString()
+      };
+    }));
+    return true;
+  };
+
+  const deleteOrder = async (orderId: string): Promise<boolean> => {
+    setOrders(prev => prev.filter(ord => ord.id !== orderId));
+    return true;
+  };
+
+  const resetOrders = async (): Promise<boolean> => {
+    setOrders([]);
+    try {
+      localStorage.setItem('sc_host_orders', JSON.stringify([]));
+    } catch (_) {}
     return true;
   };
 
@@ -914,24 +682,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         blueprints,
         inventory,
-        generalInventory,
-        resourceRequests,
         orders,
         telemetry,
         isAgentConnected,
         activeTab,
         setActiveTab,
-        createOrder,
-        updateOrderStatus,
-        updateOrderPrice,
-        createResourceRequest,
-        contributeToRequest,
         updateInventoryItem,
+        deleteInventoryItem,
         importExtractedItems,
         resetInventory,
         addBlueprint,
         updateBlueprint,
         deleteBlueprint,
+        importBlueprintFromDatabase,
+        resetBlueprints,
+        createOrder,
+        updateOrderStatus,
+        updateOrderPrice,
+        deleteOrder,
+        resetOrders,
         refreshAgentData
       }}
     >

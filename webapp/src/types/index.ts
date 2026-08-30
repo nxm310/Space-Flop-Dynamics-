@@ -1,17 +1,3 @@
-export type UserRole = 'host_crafter' | 'member';
-
-export interface UserProfile {
-  uid: string;
-  email?: string;
-  displayName: string;
-  discordId?: string;
-  discordTag?: string;
-  avatar?: string;
-  role: UserRole;
-  orgRank?: string;
-  balanceUEC?: number;
-}
-
 export interface MaterialRequirement {
   name: string;
   quantity: number;
@@ -22,12 +8,15 @@ export interface Blueprint {
   id: string;
   name: string;
   category: string;
+  subCategory?: string;
+  manufacturer?: string;
   description: string;
   icon?: string;
   requiredMaterials: MaterialRequirement[];
   craftTimeMinutes: number;
   feeUEC: number;
   available: boolean;
+  isKnownByHost?: boolean;
 }
 
 export interface InventoryItem {
@@ -36,9 +25,9 @@ export interface InventoryItem {
   category: string;
   quantity: number;
   unit: string;
-  location: string;
+  location?: string;
   unitValueUEC?: number;
-  qualityTier?: 'standard' | 'high_grade' | 'maximum_purity' | string;
+  qualityTier?: string;
   purityPercent?: number;
   recommendedShip?: string;
   extractionType?: string;
@@ -47,52 +36,6 @@ export interface InventoryItem {
   attachedFileData?: string;
   googleDriveUrl?: string;
   notes?: string;
-}
-
-export interface ResourceContributor {
-  userId: string;
-  userName: string;
-  quantity: number;
-  timestamp: string;
-}
-
-export type GeneralItemCategory = 
-  | 'vaisseau'
-  | 'armement_vaisseau'
-  | 'composant_vaisseau'
-  | 'arme_fps'
-  | 'armure_fps'
-  | 'utilitaire'
-  | 'ressource';
-
-export interface MasterInventoryItem {
-  id: string;
-  name: string;
-  category: GeneralItemCategory;
-  subcategory?: string;
-  manufacturer?: string;
-  quantity: number;
-  location: string;
-  condition?: string; // 'Opérationnel', 'Équipé sur Corsair', 'Stocké en Hangar', 'Assurance LTI'
-  estimatedValueUEC?: number;
-  notes?: string;
-  scuCapacity?: number;
-  size?: string; // 'Taille 1', 'Taille 2', 'Taille 3', 'Taille 7'
-}
-
-export interface ResourceRequest {
-  id: string;
-  resourceName: string;
-  targetQuantity: number;
-  collectedQuantity: number;
-  unit: string;
-  rewardOrPriceUEC: number;
-  urgency: 'Normal' | 'Urgent' | 'Critique';
-  dropoffLocation: string;
-  notes: string;
-  status: 'open' | 'fulfilled' | 'closed';
-  createdAt: string;
-  contributors: ResourceContributor[];
 }
 
 export type OrderStatus = 'pending' | 'accepted' | 'crafting' | 'ready' | 'delivered' | 'cancelled';
@@ -112,10 +55,10 @@ export const MINERAL_QUALITY_OPTIONS: MineralQualityOption[] = [
   {
     tier: 'standard',
     label: 'Standard / Normal',
-    description: 'Puretée classique des raffineries standard. Aucun surcoût.',
+    description: 'Pureté classique des raffineries standard. Aucun surcoût.',
     multiplier: 1.0,
     badgeColor: 'bg-slate-800 text-slate-300 border-slate-700',
-    purityRange: 'Puretée 70% - 85%'
+    purityRange: 'Pureté 70% - 85%'
   },
   {
     tier: 'high_grade',
@@ -123,28 +66,27 @@ export const MINERAL_QUALITY_OPTIONS: MineralQualityOption[] = [
     description: 'Sélection de gisements rares + solvant Dinyx. (+25% valeur)',
     multiplier: 1.25,
     badgeColor: 'bg-cyan-950/80 text-cyan-300 border-cyan-500/40',
-    purityRange: 'Puretée 85% - 95%'
+    purityRange: 'Pureté 85% - 95%'
   },
   {
     tier: 'maximum_purity',
     label: 'Pureté Maximale / Mil-Spec',
-    description: 'Puretée 99.9% pure, calibrage militaire sans résidus. (+50% valeur)',
+    description: 'Pureté 99.9% pure, calibrage militaire sans résidus. (+50% valeur)',
     multiplier: 1.5,
     badgeColor: 'bg-purple-950/80 text-purple-300 border-purple-500/40',
-    purityRange: 'Puretée 99.9% (Pur Astéroïde)'
+    purityRange: 'Pureté 99.9% (Pur Astéroïde)'
   }
 ];
 
 export interface Order {
   id: string;
-  blueprintId: string;
+  blueprintId?: string;
   blueprintName: string;
-  clientId: string;
   clientName: string;
-  clientEmail?: string;
   quantity: number;
   status: OrderStatus;
   userProvidesMaterials: boolean;
+  materialContributionPercent?: number; // 0 à 100%
   mineralQuality: MineralQualityTier;
   qualityMultiplier: number;
   baseFeeUEC: number;
@@ -153,9 +95,57 @@ export interface Order {
   discountReason?: string;
   totalFeeUEC: number;
   deliveryLocation: string;
+  craftTimeMinutes?: number;
+  requiredMaterials?: MaterialRequirement[];
   notes?: string;
   createdAt: string;
   updatedAt?: string;
+}
+
+export type UserRole = 'host_crafter' | 'member';
+
+export interface UserProfile {
+  uid: string;
+  email?: string;
+  displayName: string;
+  discordId?: string;
+  discordTag?: string;
+  avatar?: string;
+  role: UserRole;
+  orgRank?: string;
+  balanceUEC?: number;
+}
+
+export interface ResourceContributor {
+  userId: string;
+  userName: string;
+  quantity: number;
+  timestamp: string;
+}
+
+export interface ResourceRequest {
+  id: string;
+  resourceName: string;
+  targetQuantity: number;
+  collectedQuantity: number;
+  unit: string;
+  rewardOrPriceUEC: number;
+  urgency: 'Normal' | 'Urgent' | 'Critique';
+  dropoffLocation: string;
+  notes: string;
+  status: 'open' | 'fulfilled' | 'closed';
+  createdAt: string;
+  contributors: ResourceContributor[];
+}
+
+export interface FirebaseConfigState {
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  storageBucket: string;
+  messagingSenderId: string;
+  appId: string;
+  isConfigured: boolean;
 }
 
 export interface TelemetryLog {
@@ -184,12 +174,3 @@ export interface GameTelemetry {
   };
 }
 
-export interface FirebaseConfigState {
-  apiKey: string;
-  authDomain: string;
-  projectId: string;
-  storageBucket: string;
-  messagingSenderId: string;
-  appId: string;
-  isConfigured: boolean;
-}

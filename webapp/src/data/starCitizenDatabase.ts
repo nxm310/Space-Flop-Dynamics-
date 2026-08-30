@@ -1,19 +1,20 @@
 export interface SCItemDefinition {
   id: string;
   name: string;
-  category: 'Vaisseau & Véhicule' | 'Minerai Raffiné' | 'Minerai Brut' | 'Gemme FPS' | 'Salvage & Matériaux' | 'Armement Vaisseau' | 'Composant Vaisseau' | 'Arme FPS' | 'Armure FPS' | 'Utilitaire & Équipement';
+  category: 'Armement Vaisseau' | 'Composant Vaisseau' | 'Arme FPS' | 'Armure FPS' | 'Utilitaire & Équipement' | 'Minerai Raffiné' | 'Minerai Brut' | 'Gemme FPS' | 'Salvage & Matériaux';
   subCategory?: string;
   defaultUnit: 'SCU' | 'cSCU' | 'µSCU' | 'Unités';
   unitValueUEC?: number;
   description?: string;
   manufacturer?: string;
-  scuCapacity?: number;
   suggestedMaterials?: { name: string; quantity: number; unit: string }[];
   suggestedCraftTimeMinutes?: number;
 }
 
 export const STAR_CITIZEN_DATABASE: SCItemDefinition[] = [
+  // ==========================================
   // --- MINERAIS RAFFINÉS ---
+  // ==========================================
   {
     id: 'sc-min-01',
     name: 'Quantainium Raffiné',
@@ -150,45 +151,37 @@ export const STAR_CITIZEN_DATABASE: SCItemDefinition[] = [
     description: 'Alliage léger pour composants secondaires.'
   },
 
-  // --- MINERAIS BRUTS ---
+  // ==========================================
+  // --- SALVAGE & MATÉRIAUX ---
+  // ==========================================
   {
-    id: 'sc-raw-01',
-    name: 'Quantainium Brut (Instable)',
-    category: 'Minerai Brut',
+    id: 'sc-sal-01',
+    name: 'RMC (Recycled Material Composite)',
+    category: 'Salvage & Matériaux',
     defaultUnit: 'SCU',
-    unitValueUEC: 44000,
-    description: 'Minerai brut hautement volatile extrait des astéroïdes.'
+    unitValueUEC: 14500,
+    description: 'Matériau composite de coque recyclé via Vulture ou Reclaimer.'
   },
   {
-    id: 'sc-raw-02',
-    name: 'Bexalite Brut',
-    category: 'Minerai Brut',
+    id: 'sc-sal-02',
+    name: 'Construction Materials (Matériaux de Structure)',
+    category: 'Salvage & Matériaux',
     defaultUnit: 'SCU',
-    unitValueUEC: 21000
+    unitValueUEC: 7500,
+    description: 'Composants structurels compactés issus du désossage de vaisseaux.'
   },
   {
-    id: 'sc-raw-03',
-    name: 'Taranite Brut',
-    category: 'Minerai Brut',
+    id: 'sc-sal-03',
+    name: 'Superconducteurs Composite',
+    category: 'Salvage & Matériaux',
     defaultUnit: 'SCU',
-    unitValueUEC: 16000
-  },
-  {
-    id: 'sc-raw-04',
-    name: 'Laranite Brut',
-    category: 'Minerai Brut',
-    defaultUnit: 'SCU',
-    unitValueUEC: 14000
-  },
-  {
-    id: 'sc-raw-05',
-    name: 'Agricium Brut',
-    category: 'Minerai Brut',
-    defaultUnit: 'SCU',
-    unitValueUEC: 12500
+    unitValueUEC: 25000,
+    description: 'Alliage récupéré sur les épaves militaires.'
   },
 
+  // ==========================================
   // --- GEMMES FPS ---
+  // ==========================================
   {
     id: 'sc-gem-01',
     name: 'Hadanite (Gemme)',
@@ -220,587 +213,585 @@ export const STAR_CITIZEN_DATABASE: SCItemDefinition[] = [
     description: 'Gemme ultra-rare trouvée dans les grottes profondes.'
   },
 
-  // --- SALVAGE & MATÉRIAUX DE RÉCUPÉRATION ---
+  // ==========================================
+  // --- ARMEMENT DE VAISSEAU (SIZE 1 À 7) ---
+  // ==========================================
   {
-    id: 'sc-sal-01',
-    name: 'RMC (Recycled Material Composite)',
-    category: 'Salvage & Matériaux',
-    defaultUnit: 'SCU',
-    unitValueUEC: 14500,
-    description: 'Matériau composite de coque recyclé via Vulture ou Reclaimer.'
-  },
-  {
-    id: 'sc-sal-02',
-    name: 'Construction Materials (Matériaux de Structure)',
-    category: 'Salvage & Matériaux',
-    defaultUnit: 'SCU',
-    unitValueUEC: 7500,
-    description: 'Composants structurels compactés issus du désossage de vaisseaux.'
-  },
-  {
-    id: 'sc-sal-03',
-    name: 'Scrap (Ferraille Industrielle)',
-    category: 'Salvage & Matériaux',
-    defaultUnit: 'SCU',
-    unitValueUEC: 1500
-  },
-  {
-    id: 'sc-sal-04',
-    name: 'Superconducteurs Composite',
-    category: 'Salvage & Matériaux',
-    defaultUnit: 'SCU',
-    unitValueUEC: 25000
-  },
-
-  // --- ARMEMENT DE VAISSEAUX ---
-  {
-    id: 'sc-wp-01',
+    id: 'sc-bp-w01',
     name: 'Behring S7 Laser Cannon (Omnisky)',
     category: 'Armement Vaisseau',
     manufacturer: 'Behring Applied Technology',
     defaultUnit: 'Unités',
-    unitValueUEC: 125000,
+    unitValueUEC: 145000,
+    suggestedCraftTimeMinutes: 50,
+    description: 'Canon laser lourd taille 7 pour vaisseaux capitaux et corvettes.',
     suggestedMaterials: [
-      { name: 'Quantainium Raffiné', quantity: 15, unit: 'SCU' },
-      { name: 'Bexalite Raffiné', quantity: 25, unit: 'SCU' },
-      { name: 'Titanium Raffiné', quantity: 40, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 45,
-    description: 'Canon laser lourd taille 7 pour vaisseaux capitaux.'
+      { name: 'Quantainium Raffiné', quantity: 18, unit: 'SCU' },
+      { name: 'Bexalite Raffiné', quantity: 28, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 45, unit: 'SCU' },
+      { name: 'RMC (Recycled Material Composite)', quantity: 20, unit: 'SCU' }
+    ]
   },
   {
-    id: 'sc-wp-02',
+    id: 'sc-bp-w02',
     name: 'Klaus & Werner CF-337 Panther Laser Repeater (Size 3)',
     category: 'Armement Vaisseau',
     manufacturer: 'Klaus & Werner',
     defaultUnit: 'Unités',
-    unitValueUEC: 45000,
+    unitValueUEC: 48000,
+    suggestedCraftTimeMinutes: 25,
+    description: 'Répéteur laser taille 3 de référence pour chasseurs légers et moyens.',
     suggestedMaterials: [
       { name: 'Agricium Raffiné', quantity: 8, unit: 'SCU' },
       { name: 'Titanium Raffiné', quantity: 12, unit: 'SCU' },
       { name: 'Copper (Cuivre Raffiné)', quantity: 6, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 25,
-    description: 'Répéteur laser taille 3 très populaire pour chasseurs légers et moyens.'
+    ]
   },
   {
-    id: 'sc-wp-03',
+    id: 'sc-bp-w03',
     name: 'Klaus & Werner CF-447 Rhino Laser Repeater (Size 4)',
     category: 'Armement Vaisseau',
     manufacturer: 'Klaus & Werner',
     defaultUnit: 'Unités',
-    unitValueUEC: 75000,
+    unitValueUEC: 78000,
+    suggestedCraftTimeMinutes: 35,
+    description: 'Répéteur laser lourd taille 4 pour chasseurs lourds et canonnières.',
     suggestedMaterials: [
       { name: 'Agricium Raffiné', quantity: 14, unit: 'SCU' },
-      { name: 'Titanium Raffiné', quantity: 20, unit: 'SCU' },
-      { name: 'Bexalite Raffiné', quantity: 5, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 35
+      { name: 'Titanium Raffiné', quantity: 22, unit: 'SCU' },
+      { name: 'Bexalite Raffiné', quantity: 6, unit: 'SCU' }
+    ]
   },
   {
-    id: 'sc-wp-04',
+    id: 'sc-bp-w04',
     name: 'Klaus & Werner CF-557 Galdiseen Laser Repeater (Size 5)',
     category: 'Armement Vaisseau',
     manufacturer: 'Klaus & Werner',
     defaultUnit: 'Unités',
-    unitValueUEC: 110000,
+    unitValueUEC: 115000,
+    suggestedCraftTimeMinutes: 45,
+    description: 'Répéteur laser taille 5 dévastateur contre les grandes cibles.',
     suggestedMaterials: [
       { name: 'Quantainium Raffiné', quantity: 10, unit: 'SCU' },
       { name: 'Agricium Raffiné', quantity: 20, unit: 'SCU' },
       { name: 'Titanium Raffiné', quantity: 30, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 45
+    ]
   },
   {
-    id: 'sc-wp-05',
+    id: 'sc-bp-w05',
     name: 'Behring AD4B Ballistic Gatling (Size 4)',
     category: 'Armement Vaisseau',
     manufacturer: 'Behring Applied Technology',
     defaultUnit: 'Unités',
     unitValueUEC: 85000,
+    suggestedCraftTimeMinutes: 30,
+    description: 'Gatling balistique taille 4 à cadence infernale et forte pénétration de bouclier.',
     suggestedMaterials: [
       { name: 'Tungsten Raffiné', quantity: 25, unit: 'SCU' },
       { name: 'Titanium Raffiné', quantity: 20, unit: 'SCU' },
       { name: 'RMC (Recycled Material Composite)', quantity: 15, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 30
+    ]
   },
   {
-    id: 'sc-wp-06',
+    id: 'sc-bp-w06',
     name: 'Behring AD5B Ballistic Gatling (Size 5)',
     category: 'Armement Vaisseau',
     manufacturer: 'Behring Applied Technology',
     defaultUnit: 'Unités',
-    unitValueUEC: 130000,
+    unitValueUEC: 135000,
+    suggestedCraftTimeMinutes: 50,
+    description: 'Gatling balistique taille 5 surpuissante équipée sur Corsair et Redeemer.',
     suggestedMaterials: [
       { name: 'Tungsten Raffiné', quantity: 40, unit: 'SCU' },
       { name: 'Titanium Raffiné', quantity: 35, unit: 'SCU' },
       { name: 'Bexalite Raffiné', quantity: 10, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 50
+    ]
   },
   {
-    id: 'sc-wp-07',
+    id: 'sc-bp-w07',
     name: 'Apocalypse Arms Revenant Ballistic Gatling (Size 4)',
     category: 'Armement Vaisseau',
     manufacturer: 'Apocalypse Arms',
     defaultUnit: 'Unités',
-    unitValueUEC: 80000
+    unitValueUEC: 82000,
+    suggestedCraftTimeMinutes: 30,
+    description: 'Canon rotatif balistique lourd taille 4.',
+    suggestedMaterials: [
+      { name: 'Tungsten Raffiné', quantity: 22, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 18, unit: 'SCU' }
+    ]
+  },
+  {
+    id: 'sc-bp-w08',
+    name: 'Amon & Reese Omnisky IX Laser Cannon (Size 3)',
+    category: 'Armement Vaisseau',
+    manufacturer: 'Amon & Reese Co.',
+    defaultUnit: 'Unités',
+    unitValueUEC: 52000,
+    suggestedCraftTimeMinutes: 25,
+    description: 'Canon laser haute vélocité taille 3 pour tirs de précision.',
+    suggestedMaterials: [
+      { name: 'Taranite Raffinée', quantity: 8, unit: 'SCU' },
+      { name: 'Agricium Raffiné', quantity: 6, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 10, unit: 'SCU' }
+    ]
+  },
+  {
+    id: 'sc-bp-w09',
+    name: 'Amon & Reese Omnisky XII Laser Cannon (Size 4)',
+    category: 'Armement Vaisseau',
+    manufacturer: 'Amon & Reese Co.',
+    defaultUnit: 'Unités',
+    unitValueUEC: 84000,
+    suggestedCraftTimeMinutes: 35,
+    description: 'Canon laser taille 4 à longue portée et gros dégâts alpha.',
+    suggestedMaterials: [
+      { name: 'Taranite Raffinée', quantity: 14, unit: 'SCU' },
+      { name: 'Bexalite Raffiné', quantity: 8, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 18, unit: 'SCU' }
+    ]
+  },
+  {
+    id: 'sc-bp-w10',
+    name: 'Gallenson Tactical Tarantula GT-870 Ballistic Cannon (Size 3)',
+    category: 'Armement Vaisseau',
+    manufacturer: 'Gallenson Tactical Systems',
+    defaultUnit: 'Unités',
+    unitValueUEC: 46000,
+    suggestedCraftTimeMinutes: 20,
+    description: 'Canon balistique taille 3 semi-automatique percutant.',
+    suggestedMaterials: [
+      { name: 'Tungsten Raffiné', quantity: 15, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 10, unit: 'SCU' }
+    ]
   },
 
+  // ==========================================
   // --- COMPOSANTS DE VAISSEAU ---
+  // ==========================================
   {
-    id: 'sc-comp-01',
+    id: 'sc-bp-c01',
     name: 'Générateur de Bouclier FR-86 (Size 3 Militaire)',
     category: 'Composant Vaisseau',
-    subCategory: 'Bouclier Industriel / Militaire',
+    subCategory: 'Générateur de Bouclier',
+    manufacturer: 'Basilisk Armor',
     defaultUnit: 'Unités',
-    unitValueUEC: 180000,
+    unitValueUEC: 190000,
+    suggestedCraftTimeMinutes: 60,
+    description: 'Bouclier lourd taille 3 à régénération instantanée de grade militaire.',
     suggestedMaterials: [
       { name: 'Laranite Raffinée', quantity: 20, unit: 'SCU' },
-      { name: 'Taranite Raffinée', quantity: 12, unit: 'SCU' },
+      { name: 'Taranite Raffinée', quantity: 14, unit: 'SCU' },
       { name: 'RMC (Recycled Material Composite)', quantity: 30, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 60,
-    description: 'Bouclier lourd taille 3 à régénération instantanée de grade militaire.'
+    ]
   },
   {
-    id: 'sc-comp-02',
+    id: 'sc-bp-c02',
     name: 'Générateur de Bouclier FR-76 (Size 2 Militaire)',
     category: 'Composant Vaisseau',
+    subCategory: 'Générateur de Bouclier',
+    manufacturer: 'Basilisk Armor',
     defaultUnit: 'Unités',
-    unitValueUEC: 95000,
+    unitValueUEC: 98000,
+    suggestedCraftTimeMinutes: 40,
+    description: 'Bouclier moyen taille 2 militaire, régénération ultra-rapide.',
     suggestedMaterials: [
       { name: 'Laranite Raffinée', quantity: 10, unit: 'SCU' },
       { name: 'Taranite Raffinée', quantity: 6, unit: 'SCU' },
       { name: 'RMC (Recycled Material Composite)', quantity: 15, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 40
+    ]
   },
   {
-    id: 'sc-comp-03',
+    id: 'sc-bp-c03',
     name: 'Générateur de Bouclier FR-66 (Size 1 Militaire)',
     category: 'Composant Vaisseau',
+    subCategory: 'Générateur de Bouclier',
+    manufacturer: 'Basilisk Armor',
     defaultUnit: 'Unités',
-    unitValueUEC: 45000,
+    unitValueUEC: 48000,
+    suggestedCraftTimeMinutes: 20,
+    description: 'Bouclier léger taille 1 militaire pour intercepteurs et chasseurs légers.',
     suggestedMaterials: [
       { name: 'Laranite Raffinée', quantity: 4, unit: 'SCU' },
       { name: 'Taranite Raffinée', quantity: 3, unit: 'SCU' },
       { name: 'RMC (Recycled Material Composite)', quantity: 8, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 20
+    ]
   },
   {
-    id: 'sc-comp-04',
-    name: 'Quantum Drive Crossfield (Size 2 Militaire)',
+    id: 'sc-bp-c04',
+    name: 'Quantum Drive Crossfield (Size 2 Militaire Rapide)',
     category: 'Composant Vaisseau',
-    subCategory: 'Moteur de Saut Quantum',
+    subCategory: 'Moteur Quantum Drive',
+    manufacturer: 'RSI Components',
     defaultUnit: 'Unités',
-    unitValueUEC: 250000,
+    unitValueUEC: 260000,
+    suggestedCraftTimeMinutes: 75,
+    description: 'Le moteur de saut militaire de référence pour traverser Stanton et Pyro à vitesse maximale.',
     suggestedMaterials: [
       { name: 'Quantainium Raffiné', quantity: 30, unit: 'SCU' },
       { name: 'Bexalite Raffiné', quantity: 15, unit: 'SCU' },
       { name: 'Agricium Raffiné', quantity: 10, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 75,
-    description: 'Le moteur de saut militaire de référence pour traverser Stanton et Pyro à vitesse maximale.'
+    ]
   },
   {
-    id: 'sc-comp-05',
-    name: 'Quantum Drive Atlas (Size 1 Civil Rapide)',
+    id: 'sc-bp-c05',
+    name: 'Quantum Drive Atlas (Size 1 Civil Longue Portée)',
     category: 'Composant Vaisseau',
+    subCategory: 'Moteur Quantum Drive',
+    manufacturer: 'RSI Components',
     defaultUnit: 'Unités',
-    unitValueUEC: 55000,
+    unitValueUEC: 58000,
+    suggestedCraftTimeMinutes: 25,
+    description: 'Moteur de saut équilibré entre vitesse et consommation pour vaisseaux taille 1.',
     suggestedMaterials: [
       { name: 'Quantainium Raffiné', quantity: 8, unit: 'SCU' },
-      { name: 'Bexalite Raffiné', quantity: 4, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 25
+      { name: 'Bexalite Raffiné', quantity: 4, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 6, unit: 'SCU' }
+    ]
   },
   {
-    id: 'sc-comp-06',
+    id: 'sc-bp-c06',
     name: 'Quantum Drive TS-2 (Size 3 Militaire Lourd)',
     category: 'Composant Vaisseau',
+    subCategory: 'Moteur Quantum Drive',
+    manufacturer: 'RSI Components',
     defaultUnit: 'Unités',
-    unitValueUEC: 380000,
+    unitValueUEC: 395000,
+    suggestedCraftTimeMinutes: 90,
+    description: 'Propulseur de saut lourd pour frégates, corvettes et vaisseaux de ligne.',
     suggestedMaterials: [
       { name: 'Quantainium Raffiné', quantity: 50, unit: 'SCU' },
       { name: 'Bexalite Raffiné', quantity: 30, unit: 'SCU' },
       { name: 'Gold (Or Raffiné)', quantity: 15, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 90
+    ]
   },
   {
-    id: 'sc-comp-07',
+    id: 'sc-bp-c07',
     name: 'Générateur d’Énergie JS-300 (Size 1 Militaire)',
     category: 'Composant Vaisseau',
+    subCategory: 'Power Plant',
+    manufacturer: 'Juno Starwerx',
     defaultUnit: 'Unités',
-    unitValueUEC: 48000
+    unitValueUEC: 52000,
+    suggestedCraftTimeMinutes: 25,
+    description: 'Générateur d’énergie taille 1 à haut rendement et faible signature thermique.',
+    suggestedMaterials: [
+      { name: 'Quantainium Raffiné', quantity: 5, unit: 'SCU' },
+      { name: 'Copper (Cuivre Raffiné)', quantity: 8, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 10, unit: 'SCU' }
+    ]
   },
   {
-    id: 'sc-comp-08',
+    id: 'sc-bp-c08',
     name: 'Générateur d’Énergie JS-400 (Size 2 Militaire)',
     category: 'Composant Vaisseau',
+    subCategory: 'Power Plant',
+    manufacturer: 'Juno Starwerx',
     defaultUnit: 'Unités',
-    unitValueUEC: 98000
+    unitValueUEC: 105000,
+    suggestedCraftTimeMinutes: 45,
+    description: 'Générateur d’énergie militaire taille 2 alimentant boucliers lourds et tourelles.',
+    suggestedMaterials: [
+      { name: 'Quantainium Raffiné', quantity: 12, unit: 'SCU' },
+      { name: 'Copper (Cuivre Raffiné)', quantity: 15, unit: 'SCU' },
+      { name: 'Gold (Or Raffiné)', quantity: 6, unit: 'SCU' }
+    ]
   },
   {
-    id: 'sc-comp-09',
+    id: 'sc-bp-c09',
     name: 'Refroidisseur Ultra-Flow (Size 2 Militaire)',
     category: 'Composant Vaisseau',
+    subCategory: 'Cooler',
+    manufacturer: 'Aegis Dynamics',
     defaultUnit: 'Unités',
-    unitValueUEC: 75000
+    unitValueUEC: 88000,
+    suggestedCraftTimeMinutes: 35,
+    description: 'Système de refroidissement cryogénique haute performance pour tirs continus.',
+    suggestedMaterials: [
+      { name: 'Beryl Raffiné', quantity: 15, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 12, unit: 'SCU' },
+      { name: 'Aluminum Raffiné', quantity: 10, unit: 'SCU' }
+    ]
   },
 
+  // ==========================================
   // --- ARMES FPS ---
+  // ==========================================
   {
-    id: 'sc-fps-01',
-    name: 'Behring P6-LR Sniper Rifle',
+    id: 'sc-bp-f01',
+    name: 'Fusil d’Assaut Behring P4-AR',
     category: 'Arme FPS',
-    manufacturer: 'Behring Applied Technology',
-    defaultUnit: 'Unités',
-    unitValueUEC: 35000,
-    suggestedMaterials: [
-      { name: 'Agricium Raffiné', quantity: 4, unit: 'SCU' },
-      { name: 'Titanium Raffiné', quantity: 6, unit: 'SCU' },
-      { name: 'Gold (Or Raffiné)', quantity: 2, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 20,
-    description: 'Fusil anti-matériel lourd avec optique haute précision.'
-  },
-  {
-    id: 'sc-fps-02',
-    name: 'Behring FS-9 LMG (Heavy Light Machine Gun)',
-    category: 'Arme FPS',
+    subCategory: 'Fusil d’Assaut Balistique',
     manufacturer: 'Behring Applied Technology',
     defaultUnit: 'Unités',
     unitValueUEC: 28000,
+    suggestedCraftTimeMinutes: 15,
+    description: 'Fusil d’assaut standard des forces de sécurité de l’UEE, fiable en toute condition.',
     suggestedMaterials: [
-      { name: 'Titanium Raffiné', quantity: 8, unit: 'SCU' },
-      { name: 'Copper (Cuivre Raffiné)', quantity: 4, unit: 'SCU' },
-      { name: 'RMC (Recycled Material Composite)', quantity: 4, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 20
+      { name: 'Titanium Raffiné', quantity: 3, unit: 'SCU' },
+      { name: 'Tungsten Raffiné', quantity: 2, unit: 'SCU' },
+      { name: 'RMC (Recycled Material Composite)', quantity: 2, unit: 'SCU' }
+    ]
   },
   {
-    id: 'sc-fps-03',
-    name: 'Behring P4-AR Ballistic Rifle',
+    id: 'sc-bp-f02',
+    name: 'Fusil de Précision Behring P6-LR',
     category: 'Arme FPS',
+    subCategory: 'Fusil de Précision Balistique',
     manufacturer: 'Behring Applied Technology',
     defaultUnit: 'Unités',
-    unitValueUEC: 18000,
+    unitValueUEC: 45000,
+    suggestedCraftTimeMinutes: 25,
+    description: 'Fusil de précision lourd capable de neutraliser une cible à travers les blindages lourds.',
     suggestedMaterials: [
       { name: 'Titanium Raffiné', quantity: 5, unit: 'SCU' },
-      { name: 'Copper (Cuivre Raffiné)', quantity: 3, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 15
+      { name: 'Tungsten Raffiné', quantity: 4, unit: 'SCU' },
+      { name: 'Diamond (Diamant Industriel)', quantity: 2, unit: 'SCU' }
+    ]
   },
   {
-    id: 'sc-fps-04',
-    name: 'Kastak Arms Karna Plasma Rifle',
+    id: 'sc-bp-f03',
+    name: 'Fusil d’Assaut Klaus & Werner Gallant Energy Rifle',
     category: 'Arme FPS',
-    manufacturer: 'Kastak Arms',
+    subCategory: 'Fusil d’Assaut Laser',
+    manufacturer: 'Klaus & Werner',
     defaultUnit: 'Unités',
     unitValueUEC: 32000,
+    suggestedCraftTimeMinutes: 18,
+    description: 'Fusil d’assaut laser à tir en rafale 3 coups avec accumulateur thermique.',
     suggestedMaterials: [
-      { name: 'Hephaestanite Raffinée', quantity: 5, unit: 'SCU' },
-      { name: 'Titanium Raffiné', quantity: 6, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 25
+      { name: 'Agricium Raffiné', quantity: 3, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 3, unit: 'SCU' },
+      { name: 'Copper (Cuivre Raffiné)', quantity: 2, unit: 'SCU' }
+    ]
   },
   {
-    id: 'sc-fps-05',
-    name: 'Kastak Arms Coda Heavy Pistol',
+    id: 'sc-bp-f04',
+    name: 'Mitrailleuse Légère Gemini F55 LMG',
     category: 'Arme FPS',
-    manufacturer: 'Kastak Arms',
-    defaultUnit: 'Unités',
-    unitValueUEC: 12000
-  },
-  {
-    id: 'sc-fps-06',
-    name: 'Klaus & Werner Gallant Energy Rifle',
-    category: 'Arme FPS',
-    manufacturer: 'Klaus & Werner',
-    defaultUnit: 'Unités',
-    unitValueUEC: 22000
-  },
-  {
-    id: 'sc-fps-07',
-    name: 'Klaus & Werner Demeco LMG',
-    category: 'Arme FPS',
-    manufacturer: 'Klaus & Werner',
-    defaultUnit: 'Unités',
-    unitValueUEC: 30000
-  },
-  {
-    id: 'sc-fps-08',
-    name: 'Gemini C54 SMG',
-    category: 'Arme FPS',
+    subCategory: 'Mitrailleuse Balistique',
     manufacturer: 'Gemini',
     defaultUnit: 'Unités',
-    unitValueUEC: 16000
+    unitValueUEC: 42000,
+    suggestedCraftTimeMinutes: 22,
+    description: 'Mitrailleuse lourde rotative à très haute cadence de tir.',
+    suggestedMaterials: [
+      { name: 'Tungsten Raffiné', quantity: 6, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 5, unit: 'SCU' },
+      { name: 'RMC (Recycled Material Composite)', quantity: 4, unit: 'SCU' }
+    ]
+  },
+  {
+    id: 'sc-bp-f05',
+    name: 'Mitraillette Gemini C54 SMG',
+    category: 'Arme FPS',
+    subCategory: 'SMG Balistique',
+    manufacturer: 'Gemini',
+    defaultUnit: 'Unités',
+    unitValueUEC: 22000,
+    suggestedCraftTimeMinutes: 12,
+    description: 'Arme compacte de combat rapproché à cadence ultrarapide.',
+    suggestedMaterials: [
+      { name: 'Titanium Raffiné', quantity: 2, unit: 'SCU' },
+      { name: 'Tungsten Raffiné', quantity: 2, unit: 'SCU' }
+    ]
+  },
+  {
+    id: 'sc-bp-f06',
+    name: 'Fusil à Pompe Kastak Arms Devastator',
+    category: 'Arme FPS',
+    subCategory: 'Fusil à Pompe Plasma',
+    manufacturer: 'Kastak Arms',
+    defaultUnit: 'Unités',
+    unitValueUEC: 36000,
+    suggestedCraftTimeMinutes: 15,
+    description: 'Fusil à pompe énergétique projetant des gerbes de plasma surchauffé.',
+    suggestedMaterials: [
+      { name: 'Hephaestanite Raffinée', quantity: 4, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 4, unit: 'SCU' }
+    ]
+  },
+  {
+    id: 'sc-bp-f07',
+    name: 'Lance-Roquettes Apocalypse Arms Animus',
+    category: 'Arme FPS',
+    subCategory: 'Lance-Missiles Lourd',
+    manufacturer: 'Apocalypse Arms',
+    defaultUnit: 'Unités',
+    unitValueUEC: 75000,
+    suggestedCraftTimeMinutes: 35,
+    description: 'Lanceur d’ogives guidées anti-véhicules et anti-vaisseaux.',
+    suggestedMaterials: [
+      { name: 'Hephaestanite Raffinée', quantity: 8, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 10, unit: 'SCU' },
+      { name: 'Tungsten Raffiné', quantity: 6, unit: 'SCU' }
+    ]
   },
 
-  // --- ARMURES FPS ---
+  // ==========================================
+  // --- ARMURES FPS (LÉGÈRES, MOYENNES, LOURDES) ---
+  // ==========================================
   {
-    id: 'sc-arm-01',
-    name: 'Armure Lourde Citadel Exec (Full Armor Set)',
+    id: 'sc-bp-a01',
+    name: 'Ensemble Armure Lourde ADP-mk4 (Plastron + Casque + Jambes)',
     category: 'Armure FPS',
+    subCategory: 'Armure Lourde Militaire',
+    manufacturer: 'Clark Defense Systems',
+    defaultUnit: 'Unités',
+    unitValueUEC: 65000,
+    suggestedCraftTimeMinutes: 30,
+    description: 'Armure de combat lourd avec blindage composite Titanium résistant aux impacts balistiques.',
+    suggestedMaterials: [
+      { name: 'Titanium Raffiné', quantity: 10, unit: 'SCU' },
+      { name: 'RMC (Recycled Material Composite)', quantity: 8, unit: 'SCU' },
+      { name: 'Tungsten Raffiné', quantity: 4, unit: 'SCU' }
+    ]
+  },
+  {
+    id: 'sc-bp-a02',
+    name: 'Ensemble Armure Lourde Morozov-SH (Spécial Environnement Extrême)',
+    category: 'Armure FPS',
+    subCategory: 'Armure Lourde Survie',
+    manufacturer: 'Roussimoff Technologies',
+    defaultUnit: 'Unités',
+    unitValueUEC: 72000,
+    suggestedCraftTimeMinutes: 35,
+    description: 'Blindage lourd avec régulation thermique pour Pyro et planètes gelées.',
+    suggestedMaterials: [
+      { name: 'Titanium Raffiné', quantity: 12, unit: 'SCU' },
+      { name: 'Beryl Raffiné', quantity: 6, unit: 'SCU' },
+      { name: 'RMC (Recycled Material Composite)', quantity: 8, unit: 'SCU' }
+    ]
+  },
+  {
+    id: 'sc-bp-a03',
+    name: 'Ensemble Armure Moyenne TrueDef-Pro',
+    category: 'Armure FPS',
+    subCategory: 'Armure Moyenne Polyvalente',
+    manufacturer: 'Clark Defense Systems',
     defaultUnit: 'Unités',
     unitValueUEC: 45000,
+    suggestedCraftTimeMinutes: 20,
+    description: 'Compromis parfait entre protection balistique et mobilité tactique.',
     suggestedMaterials: [
-      { name: 'RMC (Recycled Material Composite)', quantity: 12, unit: 'SCU' },
-      { name: 'Titanium Raffiné', quantity: 18, unit: 'SCU' },
-      { name: 'Copper (Cuivre Raffiné)', quantity: 8, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 30,
-    description: 'Armure lourde de combat urbain offrant la plus haute protection balistique.'
+      { name: 'Titanium Raffiné', quantity: 6, unit: 'SCU' },
+      { name: 'RMC (Recycled Material Composite)', quantity: 5, unit: 'SCU' }
+    ]
   },
   {
-    id: 'sc-arm-02',
-    name: 'Armure Lourde Morozov-SH Thule Edition',
+    id: 'sc-bp-a04',
+    name: 'Ensemble Armure Légère Stoneskin',
     category: 'Armure FPS',
+    subCategory: 'Armure Légère Recon',
+    manufacturer: 'Kastak Arms',
     defaultUnit: 'Unités',
-    unitValueUEC: 48000,
+    unitValueUEC: 30000,
+    suggestedCraftTimeMinutes: 15,
+    description: 'Armure ultra-légère conçue pour les tireurs d’élite et pilotes.',
     suggestedMaterials: [
-      { name: 'RMC (Recycled Material Composite)', quantity: 15, unit: 'SCU' },
-      { name: 'Titanium Raffiné', quantity: 20, unit: 'SCU' },
-      { name: 'Beryl Raffiné', quantity: 6, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 35
-  },
-  {
-    id: 'sc-arm-03',
-    name: 'Armure Moyenne Orc-mkX Core Set',
-    category: 'Armure FPS',
-    defaultUnit: 'Unités',
-    unitValueUEC: 32000,
-    suggestedMaterials: [
-      { name: 'RMC (Recycled Material Composite)', quantity: 8, unit: 'SCU' },
-      { name: 'Titanium Raffiné', quantity: 10, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 20
-  },
-  {
-    id: 'sc-arm-04',
-    name: 'Armure Légère Inquisitor Stealth Edition',
-    category: 'Armure FPS',
-    defaultUnit: 'Unités',
-    unitValueUEC: 26000
-  },
-  {
-    id: 'sc-arm-05',
-    name: 'Armure Lourde Defiance Full Set (Pyro Outlaw)',
-    category: 'Armure FPS',
-    defaultUnit: 'Unités',
-    unitValueUEC: 42000
+      { name: 'Aluminum Raffiné', quantity: 4, unit: 'SCU' },
+      { name: 'RMC (Recycled Material Composite)', quantity: 3, unit: 'SCU' }
+    ]
   },
 
-  // --- UTILITAIRES & ÉQUIPEMENT ---
+  // ==========================================
+  // --- UTILITAIRES & ÉQUIPEMENTS ---
+  // ==========================================
   {
-    id: 'sc-ut-01',
-    name: 'Multi-Tool Pyro RRS + Attachement Salvage & Mining',
+    id: 'sc-bp-u01',
+    name: 'Multi-Tool Pyro RRS avec Rayon Tracteur & Tête de Minage Helix',
     category: 'Utilitaire & Équipement',
+    subCategory: 'Outil Polyvalent FPS',
+    manufacturer: 'Pyrotechnic Amalgamated',
     defaultUnit: 'Unités',
-    unitValueUEC: 15000,
-    suggestedMaterials: [
-      { name: 'RMC (Recycled Material Composite)', quantity: 5, unit: 'SCU' },
-      { name: 'Copper (Cuivre Raffiné)', quantity: 5, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 10,
-    description: 'Outil polyvalent multifonction avec rayon tracteur haute puissance.'
-  },
-  {
-    id: 'sc-ut-02',
-    name: 'Tigerclaw Cryptokey (Hacking Device)',
-    category: 'Utilitaire & Équipement',
-    defaultUnit: 'Unités',
-    unitValueUEC: 12500,
-    suggestedMaterials: [
-      { name: 'Gold (Or Raffiné)', quantity: 2, unit: 'SCU' },
-      { name: 'Copper (Cuivre Raffiné)', quantity: 3, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 10,
-    description: 'Carte de décryptage utilisée pour effacer le CrimeStat aux stations de sécurité.'
-  },
-  {
-    id: 'sc-ut-03',
-    name: 'MedGun CureLife Paramédical + Cartouches Remplies',
-    category: 'Utilitaire & Équipement',
-    defaultUnit: 'Unités',
-    unitValueUEC: 14000,
+    unitValueUEC: 25000,
+    suggestedCraftTimeMinutes: 12,
+    description: 'Outil de poche indispensable pour le minage de grottes, le déplacement de caisses SCU et la réparation.',
     suggestedMaterials: [
       { name: 'Agricium Raffiné', quantity: 2, unit: 'SCU' },
-      { name: 'RMC (Recycled Material Composite)', quantity: 3, unit: 'SCU' }
-    ],
-    suggestedCraftTimeMinutes: 10
+      { name: 'Copper (Cuivre Raffiné)', quantity: 3, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 2, unit: 'SCU' }
+    ]
   },
   {
-    id: 'sc-ut-04',
-    name: 'Pack 10x MedPen Hemozal & OxyPen',
+    id: 'sc-bp-u02',
+    name: 'Pistolet Médical CureLife ParaMed MedGun',
     category: 'Utilitaire & Équipement',
+    subCategory: 'Dispositif Médical',
+    manufacturer: 'CureLife',
     defaultUnit: 'Unités',
-    unitValueUEC: 5000
-  },
-  // --- VAISSEAUX & VÉHICULES ---
-  {
-    id: 'sc-ship-01',
-    name: 'MISC Prospector',
-    category: 'Vaisseau & Véhicule',
-    subCategory: 'Vaisseau de Minage Solo',
-    manufacturer: 'MISC',
-    defaultUnit: 'Unités',
-    unitValueUEC: 2061000,
-    scuCapacity: 32,
-    description: 'Le vaisseau de forage spatial de référence avec laser de minage et 32 SCU de nacelles amovibles.'
+    unitValueUEC: 22000,
+    suggestedCraftTimeMinutes: 10,
+    description: 'Pistolet d’injection médicale pour stabiliser les blessures et ranimer les alliés à terre.',
+    suggestedMaterials: [
+      { name: 'Copper (Cuivre Raffiné)', quantity: 2, unit: 'SCU' },
+      { name: 'Aluminum Raffiné', quantity: 3, unit: 'SCU' }
+    ]
   },
   {
-    id: 'sc-ship-02',
-    name: 'ARGO MOLE',
-    category: 'Vaisseau & Véhicule',
-    subCategory: 'Vaisseau de Minage Multi-Équipages',
-    manufacturer: 'ARGO Astronautics',
-    defaultUnit: 'Unités',
-    unitValueUEC: 5130000,
-    scuCapacity: 96,
-    description: 'Vaisseau industriel lourd doté de 3 cabines d’opérateur de minage indépendantes et 96 SCU de capacité.'
-  },
-  {
-    id: 'sc-ship-03',
-    name: 'Drake Vulture',
-    category: 'Vaisseau & Véhicule',
-    subCategory: 'Vaisseau de Salvage Solo',
-    manufacturer: 'Drake Interplanetary',
-    defaultUnit: 'Unités',
-    unitValueUEC: 2600000,
-    scuCapacity: 12,
-    description: 'Spécialiste du démantèlement et recyclage de coques (RMC) avec rayon grattoir et station de compactage.'
-  },
-  {
-    id: 'sc-ship-04',
-    name: 'Aegis Reclaimer',
-    category: 'Vaisseau & Véhicule',
-    subCategory: 'Vaisseau de Salvage Lourd',
-    manufacturer: 'Aegis Dynamics',
-    defaultUnit: 'Unités',
-    unitValueUEC: 15120000,
-    scuCapacity: 420,
-    description: 'Béhémoth industriel de recyclage doté d’un broyeur géant et d’une capacité massive de RMC/Construction Materials.'
-  },
-  {
-    id: 'sc-ship-05',
-    name: 'Drake Corsair',
-    category: 'Vaisseau & Véhicule',
-    subCategory: 'Gunship & Exploration Lourde',
-    manufacturer: 'Drake Interplanetary',
-    defaultUnit: 'Unités',
-    unitValueUEC: 6500000,
-    scuCapacity: 72,
-    description: 'Puissance de feu frontale destructrice (4x S5 + 2x S4) avec soute pour véhicule et quartiers d’équipage.'
-  },
-  {
-    id: 'sc-ship-06',
-    name: 'Drake Cutlass Black',
-    category: 'Vaisseau & Véhicule',
-    subCategory: 'Vaisseau Polyvalent / Cargo',
-    manufacturer: 'Drake Interplanetary',
-    defaultUnit: 'Unités',
-    unitValueUEC: 2100000,
-    scuCapacity: 46,
-    description: 'Le couteau suisse de Stanton : transport, combat rapproché, et rampe d’accès pour véhicules ROC/Mule.'
-  },
-  {
-    id: 'sc-ship-07',
-    name: 'Crusader C2 Hercules Starlifter',
-    category: 'Vaisseau & Véhicule',
-    subCategory: 'Transport Lourd / Fret Géant',
-    manufacturer: 'Crusader Industries',
-    defaultUnit: 'Unités',
-    unitValueUEC: 19850000,
-    scuCapacity: 696,
-    description: 'Monstre logistique de 696 SCU capable d’embarquer des chars Nova ou plusieurs dizaines de conteneurs 32 SCU.'
-  },
-  {
-    id: 'sc-ship-08',
-    name: 'Aegis Gladius',
-    category: 'Vaisseau & Véhicule',
-    subCategory: 'Chasseur Léger Militaire',
-    manufacturer: 'Aegis Dynamics',
-    defaultUnit: 'Unités',
-    unitValueUEC: 1169600,
-    scuCapacity: 0,
-    description: 'Chasseur de supériorité spatiale officiel de la Navy UEE, agile et redoutable en combat tournoyant.'
-  },
-  {
-    id: 'sc-ship-09',
-    name: 'Anvil Arrow',
-    category: 'Vaisseau & Véhicule',
-    subCategory: 'Intercepteur Léger',
-    manufacturer: 'Anvil Aerospace',
-    defaultUnit: 'Unités',
-    unitValueUEC: 975000,
-    scuCapacity: 0,
-    description: 'Vitesse et maniabilité extrêmes avec ailes repliables pour appontage sur porte-vaisseaux.'
-  },
-  {
-    id: 'sc-ship-10',
-    name: 'Anvil Carrack',
-    category: 'Vaisseau & Véhicule',
-    subCategory: 'Exploration d’Élite / Vaisseau Mère',
-    manufacturer: 'Anvil Aerospace',
-    defaultUnit: 'Unités',
-    unitValueUEC: 26650000,
-    scuCapacity: 456,
-    description: 'Navire amiral d’exploration avec medbay Tier 2, garage pour rover, hangar snub Pisces et baie de scan longue portée.'
-  },
-  {
-    id: 'sc-ship-11',
-    name: 'RSI Constellation Andromeda',
-    category: 'Vaisseau & Véhicule',
-    subCategory: 'Gunship Multi-Équipage',
-    manufacturer: 'Roberts Space Industries',
-    defaultUnit: 'Unités',
-    unitValueUEC: 8540000,
-    scuCapacity: 96,
-    description: 'Canonnière légendaire avec batterie de missiles géante, tourelles doubles et chasseur snub P-52 Merlin intégré.'
-  },
-  {
-    id: 'sc-ship-12',
-    name: 'Greycat ROC (Remote Ore Collector)',
-    category: 'Vaisseau & Véhicule',
-    subCategory: 'Véhicule Terrestre Minier',
+    id: 'sc-bp-u03',
+    name: 'Rayon Tracteur Lourd MaxLift (2H Tractor Beam)',
+    category: 'Utilitaire & Équipement',
+    subCategory: 'Outil Industriel Lourd',
     manufacturer: 'Greycat Industrial',
     defaultUnit: 'Unités',
-    unitValueUEC: 172000,
-    scuCapacity: 0.8,
-    description: 'Buggy de minage planétaire conçu pour extraire l’Hadanite, l’Aphorite et la Dolivine à même le sol.'
+    unitValueUEC: 38000,
+    suggestedCraftTimeMinutes: 15,
+    description: 'Manipulateur à deux mains capable de soulever des conteneurs de 32 SCU et véhicules légers.',
+    suggestedMaterials: [
+      { name: 'Agricium Raffiné', quantity: 4, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 5, unit: 'SCU' },
+      { name: 'Copper (Cuivre Raffiné)', quantity: 4, unit: 'SCU' }
+    ]
   },
   {
-    id: 'sc-ship-13',
-    name: 'Ursa Rover',
-    category: 'Vaisseau & Véhicule',
-    subCategory: 'Véhicule Terrestre Tout-Terrain',
-    manufacturer: 'Roberts Space Industries',
+    id: 'sc-bp-u04',
+    name: 'Tête de Minage Laser Helix Size 1 (Prospector)',
+    category: 'Utilitaire & Équipement',
+    subCategory: 'Tête de Minage Laser',
+    manufacturer: 'Shubin Interstellar',
     defaultUnit: 'Unités',
-    unitValueUEC: 235000,
-    scuCapacity: 4,
-    description: 'Véhicule 6 roues blindé tout-terrain avec tourelle de défense et espace pour 6 passagers.'
+    unitValueUEC: 68000,
+    suggestedCraftTimeMinutes: 25,
+    description: 'Tête de minage laser de référence pour briser les gisements denses de Quantainium.',
+    suggestedMaterials: [
+      { name: 'Quantainium Raffiné', quantity: 6, unit: 'SCU' },
+      { name: 'Diamond (Diamant Industriel)', quantity: 8, unit: 'SCU' },
+      { name: 'Titanium Raffiné', quantity: 12, unit: 'SCU' }
+    ]
+  },
+  {
+    id: 'sc-bp-u05',
+    name: 'Tête de Minage Laser Lancet Size 2 (ARGO MOLE)',
+    category: 'Utilitaire & Équipement',
+    subCategory: 'Tête de Minage Laser',
+    manufacturer: 'Shubin Interstellar',
+    defaultUnit: 'Unités',
+    unitValueUEC: 110000,
+    suggestedCraftTimeMinutes: 40,
+    description: 'Tête de minage taille 2 à réduction d’instabilité pour extraction en équipage.',
+    suggestedMaterials: [
+      { name: 'Quantainium Raffiné', quantity: 12, unit: 'SCU' },
+      { name: 'Diamond (Diamant Industriel)', quantity: 15, unit: 'SCU' },
+      { name: 'Bexalite Raffiné', quantity: 8, unit: 'SCU' }
+    ]
   }
 ];
 
-// Helper functions for autocomplete search
-export const searchStarCitizenItems = (
-  query: string, 
-  filterCategory?: string, 
-  limit: number = 10
-): SCItemDefinition[] => {
-  if (!query || query.trim().length < 1) return [];
+export function searchStarCitizenItems(query: string, categoryFilter?: string, maxResults = 12): SCItemDefinition[] {
+  if (!query || query.trim().length === 0) return [];
+  const cleanQ = query.toLowerCase().trim();
 
-  const clean = query.toLowerCase().trim();
   return STAR_CITIZEN_DATABASE.filter(item => {
-    const matchesName = item.name.toLowerCase().includes(clean);
-    const matchesDesc = item.description?.toLowerCase().includes(clean) || false;
-    const matchesCategory = !filterCategory || filterCategory === 'all' || item.category === filterCategory;
-    return (matchesName || matchesDesc) && matchesCategory;
-  }).slice(0, limit);
-};
+    if (categoryFilter && categoryFilter !== 'Tous' && item.category !== categoryFilter) {
+      return false;
+    }
+    return (
+      item.name.toLowerCase().includes(cleanQ) ||
+      (item.manufacturer && item.manufacturer.toLowerCase().includes(cleanQ)) ||
+      (item.subCategory && item.subCategory.toLowerCase().includes(cleanQ)) ||
+      (item.description && item.description.toLowerCase().includes(cleanQ))
+    );
+  }).slice(0, maxResults);
+}
+
