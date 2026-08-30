@@ -1,0 +1,13 @@
+{
+  "sc_install_path": "D:\\SC\\StarCitizen\\LIVE",
+  "log_file_path": "D:\\SC\\StarCitizen\\LIVE\\Game.log",
+  "server_host": "127.0.0.1",
+  "server_port": 5500,
+  "poll_interval_seconds": 1.5,
+  "auto_sync_cloud": true,
+  "crafter_profile": {
+    "callsign": "Host-MasterCrafter",
+    "org": "Aegis Syndicate",
+    "primary_hangar": "Lorville / HUR-L1"
+  }
+}

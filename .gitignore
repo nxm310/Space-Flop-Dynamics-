@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+webapp/node_modules/
+
+# Production build outputs
+dist/
+webapp/dist/
+
+# Python cache & local agent logs
+__pycache__/
+local_agent/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.log
+
+# Environment & local settings
+.env
+.env.local
+*.local
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
