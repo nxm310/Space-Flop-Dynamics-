@@ -11,7 +11,9 @@ import {
   RotateCcw,
   CheckCircle2,
   AlertTriangle,
-  FileText
+  FileText,
+  Sparkles,
+  RefreshCw
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -158,30 +160,68 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
             </p>
           </div>
 
-          {/* Download Templates Bar */}
-          <div className="flex items-center justify-between p-3 rounded-lg bg-sc-panel/80 border border-slate-800 text-xs font-mono">
-            <span className="text-slate-400">Modèles vierges à remplir :</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  audio.playClick();
-                  ImportExportService.downloadMineralsTemplateExcel();
-                }}
-                className="px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 flex items-center gap-1 transition-colors"
-              >
-                <Download className="w-3 h-3" />
-                Modèle Excel (.xlsx)
-              </button>
-              <button
-                onClick={() => {
-                  audio.playClick();
-                  ImportExportService.downloadMineralsTemplateCSV();
-                }}
-                className="px-2.5 py-1 rounded bg-sc-cyan/15 hover:bg-sc-cyan/25 border border-sc-cyan/30 text-sc-cyan flex items-center gap-1 transition-colors"
-              >
-                <Download className="w-3 h-3" />
-                Modèle CSV
-              </button>
+          {/* Download Templates Bar & User CSV Quick Load */}
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-sc-panel/80 border border-slate-800 text-xs font-mono">
+              <span className="text-slate-400">Modèles vierges à télécharger :</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    audio.playClick();
+                    ImportExportService.downloadMineralsTemplateExcel();
+                  }}
+                  className="px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 flex items-center gap-1 transition-colors"
+                >
+                  <Download className="w-3 h-3" />
+                  Modèle Excel (.xlsx)
+                </button>
+                <button
+                  onClick={() => {
+                    audio.playClick();
+                    ImportExportService.downloadMineralsTemplateCSV();
+                  }}
+                  className="px-2.5 py-1 rounded bg-sc-cyan/15 hover:bg-sc-cyan/25 border border-sc-cyan/30 text-sc-cyan flex items-center gap-1 transition-colors"
+                >
+                  <Download className="w-3 h-3" />
+                  Modèle CSV
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Load User Mineral File (257 entries) */}
+            <div className="p-3.5 rounded-xl bg-gradient-to-r from-sc-cyan/10 via-sc-card to-cyan-950/20 border border-sc-cyan/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-mono">
+              <div>
+                <div className="flex items-center gap-2 text-slate-200 font-bold">
+                  <Sparkles className="w-4 h-4 text-sc-cyan" />
+                  <span>Mon Fichier de Minerais Enregistré (257 lots)</span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Quantainium, Janalite, Feynmaline, Dolivine, Hadanite, Beryl, Savrilium, Aslarite, etc.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href="./mes_minerais.csv"
+                  download="mes_minerais.csv"
+                  onClick={() => audio.playClick()}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 flex items-center gap-1.5 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5 text-sc-cyan" />
+                  <span>Télécharger CSV</span>
+                </a>
+                <button
+                  onClick={() => {
+                    audio.playSuccess();
+                    const userStock = StorageService.getUserPreloadedStock();
+                    onImportStock(userStock, 'replace');
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold border border-sc-cyan shadow-neon-cyan flex items-center gap-1.5 transition-all"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Charger dans mon stock</span>
+                </button>
+              </div>
             </div>
           </div>
 

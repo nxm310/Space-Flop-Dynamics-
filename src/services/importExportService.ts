@@ -140,13 +140,30 @@ export class ImportExportService {
 
     rows.forEach((row, idx) => {
       // Find mineral name column with flexible headers
-      const rawName = (row['Minerai'] || row['minerai'] || row['Mineral'] || row['mineral'] || row['Nom'] || row['nom'] || '') as string;
+      const rawName = (
+        row['Matériaux'] ||
+        row['Materiaux'] ||
+        row['Matériau'] ||
+        row['Materiau'] ||
+        row['Minerai'] ||
+        row['minerai'] ||
+        row['Mineral'] ||
+        row['mineral'] ||
+        row['Nom'] ||
+        row['nom'] ||
+        ''
+      ) as string;
+
       if (!rawName || typeof rawName !== 'string' || !rawName.trim()) {
         errors.push(`Ligne ${idx + 2} : Nom du minerai manquant.`);
         return;
       }
 
-      const cleanName = rawName.trim();
+      let cleanName = rawName.trim();
+      if (cleanName.toLowerCase() === 'quantanium') {
+        cleanName = 'Quantainium';
+      }
+
       const matchedMineral = STAR_CITIZEN_MINERALS.find(m =>
         m.name.toLowerCase() === cleanName.toLowerCase() ||
         m.displayName.toLowerCase().includes(cleanName.toLowerCase()) ||
@@ -156,9 +173,9 @@ export class ImportExportService {
       const mineralId = matchedMineral ? matchedMineral.id : cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_');
       const mineralName = matchedMineral ? matchedMineral.name : cleanName;
 
-      // Quantity parsing
+      // Quantity parsing (supports French comma format e.g. "0,809")
       let qty = 0;
-      const rawQty = row['Quantite_SCU'] || row['Quantité (SCU)'] || row['Quantite'] || row['Quantité'] || row['SCU'] || row['scu'] || row['quantity'];
+      const rawQty = row['Quantité'] || row['Quantite'] || row['Quantite_SCU'] || row['Quantité (SCU)'] || row['SCU'] || row['scu'] || row['quantity'] || row['Quantity'];
       if (rawQty !== undefined && rawQty !== null) {
         qty = parseFloat(String(rawQty).replace(',', '.'));
       } else {
@@ -173,12 +190,22 @@ export class ImportExportService {
         return;
       }
 
+      // Quality & Type parsing
+      const rawType = (row['Type'] || row['type'] || '') as string;
+      const rawQuality = (row['Qualité'] || row['Qualite'] || row['Quality'] || row['quality'] || '') as string;
+
       // Owner Type & Client Name
       const rawOwner = String(row['Type_Proprietaire'] || row['Propriétaire'] || row['Owner'] || row['owner'] || 'Personnel').toLowerCase();
       const isClient = rawOwner.includes('client') || rawOwner.includes('depot') || rawOwner.includes('dépôt');
       const clientName = (row['Nom_Client'] || row['Nom Client'] || row['Client'] || row['client'] || '') as string;
 
-      const notes = (row['Notes'] || row['notes'] || row['Commentaire'] || '') as string;
+      const rawNotes = (row['Notes'] || row['notes'] || row['Commentaire'] || Object.values(row)[4] || '') as string;
+      const notesParts = [
+        rawNotes && typeof rawNotes === 'string' ? rawNotes.trim() : '',
+        rawQuality ? `Qualité: ${rawQuality}` : '',
+        rawType ? rawType.trim() : ''
+      ].filter(Boolean);
+
       const id = (row['ID'] || row['id'] || `stock-imp-${Date.now()}-${idx}`) as string;
 
       items.push({
@@ -189,7 +216,7 @@ export class ImportExportService {
         ownerType: isClient ? 'client' : 'personal',
         clientName: isClient ? clientName.trim() || 'Client Inconnu' : undefined,
         lastUpdated: new Date().toISOString(),
-        notes: notes ? notes.trim() : undefined
+        notes: notesParts.length > 0 ? notesParts.join(' • ') : undefined
       });
     });
 

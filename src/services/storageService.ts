@@ -8,6 +8,7 @@ import {
   AppDataBackup
 } from '../types';
 import { STAR_CITIZEN_BLUEPRINTS } from '../data/blueprintsData';
+import { USER_PRELOADED_STOCK } from '../data/userPreloadedStock';
 
 const STORAGE_KEYS = {
   RAW_CARGO: 'sc_raw_cargo_v1',
@@ -16,7 +17,7 @@ const STORAGE_KEYS = {
   CUSTOM_BLUEPRINTS: 'sc_custom_blueprints_v1',
   ORDERS: 'sc_orders_v1',
   SETTINGS: 'sc_settings_v1',
-  INITIALIZED: 'sc_initialized_v1'
+  INITIALIZED: 'sc_initialized_v2'
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -54,66 +55,8 @@ const SEED_RAW_CARGO: RawCargoItem[] = [
 ];
 
 const SEED_REFINED_STOCK: RefinedStockItem[] = [
-  {
-    id: 'stock-perso-1',
-    mineralId: 'quantainium',
-    mineralName: 'Quantainium',
-    quantitySCU: 18.5,
-    ownerType: 'personal',
-    lastUpdated: new Date().toISOString(),
-    notes: 'Stock de réserve pour fabrications de moteurs quantiques'
-  },
-  {
-    id: 'stock-perso-2',
-    mineralId: 'laranite',
-    mineralName: 'Laranite',
-    quantitySCU: 35.0,
-    ownerType: 'personal',
-    lastUpdated: new Date().toISOString(),
-    notes: 'Réservé pour canons laser'
-  },
-  {
-    id: 'stock-perso-3',
-    mineralId: 'agricium',
-    mineralName: 'Agricium',
-    quantitySCU: 28.0,
-    ownerType: 'personal',
-    lastUpdated: new Date().toISOString()
-  },
-  {
-    id: 'stock-perso-4',
-    mineralId: 'taranite',
-    mineralName: 'Taranite',
-    quantitySCU: 12.0,
-    ownerType: 'personal',
-    lastUpdated: new Date().toISOString()
-  },
-  {
-    id: 'stock-perso-5',
-    mineralId: 'tungsten',
-    mineralName: 'Tungsten',
-    quantitySCU: 50.0,
-    ownerType: 'personal',
-    lastUpdated: new Date().toISOString()
-  },
-  {
-    id: 'stock-perso-6',
-    mineralId: 'titanium',
-    mineralName: 'Titanium',
-    quantitySCU: 65.0,
-    ownerType: 'personal',
-    lastUpdated: new Date().toISOString()
-  },
-  {
-    id: 'stock-perso-7',
-    mineralId: 'hadanite',
-    mineralName: 'Hadanite',
-    quantitySCU: 1.5, // 150 gems
-    ownerType: 'personal',
-    lastUpdated: new Date().toISOString(),
-    notes: '150 gemmes FPS minées au ROC'
-  },
-  // Client Deposits
+  ...USER_PRELOADED_STOCK,
+  // Client Deposits demo
   {
     id: 'stock-client-1',
     mineralId: 'agricium',
@@ -408,6 +351,11 @@ export class StorageService {
     this.saveCustomBlueprints([]);
     this.saveOrders(SEED_ORDERS);
     this.saveSettings(DEFAULT_SETTINGS);
+  }
+
+  // Get User Preloaded Stock
+  static getUserPreloadedStock(): RefinedStockItem[] {
+    return [...USER_PRELOADED_STOCK];
   }
 
   // Clear Everything
