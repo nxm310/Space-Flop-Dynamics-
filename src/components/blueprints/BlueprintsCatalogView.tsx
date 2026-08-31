@@ -3,6 +3,7 @@ import { Blueprint, BlueprintCategory, RefinedStockItem } from '../../types';
 import { BLUEPRINT_CATEGORIES } from '../../data/blueprintsData';
 import { BlueprintDetailsModal } from './BlueprintDetailsModal';
 import { CustomBlueprintModal } from './CustomBlueprintModal';
+import { BlueprintsSourcesModal } from './BlueprintsSourcesModal';
 import { StarCitizenApiService } from '../../services/starCitizenApi';
 import {
   Scroll,
@@ -19,7 +20,8 @@ import {
   Sword,
   Shield,
   Wrench,
-  Box
+  Box,
+  BookOpen
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -45,7 +47,12 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
   const [feasibilityFilter, setFeasibilityFilter] = useState<'all' | 'craftable' | 'missing'>('all');
   const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint | null>(null);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [isSourcesModalOpen, setIsSourcesModalOpen] = useState(false);
   const [isSyncingApi, setIsSyncingApi] = useState(false);
+
+  const handleBatchImport = (importedList: Blueprint[]) => {
+    importedList.forEach(bp => onAddCustomBlueprint(bp));
+  };
 
   // Helper to check feasibility of a blueprint
   const checkFeasibility = (bp: Blueprint) => {
@@ -130,7 +137,19 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => {
+              audio.playClick();
+              setIsSourcesModalOpen(true);
+            }}
+            className="px-3 py-2 rounded-lg border border-purple-500/40 bg-purple-950/20 hover:bg-purple-950/40 text-purple-300 text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-colors"
+            title="Consulter les sites communautaires et importer des JSON de blueprints"
+          >
+            <BookOpen className="w-4 h-4 text-purple-400" />
+            <span className="hidden sm:inline">Sources & Datamining</span>
+          </button>
+
           <button
             onClick={handleSyncApi}
             disabled={isSyncingApi}
@@ -395,6 +414,13 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
         isOpen={isCustomModalOpen}
         onClose={() => setIsCustomModalOpen(false)}
         onAddBlueprint={onAddCustomBlueprint}
+      />
+
+      {/* Sources & Datamining Guide Modal */}
+      <BlueprintsSourcesModal
+        isOpen={isSourcesModalOpen}
+        onClose={() => setIsSourcesModalOpen(false)}
+        onImportBlueprints={handleBatchImport}
       />
     </div>
   );
