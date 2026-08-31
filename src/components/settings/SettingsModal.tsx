@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Modal } from '../common/Modal';
 import { AppSettings } from '../../types';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { Settings, Volume2, VolumeX, Palette, Globe, RotateCcw, Trash2, Sparkles } from 'lucide-react';
+import { Settings, Volume2, VolumeX, Palette, Globe, RotateCcw, Trash2 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
 interface SettingsModalProps {
@@ -10,9 +10,7 @@ interface SettingsModalProps {
   onClose: () => void;
   settings: AppSettings;
   onUpdateSettings: (newSettings: AppSettings) => void;
-  onResetDemoData: () => void;
   onClearAllData: () => void;
-  onLoadUserStock: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -20,9 +18,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   settings,
   onUpdateSettings,
-  onResetDemoData,
-  onClearAllData,
-  onLoadUserStock
+  onClearAllData
 }) => {
   const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
 
@@ -136,27 +132,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <h4 className="text-sm font-bold text-slate-100 font-sans">Gestion & Réinitialisation des Données</h4>
             </div>
             <p className="text-xs font-mono text-slate-400">
-              Actions globales sur vos minerais, commandes, raffinages et cargaisons.
+              Effacer et réinitialiser toutes les données de l'application (minerais, commandes, raffinage, cargaisons).
             </p>
 
-            <div className="space-y-2 pt-1">
-              {/* Reload 257 User Minerals */}
-              <button
-                type="button"
-                onClick={() => {
-                  audio.playSuccess();
-                  onLoadUserStock();
-                  onClose();
-                }}
-                className="w-full py-2 px-3 rounded-lg bg-sc-cyan/15 hover:bg-sc-cyan/25 border border-sc-cyan/40 text-sc-cyan font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-between transition-colors"
-              >
-                <span className="flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Recharger mes 257 minerais (CSV)</span>
-                </span>
-                <span className="text-[10px] text-slate-400">257 lots</span>
-              </button>
-
+            <div className="pt-1">
               {/* Reset All Data (Clear Everything) */}
               <button
                 type="button"
@@ -164,29 +143,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   audio.playAlert();
                   setIsConfirmClearOpen(true);
                 }}
-                className="w-full py-2 px-3 rounded-lg bg-rose-950/30 hover:bg-rose-950/60 border border-rose-800/60 text-rose-300 font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-between transition-colors"
+                className="w-full py-2.5 px-3.5 rounded-lg bg-rose-950/30 hover:bg-rose-950/60 border border-rose-800/60 text-rose-300 font-mono text-xs font-bold uppercase tracking-wider flex items-center justify-between transition-colors shadow-sm"
               >
-                <span className="flex items-center gap-1.5">
-                  <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                <span className="flex items-center gap-2">
+                  <Trash2 className="w-4 h-4 text-rose-400" />
                   <span>Réinitialiser & Vider Toutes les Données</span>
                 </span>
-                <span className="text-[10px] text-rose-400">Remise à zéro</span>
-              </button>
-
-              {/* Demo Data Reset */}
-              <button
-                type="button"
-                onClick={() => {
-                  audio.playSuccess();
-                  onResetDemoData();
-                  onClose();
-                }}
-                className="w-full py-1.5 px-3 rounded-lg bg-slate-900/60 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 font-mono text-[11px] uppercase tracking-wider flex items-center justify-between transition-colors"
-              >
-                <span className="flex items-center gap-1.5">
-                  <RotateCcw className="w-3 h-3 text-slate-400" />
-                  <span>Charger le jeu de démo complet</span>
-                </span>
+                <span className="text-[10px] text-rose-400 uppercase">Remise à zéro</span>
               </button>
             </div>
           </div>

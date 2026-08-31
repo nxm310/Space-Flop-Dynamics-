@@ -1,7 +1,8 @@
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import { RefinedStockItem, CustomerOrder, RawCargoItem } from '../types';
+import { RefinedStockItem, CustomerOrder, RawCargoItem, AppDataBackup } from '../types';
 import { STAR_CITIZEN_MINERALS } from '../data/mineralsData';
+import { StorageService } from './storageService';
 
 export interface ImportResult<T> {
   success: boolean;
@@ -399,6 +400,40 @@ export class ImportExportService {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Modèle Minerais');
     worksheet['!cols'] = [{ wch: 18 }, { wch: 16 }, { wch: 22 }, { wch: 16 }, { wch: 30 }];
     XLSX.writeFile(workbook, 'modele_import_minerais_star_citizen.xlsx');
+  }
+
+  // =========================================================================
+  // FULL JSON BACKUP & RESTORE
+  // =========================================================================
+
+  static exportFullBackupJSON() {
+    const backup = {
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      rawCargo: StorageService.getRawCargo(),
+      refinedStock: StorageService.getRefinedStock(),
+      refineryJobs: StorageService.getRefineryJobs(),
+      customBlueprints: StorageService.getCustomBlueprints(),
+      orders: StorageService.getOrders(),
+      settings: StorageService.getSettings()
+    };
+    const jsonStr = JSON.stringify(backup, null, 2);
+    const dateStr = new Date().toISOString().split('T')[0];
+    this.downloadFile(jsonStr, `star_citizen_backup_${dateStr}.json`, 'application/json;charset=utf-8;');
+  }
+
+  static async importFullBackupJSON(file: File): Promise<AppDataBackup | null> {
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text) as AppDataBackup;
+      if (backup && (backup.refinedStock || backup.rawCargo || backup.orders || backup.refineryJobs)) {
+        StorageService.importFullBackup(backup);
+        return backup;
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   private static downloadFile(content: string, filename: string, mimeType: string) {
