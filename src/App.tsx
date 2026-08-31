@@ -499,7 +499,24 @@ export function App() {
     setCustomBlueprints(StorageService.getCustomBlueprints());
     setOrders(StorageService.getOrders());
     setSettings(StorageService.getSettings());
-    addToast('info', 'Données Réinitialisées', 'Données de démonstration Star Citizen chargées.');
+    addToast('info', 'Données Réinitialisées', 'Données Star Citizen réinitialisées.');
+  };
+
+  const handleClearAllData = () => {
+    StorageService.clearAllData();
+    setRawCargo([]);
+    setRefinedStock([]);
+    setRefineryJobs([]);
+    setCustomBlueprints([]);
+    setOrders([]);
+    addToast('info', 'Remise à Zéro Complète', 'Tous les minerais, commandes, raffinages et cargaisons ont été effacés.');
+  };
+
+  const handleLoadUserCsvStock = () => {
+    const userStock = StorageService.getUserPreloadedStock();
+    StorageService.saveRefinedStock(userStock);
+    setRefinedStock(userStock);
+    addToast('success', 'Fichier Minerais Chargé', `${userStock.length} lots de minerais ont été chargés dans votre inventaire.`);
   };
 
   // Mobile navigation state
@@ -860,6 +877,8 @@ export function App() {
         settings={settings}
         onUpdateSettings={(newSt) => setSettings(newSt)}
         onResetDemoData={handleResetDemoData}
+        onClearAllData={handleClearAllData}
+        onLoadUserStock={handleLoadUserCsvStock}
       />
 
       {/* Toast Notification Container */}
