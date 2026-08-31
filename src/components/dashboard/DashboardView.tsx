@@ -60,12 +60,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
   const readyOrders = orders.filter(o => o.status === 'ready');
 
-  // Top 5 refined minerals by quantity
-  const sortedStock = [...refinedStock]
-    .sort((a, b) => b.quantitySCU - a.quantitySCU)
-    .slice(0, 5);
+  // Consolidated top minerals
+  const topConsolidatedMinerals = React.useMemo(() => {
+    const map = new Map<string, { mineralName: string; totalQty: number; lotCount: number }>();
+    refinedStock.forEach(item => {
+      if (!map.has(item.mineralName)) {
+        map.set(item.mineralName, { mineralName: item.mineralName, totalQty: 0, lotCount: 0 });
+      }
+      const e = map.get(item.mineralName)!;
+      e.totalQty += item.quantitySCU;
+      e.lotCount += 1;
+    });
+    return Array.from(map.values()).sort((a, b) => b.totalQty - a.totalQty).slice(0, 6);
+  }, [refinedStock]);
 
-  const maxStockQuantity = sortedStock.length > 0 ? sortedStock[0].quantitySCU : 1;
+  const maxStockQuantity = topConsolidatedMinerals.length > 0 ? topConsolidatedMinerals[0].totalQty : 1;
 
   return (
     <div className="space-y-6">
@@ -305,16 +314,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </button>
             </div>
 
-            {sortedStock.length > 0 ? (
+            {topConsolidatedMinerals.length > 0 ? (
               <div className="space-y-3 font-mono">
-                {sortedStock.map(item => {
-                  const pct = Math.min(100, Math.max(8, (item.quantitySCU / maxStockQuantity) * 100));
+                {topConsolidatedMinerals.map(item => {
+                  const pct = Math.min(100, Math.max(8, (item.totalQty / maxStockQuantity) * 100));
 
                   return (
-                    <div key={item.id} className="space-y-1">
+                    <div key={item.mineralName} className="space-y-1">
                       <div className="flex justify-between text-xs">
-                        <span className="text-slate-200 font-semibold">{item.mineralName}</span>
-                        <span className="text-sc-cyan font-bold">{item.quantitySCU.toFixed(2)} SCU</span>
+                        <span className="text-slate-200 font-semibold flex items-center gap-1.5">
+                          <span>{item.mineralName}</span>
+                          <span className="text-[10px] text-slate-500 font-normal">({item.lotCount} lots)</span>
+                        </span>
+                        <span className="text-sc-cyan font-bold">{item.totalQty.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} SCU</span>
                       </div>
                       <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
                         <div
