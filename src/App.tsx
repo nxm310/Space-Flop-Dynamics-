@@ -264,6 +264,14 @@ export function App() {
     addToast('success', 'Stock Mis à Jour', `Quantité de ${item.mineralName} modifiée.`);
   };
 
+  const handleUpdateStockItem = (updatedItem: RefinedStockItem) => {
+    setRefinedStock(prev => prev.map(s => s.id === updatedItem.id ? {
+      ...updatedItem,
+      lastUpdated: new Date().toISOString()
+    } : s));
+    addToast('success', 'Minerai Modifié', `Le lot de ${updatedItem.mineralName} a été mis à jour.`);
+  };
+
   const handleDeleteStockItem = (id: string) => {
     setRefinedStock(prev => prev.filter(s => s.id !== id));
     addToast('info', 'Ligne de stock supprimée');
@@ -807,6 +815,7 @@ export function App() {
           <RefinedInventoryView
             stock={refinedStock}
             onAdjustStock={handleAdjustStock}
+            onUpdateStockItem={handleUpdateStockItem}
             onDeleteStockItem={handleDeleteStockItem}
             onNavigateToTab={(tab) => {
               audio.playClick();

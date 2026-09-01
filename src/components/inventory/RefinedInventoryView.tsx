@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { RefinedStockItem } from '../../types';
 import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
 import { AdjustStockModal } from './AdjustStockModal';
+import { EditStockModal } from './EditStockModal';
 import { StatCard } from '../common/StatCard';
 import { Badge } from '../common/Badge';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -13,6 +14,7 @@ import {
   Filter,
   FileSpreadsheet,
   Trash2,
+  Pencil,
   Coins,
   User,
   ShieldCheck,
@@ -30,6 +32,7 @@ import { audio } from '../../services/audioService';
 interface RefinedInventoryViewProps {
   stock: RefinedStockItem[];
   onAdjustStock: (item: Omit<RefinedStockItem, 'id' | 'lastUpdated'>, mode: 'add' | 'set' | 'deduct') => void;
+  onUpdateStockItem?: (item: RefinedStockItem) => void;
   onDeleteStockItem: (id: string) => void;
   onNavigateToTab?: (tab: string) => void;
 }
@@ -37,6 +40,7 @@ interface RefinedInventoryViewProps {
 export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
   stock,
   onAdjustStock,
+  onUpdateStockItem,
   onDeleteStockItem,
   onNavigateToTab
 }) => {
@@ -63,6 +67,7 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
   const [pageSize, setPageSize] = useState<number>(50);
 
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [editingStockItem, setEditingStockItem] = useState<RefinedStockItem | null>(null);
   const [selectedMineralForModal, setSelectedMineralForModal] = useState('quantainium');
   const [stockToDelete, setStockToDelete] = useState<string | null>(null);
 
@@ -727,6 +732,16 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
                         <td className="py-3 px-4 text-center">
                           <div className="flex items-center justify-center gap-1">
                             <button
+                              onClick={() => {
+                                audio.playClick();
+                                setEditingStockItem(item);
+                              }}
+                              className="p-1 rounded bg-slate-800 hover:bg-sc-cyan/20 border border-slate-700 hover:border-sc-cyan/50 text-slate-300 hover:text-sc-cyan transition-colors"
+                              title="Modifier ce lot de minerai (quantité, qualité, nom, propriétaire, notes)"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
                               onClick={() => handleQuickAdjust(item, 1)}
                               className="px-1.5 py-0.5 rounded bg-emerald-950/50 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-[10px] font-bold"
                               title="Ajouter 1"
@@ -970,7 +985,18 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-800">
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => {
+                        audio.playClick();
+                        setEditingStockItem(item);
+                      }}
+                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-sc-cyan/20 border border-slate-700 hover:border-sc-cyan/50 text-slate-300 hover:text-sc-cyan text-xs font-mono flex items-center gap-1 transition-all"
+                      title="Modifier ce lot de minerai"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Modifier</span>
+                    </button>
                     <button
                       onClick={() => handleQuickAdjust(item, 1)}
                       className="px-2 py-0.5 rounded bg-emerald-950/50 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-xs font-bold"
@@ -1006,6 +1032,18 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
         onAdjustStock={onAdjustStock}
         defaultMineralId={selectedMineralForModal}
         defaultOwnerType={activeTab === 'client' ? 'client' : 'personal'}
+      />
+
+      {/* Edit Mineral Stock Modal */}
+      <EditStockModal
+        isOpen={editingStockItem !== null}
+        onClose={() => setEditingStockItem(null)}
+        item={editingStockItem}
+        onSave={(updatedItem) => {
+          if (onUpdateStockItem) {
+            onUpdateStockItem(updatedItem);
+          }
+        }}
       />
 
       {/* Delete Confirmation */}
