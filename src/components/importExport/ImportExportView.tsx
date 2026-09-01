@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { RefinedStockItem, AppDataBackup } from '../../types';
-import { ImportExportService, ImportResult } from '../../services/importExportService';
+import { ImportExportService, ImportResult, QuantityImportUnit } from '../../services/importExportService';
 import {
   FileSpreadsheet,
   Upload,
@@ -8,7 +8,8 @@ import {
   FileCode,
   CheckCircle2,
   AlertTriangle,
-  FileText
+  FileText,
+  Sparkles
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -23,6 +24,8 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
   onImportStock,
   onRestoreBackup
 }) => {
+  const [currentFile, setCurrentFile] = useState<File | null>(null);
+  const [quantityUnit, setQuantityUnit] = useState<QuantityImportUnit>('auto');
   const [importResult, setImportResult] = useState<ImportResult<RefinedStockItem> | null>(null);
   const [importMode, setImportMode] = useState<'replace' | 'merge'>('merge');
   const [backupSuccessMessage, setBackupSuccessMessage] = useState('');
@@ -36,8 +39,9 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
     if (!file) return;
 
     audio.playClick();
+    setCurrentFile(file);
     try {
-      const result = await ImportExportService.importMineralsFromFile(file);
+      const result = await ImportExportService.importMineralsFromFile(file, quantityUnit);
       setImportResult(result);
       if (result.success) {
         audio.playSuccess();
@@ -49,11 +53,21 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
     }
   };
 
+  const handleUnitChange = async (newUnit: QuantityImportUnit) => {
+    audio.playClick();
+    setQuantityUnit(newUnit);
+    if (currentFile) {
+      const result = await ImportExportService.importMineralsFromFile(currentFile, newUnit);
+      setImportResult(result);
+    }
+  };
+
   const handleApplyImport = () => {
     if (!importResult || !importResult.success || importResult.data.length === 0) return;
     audio.playSuccess();
     onImportStock(importResult.data, importMode);
     setImportResult(null);
+    setCurrentFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -97,7 +111,7 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
           Centre d'Import & Export de Données
         </h2>
         <p className="text-xs font-mono text-slate-400 mt-1">
-          Importez vos tableaux Excel / CSV ou sauvegardez l'intégralité de votre système
+          Importez vos tableaux Excel / CSV (support natif du micro-SCU µSCU et SCU) ou sauvegardez votre système
         </p>
       </div>
 
@@ -120,8 +134,46 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
                 Importer un Tableau de Minerais (Excel / CSV)
               </h3>
               <p className="text-xs font-mono text-slate-400">
-                Glissez-déposez ou sélectionnez un fichier .xlsx ou .csv
+                Glissez-déposez un tableau avec quantités en micro-SCU (µSCU) ou SCU
               </p>
+            </div>
+          </div>
+
+          {/* Micro-SCU conversion info box */}
+          <div className="p-3 rounded-xl bg-sc-cyan/10 border border-sc-cyan/30 text-xs font-mono text-slate-300 flex items-start gap-2.5">
+            <Sparkles className="w-4 h-4 text-sc-cyan shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <span className="font-bold text-sc-cyan">Conversion micro-SCU (µSCU) activée :</span>
+              <p className="text-[11px] text-slate-300">
+                Les valeurs en micro-SCU sont automatiquement converties en SCU (<code className="text-sc-cyan">1 SCU = 1 000 000 µSCU</code>, ex: 809 000 µSCU ➔ 0.809 SCU).
+              </p>
+            </div>
+          </div>
+
+          {/* Unit Selector Toggle */}
+          <div className="space-y-1.5 font-mono text-xs">
+            <span className="text-slate-400 block text-[11px]">Unité des valeurs dans votre fichier :</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              {[
+                { id: 'auto', label: 'Auto Détection', hint: 'Auto' },
+                { id: 'micro_scu', label: 'micro-SCU (µSCU)', hint: '÷ 1 000 000' },
+                { id: 'scu', label: 'SCU Direct', hint: '1 SCU' },
+                { id: 'cscu', label: 'centi-SCU (cSCU)', hint: '÷ 100' }
+              ].map(u => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => handleUnitChange(u.id as QuantityImportUnit)}
+                  className={`p-2 rounded-lg border text-center transition-all flex flex-col items-center justify-center ${
+                    quantityUnit === u.id
+                      ? 'bg-sc-cyan/20 border-sc-cyan text-sc-cyan font-bold shadow-neon-cyan'
+                      : 'bg-sc-panel border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                  }`}
+                >
+                  <span className="text-[11px]">{u.label}</span>
+                  <span className="text-[9px] text-slate-500">{u.hint}</span>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -139,16 +191,16 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
             />
             <FileSpreadsheet className="w-10 h-10 text-slate-500 group-hover:text-sc-cyan mx-auto mb-2 transition-colors" />
             <p className="text-sm font-semibold text-slate-200 font-sans">
-              Cliquez pour sélectionner un fichier Excel (.xlsx) ou CSV
+              {currentFile ? currentFile.name : 'Cliquez pour sélectionner un fichier Excel (.xlsx) ou CSV'}
             </p>
             <p className="text-xs font-mono text-slate-500 mt-1">
-              Colonnes reconnues : <code className="text-sc-cyan">Minerai / Matériaux</code>, <code className="text-sc-cyan">Type</code>, <code className="text-sc-cyan">Qualité</code>, <code className="text-sc-cyan">Quantité</code>, <code className="text-sc-cyan">Notes</code>
+              Colonnes reconnues : <code className="text-sc-cyan">Matériaux / Minerai</code>, <code className="text-sc-cyan">Type</code>, <code className="text-sc-cyan">Qualité</code>, <code className="text-sc-cyan">Quantité (µSCU ou SCU)</code>, <code className="text-sc-cyan">Notes</code>
             </p>
           </div>
 
           {/* Download Blank Templates Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-sc-panel/80 border border-slate-800 text-xs font-mono">
-            <span className="text-slate-400">Modèles vierges à télécharger :</span>
+            <span className="text-slate-400">Modèles vierges (µSCU & SCU) :</span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
@@ -184,6 +236,11 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
                     {importResult.success ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
                     {importResult.data.length} minerais identifiés sur {importResult.totalRows} lignes
                   </span>
+                  {importResult.success && (
+                    <span className="text-[10px] text-sc-cyan bg-sc-cyan/10 px-2 py-0.5 rounded border border-sc-cyan/30">
+                      Total : {importResult.data.reduce((a, b) => a + b.quantitySCU, 0).toFixed(3)} SCU
+                    </span>
+                  )}
                 </div>
 
                 {/* Errors list */}
@@ -192,6 +249,22 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
                     {importResult.errors.map((err, i) => (
                       <p key={i}>• {err}</p>
                     ))}
+                  </div>
+                )}
+
+                {/* Sample items preview table */}
+                {importResult.success && importResult.data.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-emerald-900/60 space-y-1.5">
+                    <span className="text-[11px] text-slate-400 font-bold block">Aperçu de la conversion (5 premiers lots) :</span>
+                    <div className="space-y-1">
+                      {importResult.data.slice(0, 5).map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-1.5 rounded bg-black/40 text-[11px]">
+                          <span className="text-slate-200 font-semibold">{item.mineralName}</span>
+                          <span className="text-sc-cyan font-bold">{item.quantitySCU.toFixed(3)} SCU</span>
+                          {item.notes && <span className="text-slate-400 truncate max-w-[150px]">{item.notes}</span>}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -230,7 +303,7 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
                     className="w-full py-2.5 rounded-lg bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-neon-cyan transition-all"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    Valider l'importation de {importResult.data.length} minerais
+                    Valider l'importation de {importResult.data.length} minerais ({importResult.data.reduce((a, b) => a + b.quantitySCU, 0).toFixed(3)} SCU)
                   </button>
                 </div>
               )}
@@ -249,7 +322,7 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
                   Exporter Mes Données Actuelles
                 </h3>
                 <p className="text-xs font-mono text-slate-400">
-                  Téléchargez vos stocks et commandes pour vos tableurs
+                  Téléchargez vos stocks avec colonnes µSCU et SCU pour vos tableurs
                 </p>
               </div>
             </div>
@@ -268,7 +341,7 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
                   <span>Stock Minerais (Excel)</span>
                 </div>
                 <p className="text-[11px] font-mono text-slate-400 mt-1">
-                  Format .xlsx avec formules et colonnes formatées
+                  Format .xlsx avec colonnes µSCU et SCU
                 </p>
               </button>
 

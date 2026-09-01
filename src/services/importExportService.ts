@@ -4,11 +4,14 @@ import { RefinedStockItem, CustomerOrder, RawCargoItem, AppDataBackup } from '..
 import { STAR_CITIZEN_MINERALS } from '../data/mineralsData';
 import { StorageService } from './storageService';
 
+export type QuantityImportUnit = 'micro_scu' | 'scu' | 'cscu' | 'auto';
+
 export interface ImportResult<T> {
   success: boolean;
   data: T[];
   errors: string[];
   totalRows: number;
+  detectedUnit?: QuantityImportUnit;
 }
 
 export class ImportExportService {
@@ -19,18 +22,17 @@ export class ImportExportService {
   static exportMineralsToCSV(items: RefinedStockItem[], filename = 'star_citizen_minerais.csv') {
     const data = items.map(item => {
       const mineralInfo = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId);
-      const unitValue = mineralInfo?.basePriceAUEC || 0;
-      const totalValue = Math.round(item.quantitySCU * unitValue * 100); // 1 SCU = 100 cSCU
+      const estPrice = Math.round(item.quantitySCU * 100 * (mineralInfo?.basePriceAUEC || 15));
+      const microScu = Math.round(item.quantitySCU * 1_000_000);
 
       return {
-        'ID': item.id,
-        'Minerai': item.mineralName,
-        'Type_Proprietaire': item.ownerType === 'personal' ? 'Personnel' : 'Client',
+        'Matériaux': item.mineralName,
+        'Quantité (µSCU)': microScu,
+        'Quantité (SCU)': item.quantitySCU,
+        'Type_Proprietaire': item.ownerType === 'client' ? 'Client' : 'Personnel',
         'Nom_Client': item.clientName || '',
-        'Quantite_SCU': item.quantitySCU,
-        'Quantite_cSCU': Math.round(item.quantitySCU * 100),
-        'Valeur_Unitaire_aUEC': unitValue,
-        'Valeur_Totale_Estimee_aUEC': totalValue,
+        'Groupe': mineralInfo?.group || 'Mineral',
+        'Valeur_Estimee_aUEC': estPrice,
         'Derniere_Mise_A_Jour': item.lastUpdated,
         'Notes': item.notes || ''
       };
@@ -43,19 +45,20 @@ export class ImportExportService {
   static exportMineralsToExcel(items: RefinedStockItem[], filename = 'star_citizen_minerais.xlsx') {
     const data = items.map(item => {
       const mineralInfo = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId);
-      const unitValue = mineralInfo?.basePriceAUEC || 0;
-      const totalValue = Math.round(item.quantitySCU * unitValue * 100);
+      const estPrice = Math.round(item.quantitySCU * 100 * (mineralInfo?.basePriceAUEC || 15));
+      const microScu = Math.round(item.quantitySCU * 1_000_000);
 
       return {
         'ID': item.id,
-        'Minerai': item.mineralName,
-        'Propriétaire': item.ownerType === 'personal' ? 'Personnel' : 'Client',
-        'Nom Client': item.clientName || '',
+        'Matériaux': item.mineralName,
+        'Quantité (µSCU)': microScu,
         'Quantité (SCU)': item.quantitySCU,
-        'Quantité (cSCU)': Math.round(item.quantitySCU * 100),
-        'Valeur aUEC/cSCU': unitValue,
-        'Valeur Totale aUEC': totalValue,
-        'Dernière M.À.J': new Date(item.lastUpdated).toLocaleString('fr-FR'),
+        'Propriétaire': item.ownerType === 'client' ? 'Client' : 'Personnel',
+        'Nom Client': item.clientName || '',
+        'Groupe': mineralInfo?.group || 'Mineral',
+        'Prix Unitaire aUEC/cSCU': mineralInfo?.basePriceAUEC || 15,
+        'Valeur Estimée aUEC': estPrice,
+        'Dernière MAJ': new Date(item.lastUpdated).toLocaleString('fr-FR'),
         'Notes': item.notes || ''
       };
     });
@@ -65,44 +68,53 @@ export class ImportExportService {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Stock Minerais');
 
     // Auto width for columns
-    const maxCols = 10;
+    const maxCols = 11;
     const colWidths = Array(maxCols).fill({ wch: 18 });
     colWidths[1] = { wch: 22 }; // Minerai
-    colWidths[3] = { wch: 25 }; // Nom client
-    colWidths[9] = { wch: 35 }; // Notes
+    colWidths[2] = { wch: 20 }; // Quantité µSCU
+    colWidths[3] = { wch: 16 }; // Quantité SCU
+    colWidths[5] = { wch: 25 }; // Nom client
+    colWidths[10] = { wch: 35 }; // Notes
     worksheet['!cols'] = colWidths;
 
     XLSX.writeFile(workbook, filename);
   }
 
   // =========================================================================
-  // REFINED MINERALS IMPORT
+  // REFINED MINERALS IMPORT (SUPPORTS MICRO-SCU, SCU, CSCU & AUTO)
   // =========================================================================
 
-  static async importMineralsFromFile(file: File): Promise<ImportResult<RefinedStockItem>> {
+  static async importMineralsFromFile(
+    file: File,
+    unit: QuantityImportUnit = 'auto'
+  ): Promise<ImportResult<RefinedStockItem>> {
     const extension = file.name.split('.').pop()?.toLowerCase();
     if (extension === 'csv') {
-      return this.importMineralsFromCSV(file);
+      return this.importMineralsFromCSV(file, unit);
     } else if (extension === 'xlsx' || extension === 'xls') {
-      return this.importMineralsFromExcel(file);
+      return this.importMineralsFromExcel(file, unit);
     } else {
       return {
         success: false,
         data: [],
         errors: ['Format de fichier non pris en charge. Veuillez utiliser un fichier .csv ou .xlsx.'],
-        totalRows: 0
+        totalRows: 0,
+        detectedUnit: unit
       };
     }
   }
 
-  private static importMineralsFromCSV(file: File): Promise<ImportResult<RefinedStockItem>> {
+  private static importMineralsFromCSV(
+    file: File,
+    unit: QuantityImportUnit
+  ): Promise<ImportResult<RefinedStockItem>> {
     return new Promise((resolve) => {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
           const rows = results.data as Record<string, unknown>[];
-          const parsed = this.parseMineralRows(rows);
+          const parsed = this.parseMineralRows(rows, unit);
           resolve(parsed);
         },
         error: (err) => {
@@ -110,37 +122,46 @@ export class ImportExportService {
             success: false,
             data: [],
             errors: [`Erreur de lecture CSV : ${err.message}`],
-            totalRows: 0
+            totalRows: 0,
+            detectedUnit: unit
           });
         }
       });
     });
   }
 
-  private static async importMineralsFromExcel(file: File): Promise<ImportResult<RefinedStockItem>> {
+  private static async importMineralsFromExcel(
+    file: File,
+    unit: QuantityImportUnit
+  ): Promise<ImportResult<RefinedStockItem>> {
     try {
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: 'array' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
-      return this.parseMineralRows(rows);
+      return this.parseMineralRows(rows, unit);
     } catch (e: unknown) {
       return {
         success: false,
         data: [],
         errors: [`Erreur lors de la lecture du fichier Excel : ${(e as Error).message}`],
-        totalRows: 0
+        totalRows: 0,
+        detectedUnit: unit
       };
     }
   }
 
-  private static parseMineralRows(rows: Record<string, unknown>[]): ImportResult<RefinedStockItem> {
+  static parseMineralRows(
+    rows: Record<string, unknown>[],
+    unit: QuantityImportUnit = 'auto'
+  ): ImportResult<RefinedStockItem> {
     const items: RefinedStockItem[] = [];
     const errors: string[] = [];
+    let detectedEffectiveUnit: QuantityImportUnit = unit;
 
     rows.forEach((row, idx) => {
-      // Find mineral name column with flexible headers
+      // 1. Find mineral name column with flexible French / English headers
       const rawName = (
         row['Matériaux'] ||
         row['Materiaux'] ||
@@ -152,6 +173,8 @@ export class ImportExportService {
         row['mineral'] ||
         row['Nom'] ||
         row['nom'] ||
+        row['Material'] ||
+        row['material'] ||
         ''
       ) as string;
 
@@ -174,37 +197,104 @@ export class ImportExportService {
       const mineralId = matchedMineral ? matchedMineral.id : cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_');
       const mineralName = matchedMineral ? matchedMineral.name : cleanName;
 
-      // Quantity parsing (supports French comma format e.g. "0,809")
-      let qty = 0;
-      const rawQty = row['Quantité'] || row['Quantite'] || row['Quantite_SCU'] || row['Quantité (SCU)'] || row['SCU'] || row['scu'] || row['quantity'] || row['Quantity'];
-      if (rawQty !== undefined && rawQty !== null) {
-        qty = parseFloat(String(rawQty).replace(',', '.'));
-      } else {
-        const rawCscu = row['Quantite_cSCU'] || row['Quantité (cSCU)'] || row['cSCU'] || row['cscu'];
-        if (rawCscu !== undefined) {
-          qty = parseFloat(String(rawCscu).replace(',', '.')) / 100;
+      // 2. Quantity column & unit detection
+      let rawQtyVal: unknown = undefined;
+      let columnExplicitUnit: 'micro_scu' | 'cscu' | 'scu' | null = null;
+
+      // Check micro-SCU specific column headers
+      for (const k of Object.keys(row)) {
+        const lk = k.toLowerCase();
+        if (lk.includes('µscu') || lk.includes('uscu') || lk.includes('micro')) {
+          rawQtyVal = row[k];
+          columnExplicitUnit = 'micro_scu';
+          break;
         }
       }
 
-      if (isNaN(qty) || qty <= 0) {
-        errors.push(`Ligne ${idx + 2} (${cleanName}) : Quantité invalide (${rawQty}).`);
+      // Check cSCU specific column headers
+      if (rawQtyVal === undefined) {
+        for (const k of Object.keys(row)) {
+          const lk = k.toLowerCase();
+          if (lk.includes('cscu') || lk.includes('centi')) {
+            rawQtyVal = row[k];
+            columnExplicitUnit = 'cscu';
+            break;
+          }
+        }
+      }
+
+      // Check standard SCU or generic quantity headers
+      if (rawQtyVal === undefined) {
+        const standardKeys = [
+          'Quantité (SCU)', 'Quantite_SCU', 'Quantité', 'Quantite',
+          'SCU', 'scu', 'quantity', 'Quantity', 'Montant', 'montant', 'Amount', 'amount'
+        ];
+        for (const sk of standardKeys) {
+          if (row[sk] !== undefined && row[sk] !== null && String(row[sk]).trim() !== '') {
+            rawQtyVal = row[sk];
+            break;
+          }
+        }
+      }
+
+      if (rawQtyVal === undefined || rawQtyVal === null) {
+        errors.push(`Ligne ${idx + 2} (${cleanName}) : Quantité manquante.`);
         return;
       }
 
-      // Quality & Type parsing
+      const cleanedQtyStr = String(rawQtyVal).replace(/\s/g, '').replace(',', '.');
+      const rawNum = parseFloat(cleanedQtyStr);
+
+      if (isNaN(rawNum) || rawNum <= 0) {
+        errors.push(`Ligne ${idx + 2} (${cleanName}) : Quantité invalide (${rawQtyVal}).`);
+        return;
+      }
+
+      // Determine effective unit
+      let effectiveUnit = unit;
+      if (effectiveUnit === 'auto') {
+        if (columnExplicitUnit === 'micro_scu') {
+          effectiveUnit = 'micro_scu';
+        } else if (columnExplicitUnit === 'cscu') {
+          effectiveUnit = 'cscu';
+        } else if (rawNum >= 1000) {
+          // Large integer numbers like 809000, 182000, 1000000 are micro-SCU (µSCU)
+          effectiveUnit = 'micro_scu';
+        } else {
+          effectiveUnit = 'scu';
+        }
+      }
+      detectedEffectiveUnit = effectiveUnit;
+
+      // Convert to SCU float
+      let finalSCU = 0;
+      if (effectiveUnit === 'micro_scu') {
+        // 1 SCU = 1 000 000 µSCU
+        finalSCU = rawNum / 1_000_000;
+      } else if (effectiveUnit === 'cscu') {
+        // 1 SCU = 100 cSCU
+        finalSCU = rawNum / 100;
+      } else {
+        // Direct SCU
+        finalSCU = rawNum;
+      }
+
+      // 3. Quality & Extraction Type parsing
       const rawType = (row['Type'] || row['type'] || '') as string;
       const rawQuality = (row['Qualité'] || row['Qualite'] || row['Quality'] || row['quality'] || '') as string;
 
-      // Owner Type & Client Name
+      // 4. Owner Type & Client Name
       const rawOwner = String(row['Type_Proprietaire'] || row['Propriétaire'] || row['Owner'] || row['owner'] || 'Personnel').toLowerCase();
       const isClient = rawOwner.includes('client') || rawOwner.includes('depot') || rawOwner.includes('dépôt');
       const clientName = (row['Nom_Client'] || row['Nom Client'] || row['Client'] || row['client'] || '') as string;
 
+      // 5. Notes & Metadata
       const rawNotes = (row['Notes'] || row['notes'] || row['Commentaire'] || Object.values(row)[4] || '') as string;
       const notesParts = [
         rawNotes && typeof rawNotes === 'string' ? rawNotes.trim() : '',
         rawQuality ? `Qualité: ${rawQuality}` : '',
-        rawType ? rawType.trim() : ''
+        rawType ? rawType.trim() : '',
+        effectiveUnit === 'micro_scu' ? `(${rawNum.toLocaleString('fr-FR')} µSCU)` : ''
       ].filter(Boolean);
 
       const id = (row['ID'] || row['id'] || `stock-imp-${Date.now()}-${idx}`) as string;
@@ -213,7 +303,7 @@ export class ImportExportService {
         id,
         mineralId,
         mineralName,
-        quantitySCU: Number(qty.toFixed(3)),
+        quantitySCU: Number(finalSCU.toFixed(6)), // Support high precision up to 6 decimals
         ownerType: isClient ? 'client' : 'personal',
         clientName: isClient ? clientName.trim() || 'Client Inconnu' : undefined,
         lastUpdated: new Date().toISOString(),
@@ -225,7 +315,8 @@ export class ImportExportService {
       success: items.length > 0,
       data: items,
       errors,
-      totalRows: rows.length
+      totalRows: rows.length,
+      detectedUnit: detectedEffectiveUnit
     };
   }
 
@@ -269,12 +360,12 @@ export class ImportExportService {
         'Organisation': order.clientOrg || '',
         'Contact': order.clientContact || '',
         'Statut': order.status,
-        'Items Commandés': itemsSummary,
-        'Minerais Fournis Client': clientMinerals || 'Aucun',
-        'Prix Total (aUEC)': order.totalPriceAUEC,
-        'Payé': order.isPaid ? 'OUI' : 'NON',
-        'Créé le': new Date(order.createdAt).toLocaleDateString('fr-FR'),
-        'Échéance': order.dueDate ? new Date(order.dueDate).toLocaleDateString('fr-FR') : '',
+        'Items': itemsSummary,
+        'Minerais Client': clientMinerals || 'Aucun',
+        'Prix Total aUEC': order.totalPriceAUEC,
+        'Payé': order.isPaid ? 'Oui' : 'Non',
+        'Date Création': new Date(order.createdAt).toLocaleString('fr-FR'),
+        'Date Échéance': order.dueDate ? new Date(order.dueDate).toLocaleDateString('fr-FR') : '',
         'Notes': order.notes || ''
       };
     });
@@ -309,6 +400,7 @@ export class ImportExportService {
     const data = cargo.map(c => ({
       'ID': c.id,
       'Minerai': c.mineralName,
+      'Quantité (µSCU)': Math.round(c.quantitySCU * 1_000_000),
       'Quantité (SCU)': c.quantitySCU,
       'Pureté (%)': `${c.purityPercentage}%`,
       'Vaisseau': c.ship,
@@ -324,82 +416,111 @@ export class ImportExportService {
   }
 
   // =========================================================================
-  // TEMPLATES DOWNLOAD
+  // TEMPLATES DOWNLOAD (WITH MICRO-SCU AND SCU COLUMNS)
   // =========================================================================
 
   static downloadMineralsTemplateCSV() {
     const sample = [
       {
-        'Minerai': 'Quantainium',
+        'Matériaux': 'Quantainium',
+        'Type': 'Minable Vaisseaux',
+        'Qualité': '850',
+        'Quantité (µSCU)': 809000,
         'Type_Proprietaire': 'Personnel',
         'Nom_Client': '',
-        'Quantite_SCU': 32.0,
-        'Notes': 'Stock raffiné personnel'
+        'Notes': 'QV Breaker - Stock raffiné'
       },
       {
-        'Minerai': 'Agricium',
+        'Matériaux': 'Hadanite',
+        'Type': 'Minable Geo',
+        'Qualité': '720',
+        'Quantité (µSCU)': 99000,
+        'Type_Proprietaire': 'Personnel',
+        'Nom_Client': '',
+        'Notes': 'ROC Mining Daymar'
+      },
+      {
+        'Matériaux': 'Agricium',
+        'Type': 'Minable Vaisseaux',
+        'Qualité': '640',
+        'Quantité (µSCU)': 15000000,
         'Type_Proprietaire': 'Client',
         'Nom_Client': 'Capitaine Jax',
-        'Quantite_SCU': 15.0,
-        'Notes': 'Apporté pour fabrication canons laser'
+        'Notes': 'Dépôt client pour canons laser'
       },
       {
-        'Minerai': 'Laranite',
+        'Matériaux': 'Janalite',
+        'Type': 'Minable Geo',
+        'Qualité': '980',
+        'Quantité (µSCU)': 50000,
         'Type_Proprietaire': 'Personnel',
         'Nom_Client': '',
-        'Quantite_SCU': 25.5,
-        'Notes': ''
-      },
-      {
-        'Minerai': 'Hadanite',
-        'Type_Proprietaire': 'Personnel',
-        'Nom_Client': '',
-        'Quantite_SCU': 1.2,
-        'Notes': 'Gemmes FPS minées'
+        'Notes': 'Grotte MicroTech'
       }
     ];
 
     const csv = Papa.unparse(sample);
-    this.downloadFile(csv, 'modele_import_minerais_star_citizen.csv', 'text/csv;charset=utf-8;');
+    this.downloadFile(csv, 'modele_import_minerais_micro_scu.csv', 'text/csv;charset=utf-8;');
   }
 
   static downloadMineralsTemplateExcel() {
     const sample = [
       {
-        'Minerai': 'Quantainium',
+        'Matériaux': 'Quantainium',
+        'Type': 'Minable Vaisseaux',
+        'Qualité': 850,
+        'Quantité (µSCU)': 809000,
+        'Quantité (SCU)': 0.809,
         'Propriétaire': 'Personnel',
         'Nom Client': '',
-        'Quantité (SCU)': 32.0,
-        'Notes': 'Stock raffiné personnel'
+        'Notes': 'QV Breaker - 1 SCU = 1 000 000 µSCU'
       },
       {
-        'Minerai': 'Agricium',
+        'Matériaux': 'Hadanite',
+        'Type': 'Minable Geo',
+        'Qualité': 720,
+        'Quantité (µSCU)': 99000,
+        'Quantité (SCU)': 0.099,
+        'Propriétaire': 'Personnel',
+        'Nom Client': '',
+        'Notes': 'ROC Mining'
+      },
+      {
+        'Matériaux': 'Agricium',
+        'Type': 'Minable Vaisseaux',
+        'Qualité': 640,
+        'Quantité (µSCU)': 15000000,
+        'Quantité (SCU)': 15.0,
         'Propriétaire': 'Client',
         'Nom Client': 'Capitaine Jax',
-        'Quantité (SCU)': 15.0,
-        'Notes': 'Apporté pour fabrication canons laser'
+        'Notes': 'Dépôt client'
       },
       {
-        'Minerai': 'Laranite',
+        'Matériaux': 'Beryl',
+        'Type': 'Minable Vaisseaux',
+        'Qualité': 530,
+        'Quantité (µSCU)': 2500000,
+        'Quantité (SCU)': 2.5,
         'Propriétaire': 'Personnel',
         'Nom Client': '',
-        'Quantité (SCU)': 25.5,
-        'Notes': ''
-      },
-      {
-        'Minerai': 'Hadanite',
-        'Propriétaire': 'Personnel',
-        'Nom Client': '',
-        'Quantité (SCU)': 1.2,
-        'Notes': 'Gemmes FPS'
+        'Notes': 'Prospector Yela'
       }
     ];
 
     const worksheet = XLSX.utils.json_to_sheet(sample);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Modèle Minerais');
-    worksheet['!cols'] = [{ wch: 18 }, { wch: 16 }, { wch: 22 }, { wch: 16 }, { wch: 30 }];
-    XLSX.writeFile(workbook, 'modele_import_minerais_star_citizen.xlsx');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Modèle Minerais µSCU');
+    worksheet['!cols'] = [
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 12 },
+      { wch: 18 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 22 },
+      { wch: 35 }
+    ];
+    XLSX.writeFile(workbook, 'modele_import_minerais_micro_scu.xlsx');
   }
 
   // =========================================================================
