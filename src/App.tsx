@@ -509,10 +509,10 @@ export function App() {
 
   // Nav Tabs configuration
   const navTabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'dashboard', label: 'Tableau de Bord', icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: 'mining', label: 'Minage Brut', icon: <Pickaxe className="w-4 h-4" />, badge: rawCargo.length > 0 ? String(rawCargo.length) : undefined },
     { id: 'refinery', label: 'Raffinerie', icon: <Flame className="w-4 h-4" />, badge: refineryJobs.filter(j => j.status === 'in_progress').length > 0 ? String(refineryJobs.filter(j => j.status === 'in_progress').length) : undefined },
-    { id: 'inventory', label: 'Stock', icon: <Boxes className="w-4 h-4" /> },
+    { id: 'inventory', label: 'Stock Minerais', icon: <Boxes className="w-4 h-4" /> },
     { id: 'blueprints', label: 'Blueprints', icon: <Scroll className="w-4 h-4" /> },
     { id: 'orders', label: 'Commandes', icon: <ClipboardList className="w-4 h-4" />, badge: orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length > 0 ? String(orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length) : undefined },
     { id: 'importExport', label: 'Import / Export', icon: <FileSpreadsheet className="w-4 h-4" /> }
@@ -552,7 +552,7 @@ export function App() {
                   </span>
                 </div>
                 <span className="text-[10px] font-mono tracking-widest text-slate-400 uppercase block mt-1">
-                  MINING & REFINERY SUITE
+                  SUITE MINAGE & RAFFINERIE
                 </span>
               </div>
             </div>
