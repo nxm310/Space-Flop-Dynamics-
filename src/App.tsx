@@ -654,7 +654,7 @@ export function App() {
                 title="Afficher les nouveautés des 5 dernières opérations"
               >
                 <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                <span className="hidden md:inline">Nouveautés</span>
+                <span className="hidden md:inline">Journal v{CURRENT_APP_VERSION}</span>
               </button>
 
               {/* Sound Toggle */}
@@ -926,7 +926,7 @@ export function App() {
               }}
               className="text-sc-cyan hover:underline font-bold"
             >
-              v1.7.0 (Journal des Mises à Jour)
+              v{CURRENT_APP_VERSION} (Journal des Mises à Jour)
             </button>
           </div>
         </div>
