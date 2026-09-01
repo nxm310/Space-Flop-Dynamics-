@@ -2,16 +2,16 @@ import React, { useState } from 'react';
 import {
   Sparkles,
   X,
+  Pencil,
   CheckSquare,
   BookOpen,
   Trash2,
   ClipboardList,
-  LayoutDashboard,
   Rocket
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.5.0';
+export const CURRENT_APP_VERSION = '1.6.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -47,67 +47,66 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 5 • Version 1.5',
-      date: 'Dernière mise à jour',
+      version: 'Opération 5 • Version 1.6',
+      date: 'Dernière mise à jour (Actuelle)',
       badge: 'Nouveau',
       badgeColor: 'cyan',
-      title: 'Atelier Blueprints Personnel & Tri Multi-Colonnes',
-      icon: <CheckSquare className="w-5 h-5 text-sc-cyan" />,
+      title: 'Édition Complète des Minerais & Expansion Blueprints Dédupliquée',
+      icon: <Pencil className="w-5 h-5 text-sc-cyan" />,
       points: [
-        '🌟 Onglet Dédié "Mes Blueprints (Mon Atelier)" : Consultez uniquement les blueprints que vous possédez ou fabriquez régulièrement.',
-        '☑️ Deux modes d\'ajout : Cochez directement la case sur la fiche d\'un blueprint ou sélectionnez-le depuis la liste déroulante par catégorie.',
-        '🔄 Tri Interactif des Minerais par En-tête : Cliquez sur les colonnes du tableau pour trier par Nom (A-Z/Z-A), Type (Geo/Vaisseau), Qualité, Quantité SCU, Valeur aUEC ou Notes.',
-        '💾 Persistance automatique : Votre sélection de blueprints et vos préférences sont sauvegardées en local.'
+        '✏️ Édition des Minerais Post-Importation : Modifiez directement vos lots de minerais (nom, quantité avec convertisseur µSCU / cSCU / SCU, qualité de 0 à 1000, type d\'extraction, propriétaire et notes).',
+        '🛡️ 50+ Recettes Star Citizen Sans Aucun Doublon : Ajout des Torpilles S9, Gatlings AD4B/AD5B, Quantum Drives S1-S3, Rayon MaxLift et Modules Miniers avec déduplication stricte.',
+        '🧹 Interface Import / Export Épurée : Suppression des modèles vierges superflus pour une importation directe et sans encombrement.',
+        '⏱️ Option "Ne plus afficher" : Mémorisation intelligente du journal des mises à jour jusqu\'au prochain saut de version.'
       ]
     },
     {
-      version: 'Opération 4 • Version 1.4',
+      version: 'Opération 4 • Version 1.5',
       date: 'Étape précédente',
-      badge: 'Blueprints',
+      badge: 'Atelier',
       badgeColor: 'purple',
-      title: 'Expansion Massive des Blueprints & Guide Datamining',
-      icon: <BookOpen className="w-5 h-5 text-purple-400" />,
+      title: 'Atelier Blueprints Personnel & Tri Multi-Colonnes',
+      icon: <CheckSquare className="w-5 h-5 text-purple-400" />,
       points: [
-        '📦 40+ Recettes Officielles Star Citizen : Composants (Atlas, VK-00, XL-1, FR-66/76/86), Armes (CF-337, AD4B, FS-9, P6-LR, Railgun), Armures et Boîtes de fret (1 à 32 SCU).',
-        '🔬 Hub Sources & Datamining : Accès direct aux bases communautaires (SC-Craft.tools, scunpacked-data, SPViewer, Erkul, UEX Corp).',
-        '📥 Importateur de Packs JSON : Importez et partagez des catalogues complets de blueprints communautaires.'
+        '🌟 Onglet Dédié "Mes Blueprints (Mon Atelier)" : Consultez et fabriquez uniquement les blueprints que vous possédez ou utilisez régulièrement.',
+        '☑️ Deux modes d\'ajout : Cochez directement la case sur la fiche d\'un plan ou sélectionnez-le depuis le menu déroulant par catégorie.',
+        '🔄 Tri Interactif par En-tête : Cliquez sur les colonnes du tableau pour trier par Nom (A-Z/Z-A), Type (Geo/Vaisseau), Qualité, Quantité SCU ou Valeur aUEC.'
       ]
     },
     {
-      version: 'Opération 3 • Version 1.3',
-      date: 'Maintenance & Périphérie',
-      badge: 'Système',
+      version: 'Opération 3 • Version 1.4',
+      date: 'Expansion',
+      badge: 'Blueprints',
+      badgeColor: 'emerald',
+      title: 'Expansion Massive des Recettes & Hub Datamining',
+      icon: <BookOpen className="w-5 h-5 text-emerald-400" />,
+      points: [
+        '🔬 Hub Sources & Datamining : Accès direct aux bases communautaires (SC-Craft.tools, scunpacked-data, SPViewer, Erkul, UEX Corp).',
+        '📥 Importateur de Packs JSON : Importation de catalogues personnalisés complets en 1 clic.'
+      ]
+    },
+    {
+      version: 'Opération 2 • Version 1.3',
+      date: 'Système',
+      badge: 'Maintenance',
       badgeColor: 'amber',
       title: 'Démarrage Vierge 100% Propre & Réinitialisation Globale',
       icon: <Trash2 className="w-5 h-5 text-amber-400" />,
       points: [
-        '✨ État Initial 100% Vierge : L\'application démarre propre sans fausse donnée de démonstration pour tous les nouveaux visiteurs.',
-        '🛡️ Réinitialisation Sécurisée dans Paramètres : Possibilité de vider instantanément toutes les tables (stocks, cales, raffinerie, commandes) avec dialogue de confirmation.'
+        '✨ État Initial 100% Vierge : L\'application démarre propre sans fausse donnée de démonstration pour tous les nouveaux utilisateurs.',
+        '🛡️ Réinitialisation Sécurisée dans Paramètres : Possibilité de vider instantanément toutes les tables avec dialogue de confirmation.'
       ]
     },
     {
-      version: 'Opération 2 • Version 1.2',
-      date: 'Gestion Commerciale',
+      version: 'Opération 1 • Version 1.2',
+      date: 'Commerce',
       badge: 'Commandes',
-      badgeColor: 'emerald',
-      title: 'Carnet de Commandes & Dépôts Clients Ségrégués',
-      icon: <ClipboardList className="w-5 h-5 text-emerald-400" />,
-      points: [
-        '💼 Gestion Complète des Commandes : Fiches clients, devis chiffrés en aUEC, acomptes, acomptes versés et dates d\'échéance.',
-        '⛏️ Distinction des Minerais Clients : Gestion isolée des stocks personnels et des minerais apportés par vos clients.',
-        '⚙️ Lancement en Fabrication : Vérification automatique de la disponibilité des minerais et déduction lors du passage en production.'
-      ]
-    },
-    {
-      version: 'Opération 1 • Version 1.1',
-      date: 'Interface & Déploiement',
-      badge: 'Cockpit HUD',
       badgeColor: 'cyan',
-      title: 'Refonte de l\'En-tête HUD & Hébergement Live GitHub Pages',
-      icon: <LayoutDashboard className="w-5 h-5 text-sc-cyan" />,
+      title: 'Carnet de Commandes & Dépôts Clients Ségrégués',
+      icon: <ClipboardList className="w-5 h-5 text-sc-cyan" />,
       points: [
-        '🛰️ Bandeau Supérieur Épuré MobiGlas : Navigation rapide, statut du jeu, volume total des cales et effets sonores interactifs.',
-        '🌐 Déploiement en Ligne Automatisé : Hébergement web rapide et accessible depuis n\'importe quel appareil via GitHub Pages.'
+        '💼 Gestion Complète des Commandes : Fiches clients, devis chiffrés en aUEC, acomptes versés et gestion des échéances.',
+        '⛏️ Distinction des Minerais Clients : Gestion isolée et traçabilité des stocks personnels et des minerais apportés par vos clients.'
       ]
     }
   ];
