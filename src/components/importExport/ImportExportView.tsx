@@ -146,33 +146,6 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
             </p>
           </div>
 
-          {/* Download Blank Templates Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg bg-sc-panel/80 border border-slate-800 text-xs font-mono">
-            <span className="text-slate-400">Modèles vierges à télécharger :</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  audio.playClick();
-                  ImportExportService.downloadMineralsTemplateExcel();
-                }}
-                className="px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 flex items-center gap-1 transition-colors"
-              >
-                <Download className="w-3 h-3" />
-                Modèle Excel (.xlsx)
-              </button>
-              <button
-                onClick={() => {
-                  audio.playClick();
-                  ImportExportService.downloadMineralsTemplateCSV();
-                }}
-                className="px-2.5 py-1 rounded bg-sc-cyan/15 hover:bg-sc-cyan/25 border border-sc-cyan/30 text-sc-cyan flex items-center gap-1 transition-colors"
-              >
-                <Download className="w-3 h-3" />
-                Modèle CSV
-              </button>
-            </div>
-          </div>
-
           {/* Import Result Preview */}
           {importResult && (
             <div className="space-y-3 pt-2">
