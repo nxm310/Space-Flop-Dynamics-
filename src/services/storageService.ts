@@ -14,6 +14,7 @@ const STORAGE_KEYS = {
   REFINED_STOCK: 'sc_refined_stock_v4',
   REFINERY_JOBS: 'sc_refinery_jobs_v4',
   CUSTOM_BLUEPRINTS: 'sc_custom_blueprints_v4',
+  UNLOCKED_BLUEPRINTS: 'sc_unlocked_blueprints_v4',
   ORDERS: 'sc_orders_v4',
   SETTINGS: 'sc_settings_v4',
   INITIALIZED: 'sc_clean_virgin_v4'
@@ -103,6 +104,21 @@ export class StorageService {
     localStorage.setItem(STORAGE_KEYS.CUSTOM_BLUEPRINTS, JSON.stringify(items));
   }
 
+  // User Unlocked / Selected Blueprint IDs
+  static getUnlockedBlueprintIds(): string[] {
+    this.init();
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.UNLOCKED_BLUEPRINTS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static saveUnlockedBlueprintIds(ids: string[]) {
+    localStorage.setItem(STORAGE_KEYS.UNLOCKED_BLUEPRINTS, JSON.stringify(ids));
+  }
+
   // All Blueprints (Built-in + Custom)
   static getAllBlueprints(): Blueprint[] {
     const custom = this.getCustomBlueprints();
@@ -175,6 +191,7 @@ export class StorageService {
     this.saveRefinedStock([]);
     this.saveRefineryJobs([]);
     this.saveCustomBlueprints([]);
+    this.saveUnlockedBlueprintIds([]);
     this.saveOrders([]);
   }
 }

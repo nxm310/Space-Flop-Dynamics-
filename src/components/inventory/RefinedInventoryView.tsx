@@ -20,6 +20,8 @@ import {
   LayoutGrid,
   Layers,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -43,7 +45,20 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('all');
   const [selectedExtractionType, setSelectedExtractionType] = useState('all');
-  const [sortBy, setSortBy] = useState<'name' | 'qty_desc' | 'qty_asc' | 'value_desc' | 'quality_desc'>('qty_desc');
+  const [sortBy, setSortBy] = useState<
+    | 'name_asc'
+    | 'name_desc'
+    | 'type_asc'
+    | 'type_desc'
+    | 'quality_desc'
+    | 'quality_asc'
+    | 'qty_desc'
+    | 'qty_asc'
+    | 'value_desc'
+    | 'value_asc'
+    | 'notes_asc'
+    | 'notes_desc'
+  >('qty_desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(50);
 
@@ -66,6 +81,35 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
     if (mineral?.isFpsMineable) return 'Minable Geo';
     if (mineral?.isShipMineable) return 'Minable Vaisseaux';
     return 'Autre';
+  };
+
+  // Helper to toggle column sort
+  const handleColumnSort = (column: 'name' | 'type' | 'quality' | 'qty' | 'value' | 'notes') => {
+    audio.playClick();
+    if (column === 'name') {
+      setSortBy(prev => prev === 'name_asc' ? 'name_desc' : 'name_asc');
+    } else if (column === 'type') {
+      setSortBy(prev => prev === 'type_asc' ? 'type_desc' : 'type_asc');
+    } else if (column === 'quality') {
+      setSortBy(prev => prev === 'quality_desc' ? 'quality_asc' : 'quality_desc');
+    } else if (column === 'qty') {
+      setSortBy(prev => prev === 'qty_desc' ? 'qty_asc' : 'qty_desc');
+    } else if (column === 'value') {
+      setSortBy(prev => prev === 'value_desc' ? 'value_asc' : 'value_desc');
+    } else if (column === 'notes') {
+      setSortBy(prev => prev === 'notes_asc' ? 'notes_desc' : 'notes_asc');
+    }
+  };
+
+  const getSortIcon = (column: 'name' | 'type' | 'quality' | 'qty' | 'value' | 'notes') => {
+    const isCurrent = sortBy.startsWith(column);
+    if (!isCurrent) {
+      return <ArrowUpDown className="w-3 h-3 text-slate-600 opacity-40 group-hover:opacity-100 transition-opacity ml-1.5 inline" />;
+    }
+    const isAsc = sortBy.endsWith('_asc');
+    return isAsc
+      ? <ArrowUp className="w-3.5 h-3.5 text-sc-cyan ml-1.5 inline" />
+      : <ArrowDown className="w-3.5 h-3.5 text-sc-cyan ml-1.5 inline" />;
   };
 
   // Filtered stock items
@@ -114,18 +158,34 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
       const valB = Math.round(b.quantitySCU * 100 * (minB?.basePriceAUEC || 15));
       const qualA = getItemQuality(a);
       const qualB = getItemQuality(b);
+      const typeA = getItemExtractionType(a);
+      const typeB = getItemExtractionType(b);
 
       switch (sortBy) {
-        case 'name':
+        case 'name_asc':
           return a.mineralName.localeCompare(b.mineralName);
+        case 'name_desc':
+          return b.mineralName.localeCompare(a.mineralName);
+        case 'type_asc':
+          return typeA.localeCompare(typeB);
+        case 'type_desc':
+          return typeB.localeCompare(typeA);
+        case 'quality_desc':
+          return qualB - qualA;
+        case 'quality_asc':
+          return qualA - qualB;
         case 'qty_desc':
           return b.quantitySCU - a.quantitySCU;
         case 'qty_asc':
           return a.quantitySCU - b.quantitySCU;
         case 'value_desc':
           return valB - valA;
-        case 'quality_desc':
-          return qualB - qualA;
+        case 'value_asc':
+          return valA - valB;
+        case 'notes_asc':
+          return (a.notes || '').localeCompare(b.notes || '');
+        case 'notes_desc':
+          return (b.notes || '').localeCompare(a.notes || '');
         default:
           return 0;
       }
@@ -418,14 +478,22 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
             <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => {
+                audio.playClick();
+                setSortBy(e.target.value as any);
+              }}
               className="px-2.5 py-1.5 bg-[#090e18] border border-sc-border focus:border-sc-cyan rounded-lg text-xs font-mono text-slate-200 focus:outline-none"
             >
-              <option value="qty_desc">Quantité (Plus grand)</option>
-              <option value="qty_asc">Quantité (Plus petit)</option>
-              <option value="quality_desc">Qualité (Plus haute)</option>
+              <option value="qty_desc">Quantité (Plus grand ➔ Plus petit)</option>
+              <option value="qty_asc">Quantité (Plus petit ➔ Plus grand)</option>
+              <option value="name_asc">Nom alphabétique (A ➔ Z)</option>
+              <option value="name_desc">Nom alphabétique (Z ➔ A)</option>
+              <option value="quality_desc">Qualité (Plus haute ➔ Plus basse)</option>
+              <option value="quality_asc">Qualité (Plus basse ➔ Plus haute)</option>
+              <option value="type_asc">Type d'extraction (Geo / Vaisseau)</option>
               <option value="value_desc">Valeur aUEC (Plus chère)</option>
-              <option value="name">Nom alphabétique</option>
+              <option value="value_asc">Valeur aUEC (Moins chère)</option>
+              <option value="notes_asc">Notes & Contexte (A ➔ Z)</option>
             </select>
           </div>
         </div>
@@ -489,15 +557,82 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
           <div className="overflow-x-auto rounded-xl border border-sc-border bg-sc-card/90 shadow-xl">
             <table className="w-full text-left text-xs font-mono">
               <thead>
-                <tr className="border-b border-sc-border bg-[#090e18] text-slate-400 uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4 font-semibold">#</th>
-                  <th className="py-3 px-4 font-semibold">Matériau / Minerai</th>
-                  <th className="py-3 px-4 font-semibold">Type d'Extraction</th>
-                  <th className="py-3 px-4 font-semibold text-center">Qualité</th>
-                  <th className="py-3 px-4 font-semibold text-right">Quantité</th>
-                  <th className="py-3 px-4 font-semibold text-right">Valeur Estimée</th>
-                  <th className="py-3 px-4 font-semibold">Notes / Contexte</th>
-                  <th className="py-3 px-4 font-semibold text-center">Actions</th>
+                <tr className="border-b border-sc-border bg-[#090e18] text-slate-400 uppercase tracking-wider text-[11px] select-none">
+                  <th className="py-3 px-4 font-semibold w-12">#</th>
+
+                  {/* Mineral Column Header */}
+                  <th
+                    onClick={() => handleColumnSort('name')}
+                    className="py-3 px-4 font-semibold cursor-pointer hover:text-sc-cyan hover:bg-slate-800/40 transition-colors group"
+                    title="Cliquer pour trier alphabétiquement par nom"
+                  >
+                    <div className="flex items-center">
+                      <span>Matériau / Minerai</span>
+                      {getSortIcon('name')}
+                    </div>
+                  </th>
+
+                  {/* Extraction Type Column Header */}
+                  <th
+                    onClick={() => handleColumnSort('type')}
+                    className="py-3 px-4 font-semibold cursor-pointer hover:text-sc-cyan hover:bg-slate-800/40 transition-colors group"
+                    title="Cliquer pour trier par type d'extraction"
+                  >
+                    <div className="flex items-center">
+                      <span>Type d'Extraction</span>
+                      {getSortIcon('type')}
+                    </div>
+                  </th>
+
+                  {/* Quality Column Header */}
+                  <th
+                    onClick={() => handleColumnSort('quality')}
+                    className="py-3 px-4 font-semibold text-center cursor-pointer hover:text-sc-cyan hover:bg-slate-800/40 transition-colors group"
+                    title="Cliquer pour trier par score de qualité"
+                  >
+                    <div className="flex items-center justify-center">
+                      <span>Qualité</span>
+                      {getSortIcon('quality')}
+                    </div>
+                  </th>
+
+                  {/* Quantity Column Header */}
+                  <th
+                    onClick={() => handleColumnSort('qty')}
+                    className="py-3 px-4 font-semibold text-right cursor-pointer hover:text-sc-cyan hover:bg-slate-800/40 transition-colors group"
+                    title="Cliquer pour trier par quantité"
+                  >
+                    <div className="flex items-center justify-end">
+                      <span>Quantité</span>
+                      {getSortIcon('qty')}
+                    </div>
+                  </th>
+
+                  {/* Value Column Header */}
+                  <th
+                    onClick={() => handleColumnSort('value')}
+                    className="py-3 px-4 font-semibold text-right cursor-pointer hover:text-sc-cyan hover:bg-slate-800/40 transition-colors group"
+                    title="Cliquer pour trier par valeur estimée aUEC"
+                  >
+                    <div className="flex items-center justify-end">
+                      <span>Valeur Estimée</span>
+                      {getSortIcon('value')}
+                    </div>
+                  </th>
+
+                  {/* Notes Column Header */}
+                  <th
+                    onClick={() => handleColumnSort('notes')}
+                    className="py-3 px-4 font-semibold cursor-pointer hover:text-sc-cyan hover:bg-slate-800/40 transition-colors group"
+                    title="Cliquer pour trier par notes et contexte"
+                  >
+                    <div className="flex items-center">
+                      <span>Notes / Contexte</span>
+                      {getSortIcon('notes')}
+                    </div>
+                  </th>
+
+                  <th className="py-3 px-4 font-semibold text-center w-24">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80">
