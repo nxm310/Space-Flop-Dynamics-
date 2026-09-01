@@ -926,7 +926,7 @@ export function App() {
               }}
               className="text-sc-cyan hover:underline font-bold"
             >
-              v1.6.0 (Journal des Mises à Jour)
+              v1.7.0 (Journal des Mises à Jour)
             </button>
           </div>
         </div>
