@@ -13,7 +13,7 @@ import { StorageService } from './services/storageService';
 import { STAR_CITIZEN_BLUEPRINTS } from './data/blueprintsData';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { SettingsModal } from './components/settings/SettingsModal';
-import { WhatsNewModal } from './components/common/WhatsNewModal';
+import { WhatsNewModal, CURRENT_APP_VERSION, STORAGE_KEY_LAST_SEEN_VERSION } from './components/common/WhatsNewModal';
 import { audio } from './services/audioService';
 
 // Module Views
@@ -64,7 +64,9 @@ export function App() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   // Modals & Cross-tab prefill states
-  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(true);
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(() => {
+    return localStorage.getItem(STORAGE_KEY_LAST_SEEN_VERSION) !== CURRENT_APP_VERSION;
+  });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAddRawModalOpen, setIsAddRawModalOpen] = useState(false);
   const [isRefineryModalOpen, setIsRefineryModalOpen] = useState(false);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Sparkles,
   X,
@@ -7,10 +7,12 @@ import {
   Trash2,
   ClipboardList,
   LayoutDashboard,
-  ShieldCheck,
   Rocket
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
+
+export const CURRENT_APP_VERSION = '1.5.0';
+export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
   isOpen: boolean;
@@ -18,11 +20,29 @@ interface WhatsNewModalProps {
 }
 
 export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose }) => {
+  const [dontShowAgain, setDontShowAgain] = useState<boolean>(() => {
+    return localStorage.getItem(STORAGE_KEY_LAST_SEEN_VERSION) === CURRENT_APP_VERSION;
+  });
+
   if (!isOpen) return null;
 
   const handleClose = () => {
     audio.playClick();
+    if (dontShowAgain) {
+      localStorage.setItem(STORAGE_KEY_LAST_SEEN_VERSION, CURRENT_APP_VERSION);
+    }
     onClose();
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    audio.playClick();
+    const checked = e.target.checked;
+    setDontShowAgain(checked);
+    if (checked) {
+      localStorage.setItem(STORAGE_KEY_LAST_SEEN_VERSION, CURRENT_APP_VERSION);
+    } else {
+      localStorage.removeItem(STORAGE_KEY_LAST_SEEN_VERSION);
+    }
   };
 
   const updates = [
@@ -108,7 +128,7 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
                   Journal des Mises à Jour
                 </span>
                 <span className="text-[10px] font-mono text-slate-400">
-                  Star Citizen 4.10+ LIVE
+                  v{CURRENT_APP_VERSION} • Star Citizen 4.10+ LIVE
                 </span>
               </div>
               <h3 className="text-lg font-bold text-slate-100 uppercase tracking-wide mt-0.5">
@@ -182,13 +202,22 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer with "Don't show again until next update" Checkbox */}
         <div className="p-4 border-t border-slate-800 bg-[#090e18] flex flex-col sm:flex-row items-center justify-between gap-3 font-mono text-xs">
-          <div className="flex items-center gap-2 text-slate-400 text-[11px]">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Application synchronisée avec votre dépôt GitHub</span>
-          </div>
+          {/* Checkbox */}
+          <label className="flex items-center gap-2.5 cursor-pointer select-none text-slate-300 hover:text-slate-100 transition-colors text-xs">
+            <input
+              type="checkbox"
+              checked={dontShowAgain}
+              onChange={handleCheckboxChange}
+              className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-sc-cyan focus:ring-sc-cyan focus:ring-offset-0 cursor-pointer accent-cyan-400"
+            />
+            <span className="text-slate-300">
+              Ne plus afficher jusqu'à la prochaine mise à jour
+            </span>
+          </label>
 
+          {/* Action Button */}
           <button
             onClick={handleClose}
             className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-neon-cyan transition-all"
