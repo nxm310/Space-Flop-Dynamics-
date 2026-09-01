@@ -43,9 +43,7 @@ import {
   Volume2,
   VolumeX,
   Plus,
-  Sparkles,
-  Menu,
-  X
+  Sparkles
 } from 'lucide-react';
 
 export function App() {
@@ -528,9 +526,6 @@ export function App() {
     addToast('info', 'Remise à Zéro Complète', 'Toutes les données (minerais, commandes, raffinages, cargaisons) ont été effacées.');
   };
 
-  // Mobile navigation state
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   // Nav Tabs configuration
   const navTabs = [
     { id: 'dashboard', label: 'Tableau de Bord', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -547,42 +542,136 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#070a10] text-slate-100 sc-grid-bg flex flex-col font-sans">
-      {/* Sleek Star Citizen HUD Header */}
-      <header className="sticky top-0 z-40 bg-[#0c121e]/95 backdrop-blur-xl border-b border-sc-border/90 shadow-2xl shadow-black/70">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="h-16 flex items-center justify-between gap-3">
-            
-            {/* LEFT: Branding & Logo */}
-            <div
-              onClick={() => {
-                audio.playClick();
-                setActiveTab('dashboard');
-                setIsMobileMenuOpen(false);
-              }}
-              className="flex items-center gap-2.5 cursor-pointer group shrink-0"
-            >
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-sc-cyan via-cyan-600 to-slate-900 p-0.5 shadow-neon-cyan transition-transform group-hover:scale-105">
-                <div className="w-full h-full bg-[#0c121e] rounded-[7px] flex items-center justify-center text-sc-cyan group-hover:bg-sc-cyan group-hover:text-slate-950 transition-colors">
-                  <Pickaxe className="w-4 h-4" />
+      {/* 2-TIER SLEEK STAR CITIZEN HUD HEADER */}
+      <header className="sticky top-0 z-40 bg-[#090e18]/95 backdrop-blur-xl border-b border-sc-border/90 shadow-2xl shadow-black/80">
+        
+        {/* ROW 1: Branding, Telemetry & Utility Controls */}
+        <div className="border-b border-slate-800/80 bg-gradient-to-r from-[#0c1424] via-[#090e18] to-[#0c1424]">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div className="h-13 py-2 flex items-center justify-between gap-3">
+              
+              {/* LEFT: Branding & Logo */}
+              <div
+                onClick={() => {
+                  audio.playClick();
+                  setActiveTab('dashboard');
+                }}
+                className="flex items-center gap-2.5 cursor-pointer group shrink-0"
+              >
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sc-cyan via-cyan-600 to-slate-900 p-0.5 shadow-neon-cyan transition-transform group-hover:scale-105">
+                  <div className="w-full h-full bg-[#0c121e] rounded-[6px] flex items-center justify-center text-sc-cyan group-hover:bg-sc-cyan group-hover:text-slate-950 transition-colors">
+                    <Pickaxe className="w-4 h-4" />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 leading-none">
+                    <span className="font-extrabold font-sans text-sm tracking-wider text-slate-100 uppercase group-hover:text-sc-cyan transition-colors">
+                      STAR CITIZEN
+                    </span>
+                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-sc-cyan/15 text-sc-cyan border border-sc-cyan/30 uppercase">
+                      HUD
+                    </span>
+                    <span className="hidden sm:inline text-[9px] font-mono text-slate-500">
+                      v{CURRENT_APP_VERSION}
+                    </span>
+                  </div>
+                  <span className="text-[9px] font-mono tracking-widest text-slate-400 uppercase block mt-0.5">
+                    MINAGE • RAFFINAGE • BLUEPRINTS • COMMANDES
+                  </span>
                 </div>
               </div>
-              <div>
-                <div className="flex items-center gap-1.5 leading-none">
-                  <span className="font-extrabold font-sans text-base tracking-wider text-slate-100 uppercase group-hover:text-sc-cyan transition-colors">
-                    STAR CITIZEN
-                  </span>
-                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-sc-cyan/15 text-sc-cyan border border-sc-cyan/30 uppercase">
-                    HUD
-                  </span>
-                </div>
-                <span className="text-[10px] font-mono tracking-widest text-slate-400 uppercase block mt-1">
-                  SUITE MINAGE & RAFFINERIE
-                </span>
-              </div>
-            </div>
 
-            {/* CENTER: Desktop Nav Pills */}
-            <nav className="hidden xl:flex items-center gap-1 bg-[#070b13]/80 p-1 rounded-xl border border-slate-800/90 shadow-inner">
+              {/* CENTER: Telemetry Status Badges (Hidden on small screens) */}
+              <div className="hidden md:flex items-center gap-2">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sc-card/80 border border-slate-800 text-[11px] font-mono shadow-inner" title="Minerai brut en soute">
+                  <Pickaxe className="w-3.5 h-3.5 text-sc-cyan" />
+                  <span className="text-slate-400">Soute:</span>
+                  <strong className="text-slate-100">{totalRawHeaderSCU.toFixed(1)}</strong>
+                  <span className="text-[9px] text-slate-500">SCU</span>
+                </div>
+
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sc-card/80 border border-slate-800 text-[11px] font-mono shadow-inner" title="Minerais raffinés disponibles">
+                  <Boxes className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-slate-400">Stock:</span>
+                  <strong className="text-emerald-300">{totalRefinedHeaderSCU.toFixed(1)}</strong>
+                  <span className="text-[9px] text-slate-500">SCU</span>
+                </div>
+
+                {orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length > 0 && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-950/40 border border-amber-800/60 text-[11px] font-mono shadow-inner" title="Commandes clients actives">
+                    <ClipboardList className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-amber-300 font-bold">
+                      {orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length}
+                    </span>
+                    <span className="text-amber-400/80 text-[10px]">cmd</span>
+                  </div>
+                )}
+              </div>
+
+              {/* RIGHT: Quick Action Buttons & HUD Utilities */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {/* Quick Order Button */}
+                <button
+                  onClick={() => {
+                    audio.playClick();
+                    setIsCreateOrderModalOpen(true);
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold border border-sc-cyan shadow-neon-cyan text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150"
+                  title="Créer une nouvelle commande client"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Commande</span>
+                </button>
+
+                {/* What's New Button */}
+                <button
+                  onClick={() => {
+                    audio.playClick();
+                    setIsWhatsNewOpen(true);
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg border border-sc-cyan/40 bg-sc-cyan/15 hover:bg-sc-cyan/25 text-sc-cyan text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1 shadow-neon-cyan/20 transition-all"
+                  title="Consulter le journal des mises à jour"
+                >
+                  <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                  <span className="hidden lg:inline">Journal</span>
+                  <span className="text-[10px] font-mono">v{CURRENT_APP_VERSION}</span>
+                </button>
+
+                {/* Sound Toggle */}
+                <button
+                  onClick={() => {
+                    const upd = !settings.soundEnabled;
+                    audio.setEnabled(upd);
+                    if (upd) audio.playClick();
+                    setSettings({ ...settings, soundEnabled: upd });
+                  }}
+                  className="p-1.5 rounded-lg border border-slate-800 bg-sc-card hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+                  title={settings.soundEnabled ? 'Désactiver les sons HUD' : 'Activer les sons HUD'}
+                >
+                  {settings.soundEnabled ? <Volume2 className="w-4 h-4 text-sc-cyan" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
+                </button>
+
+                {/* Settings Cog */}
+                <button
+                  onClick={() => {
+                    audio.playClick();
+                    setIsSettingsOpen(true);
+                  }}
+                  className="p-1.5 rounded-lg border border-slate-800 bg-sc-card hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+                  title="Paramètres de l'application"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {/* ROW 2: Dedicated Navigation Bar (Responsive, Horizontal Scrolling, No Clutter) */}
+        <div className="bg-[#080d17]/95">
+          <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+            <nav className="flex items-center gap-1 sm:gap-2 overflow-x-auto py-1.5 custom-scrollbar" aria-label="Tabs">
               {navTabs.map((tab) => {
                 const isActive = activeTab === tab.id;
 
@@ -593,16 +682,16 @@ export function App() {
                       audio.playClick();
                       setActiveTab(tab.id);
                     }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider uppercase flex items-center gap-1.5 transition-all duration-150 relative ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono tracking-wider uppercase flex items-center gap-1.5 transition-all duration-150 shrink-0 select-none ${
                       isActive
-                        ? 'bg-sc-card text-sc-cyan font-bold border border-sc-cyan/40 shadow-neon-cyan/20'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent'
+                        ? 'bg-sc-card text-sc-cyan font-bold border border-sc-cyan/50 shadow-neon-cyan/20'
+                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-850 border border-transparent'
                     }`}
                   >
                     {tab.icon}
                     <span>{tab.label}</span>
                     {tab.badge && (
-                      <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
+                      <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full font-mono ${
                         isActive
                           ? 'bg-sc-cyan text-slate-950'
                           : 'bg-slate-800 text-slate-300 border border-slate-700'
@@ -614,172 +703,8 @@ export function App() {
                 );
               })}
             </nav>
-
-            {/* RIGHT: Telemetry Chips, Quick Actions & Settings */}
-            <div className="flex items-center gap-2 shrink-0">
-              {/* Telemetry Live Badge (Desktop) */}
-              <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-lg bg-sc-card/60 border border-slate-800 text-[11px] font-mono">
-                <span className="flex items-center gap-1 text-slate-400" title="Total brut en soute">
-                  <Pickaxe className="w-3 h-3 text-sc-cyan" />
-                  <strong className="text-slate-200">{totalRawHeaderSCU.toFixed(1)}</strong>
-                  <span className="text-[10px] text-slate-500">SCU</span>
-                </span>
-                <span className="text-slate-700">•</span>
-                <span className="flex items-center gap-1 text-slate-400" title="Total minerais raffinés disponibles">
-                  <Boxes className="w-3 h-3 text-emerald-400" />
-                  <strong className="text-emerald-300">{totalRefinedHeaderSCU.toFixed(1)}</strong>
-                  <span className="text-[10px] text-slate-500">SCU</span>
-                </span>
-              </div>
-
-              {/* Quick Action Button */}
-              <button
-                onClick={() => {
-                  audio.playClick();
-                  setIsCreateOrderModalOpen(true);
-                }}
-                className="px-3 py-1.5 rounded-lg bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold border border-sc-cyan shadow-neon-cyan text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Commande</span>
-              </button>
-
-              {/* What's New Pop-up Trigger Button */}
-              <button
-                onClick={() => {
-                  audio.playClick();
-                  setIsWhatsNewOpen(true);
-                }}
-                className="px-2.5 py-1.5 rounded-lg border border-sc-cyan/40 bg-sc-cyan/15 hover:bg-sc-cyan/25 text-sc-cyan text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-neon-cyan/20 transition-all"
-                title="Afficher les nouveautés des 5 dernières opérations"
-              >
-                <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                <span className="hidden md:inline">Journal v{CURRENT_APP_VERSION}</span>
-              </button>
-
-              {/* Sound Toggle */}
-              <button
-                onClick={() => {
-                  const upd = !settings.soundEnabled;
-                  audio.setEnabled(upd);
-                  if (upd) audio.playClick();
-                  setSettings({ ...settings, soundEnabled: upd });
-                }}
-                className="p-2 rounded-lg border border-slate-800 bg-sc-card hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
-                title={settings.soundEnabled ? 'Désactiver les sons HUD' : 'Activer les sons HUD'}
-              >
-                {settings.soundEnabled ? <Volume2 className="w-4 h-4 text-sc-cyan" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
-              </button>
-
-              {/* Settings Cog */}
-              <button
-                onClick={() => {
-                  audio.playClick();
-                  setIsSettingsOpen(true);
-                }}
-                className="p-2 rounded-lg border border-slate-800 bg-sc-card hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
-                title="Paramètres de l'application"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-
-              {/* Mobile Menu Toggle Button */}
-              <button
-                onClick={() => {
-                  audio.playClick();
-                  setIsMobileMenuOpen(!isMobileMenuOpen);
-                }}
-                className="xl:hidden p-2 rounded-lg border border-slate-800 bg-sc-card hover:bg-slate-800 text-slate-300 transition-colors"
-                title="Ouvrir le menu de navigation"
-              >
-                {isMobileMenuOpen ? <X className="w-5 h-5 text-sc-cyan" /> : <Menu className="w-5 h-5" />}
-              </button>
-            </div>
-
           </div>
         </div>
-
-        {/* Medium Screen Horizontal Nav Rail (< 1280px and >= 768px when menu not expanded) */}
-        <div className="hidden md:block xl:hidden border-t border-slate-800/80 bg-[#090e18]/90">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <nav className="flex space-x-1 overflow-x-auto py-1.5 custom-scrollbar" aria-label="Tabs">
-              {navTabs.map((tab) => {
-                const isActive = activeTab === tab.id;
-
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => {
-                      audio.playClick();
-                      setActiveTab(tab.id);
-                    }}
-                    className={`px-3 py-1 rounded-lg text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-all shrink-0 ${
-                      isActive
-                        ? 'bg-sc-card text-sc-cyan border border-sc-cyan/40 font-bold shadow-sm'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                    }`}
-                  >
-                    {tab.icon}
-                    <span>{tab.label}</span>
-                    {tab.badge && (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-sc-cyan/20 text-sc-cyan border border-sc-cyan/30">
-                        {tab.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
-
-        {/* Mobile Fullscreen Navigation Drawer */}
-        {isMobileMenuOpen && (
-          <div className="xl:hidden border-t border-slate-800 bg-[#0a0f1c]/98 px-4 py-4 space-y-2 animate-in slide-in-from-top-2 duration-150">
-            <div className="grid grid-cols-2 gap-2 pb-2">
-              <div className="p-2 rounded-lg bg-sc-card border border-slate-800 text-xs font-mono">
-                <span className="text-[10px] text-slate-500 block uppercase">Minage Brut</span>
-                <span className="font-bold text-sc-cyan">{totalRawHeaderSCU.toFixed(1)} SCU</span>
-              </div>
-              <div className="p-2 rounded-lg bg-sc-card border border-slate-800 text-xs font-mono">
-                <span className="text-[10px] text-slate-500 block uppercase">Stock Raffiné</span>
-                <span className="font-bold text-emerald-400">{totalRefinedHeaderSCU.toFixed(1)} SCU</span>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              {navTabs.map((tab) => {
-                const isActive = activeTab === tab.id;
-
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => {
-                      audio.playClick();
-                      setActiveTab(tab.id);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full px-4 py-2.5 rounded-lg text-xs font-mono uppercase tracking-wider flex items-center justify-between transition-colors ${
-                      isActive
-                        ? 'bg-sc-card text-sc-cyan border border-sc-cyan/50 font-bold shadow-neon-cyan/20'
-                        : 'text-slate-300 hover:bg-slate-850 hover:text-slate-100'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      {tab.icon}
-                      <span>{tab.label}</span>
-                    </div>
-                    {tab.badge && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-sc-cyan/20 text-sc-cyan border border-sc-cyan/40">
-                        {tab.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Ambient Glowing HUD Bottom Border */}
         <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-sc-cyan/50 to-transparent opacity-75" />

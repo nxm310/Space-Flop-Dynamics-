@@ -2,16 +2,16 @@ import React, { useState } from 'react';
 import {
   Sparkles,
   X,
+  LayoutGrid,
   Users,
   Pencil,
   CheckSquare,
   BookOpen,
-  Trash2,
   Rocket
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.7.0';
+export const CURRENT_APP_VERSION = '1.8.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -47,68 +47,66 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 5 • Version 1.7',
+      version: 'Opération 5 • Version 1.8.0',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Nouveau',
+      badge: 'Majeure',
       badgeColor: 'cyan',
-      title: 'Fiches Clients 360°, Historique Factions/Discord & Sous-Composants',
-      icon: <Users className="w-5 h-5 text-sc-cyan" />,
+      title: 'Header HUD Supérieur sur 2 Lignes & Ergonomie 100% Responsive',
+      icon: <LayoutGrid className="w-5 h-5 text-sc-cyan" />,
       points: [
-        '👥 Fiches Clients 360° Automatiques : Chaque commande passée génère ou met à jour la fiche du client avec l\'historique complet de ses commandes, de ses organisations/factions et de ses contacts Discord & Spectrum.',
-        '📑 Menu Déroulant des Clients & Auto-Complétion : Sélecteur déroulant complet de tous les clients existants ou déjà saisis dans l\'application, avec boutons de sélection rapide de leurs factions et contacts historiques.',
-        '🧩 Filtrage par Sous-Composants de Blueprints : Trieur instantané par sous-composants dans chaque catégorie (Quantum, Boucliers, Génératrices, Refroidisseurs, Têtes Minières, Répéteurs/Canons Laser, Gatlings, Torpilles S9, Casques, Plastrons, Bras, Jambières, Sacs, Outils, Conteneurs).',
-        '🛠️ Correction d\'Affichage du Prix aUEC : Suppression du chevauchement des flèches du navigateur avec le badge aUEC et espacement optimisé des champs numériques.'
+        '🚀 Nouveau Header HUD sur 2 Lignes : Séparation claire entre la barre de télémétrie/statut en haut et la barre de navigation dédiée pour un affichage aéré et parfaitement responsive sur mobile, tablette et PC.',
+        '📊 Télémétrie Live Épurée : Affichage direct des jauges Soute Brute (SCU), Stock Raffiné (SCU) et Commandes Actives dans des capsules haute visibilité.',
+        '👥 Fiches Clients 360° & Historique Automatique : Enregistrement automatique des clients avec historique complet des commandes, des corporations/factions et des contacts Discord & Spectrum.',
+        '📑 Menu Déroulant Clients & Sous-Composants Blueprints : Sélecteur déroulant complet de tous les clients et tri par sous-composants dans chaque catégorie de recettes.'
       ]
     },
     {
-      version: 'Opération 4 • Version 1.6',
+      version: 'Opération 4 • Version 1.7.0',
       date: 'Étape précédente',
-      badge: 'Minerais & Blueprints',
+      badge: 'Majeure',
       badgeColor: 'purple',
+      title: 'Répertoire Clients & Correction Visuelle des Prix aUEC',
+      icon: <Users className="w-5 h-5 text-purple-400" />,
+      points: [
+        '👥 Répertoire & Base de Données Clients : Gestion complète des fiches clients avec historique des transactions.',
+        '🛠️ Correction d\'Affichage du Prix aUEC : Espacement net des champs de saisie numérique et suppression du chevauchement avec le badge aUEC.'
+      ]
+    },
+    {
+      version: 'Opération 3 • Version 1.6.0',
+      date: 'Minerais & Blueprints',
+      badge: 'Majeure',
+      badgeColor: 'emerald',
       title: 'Édition Complète des Minerais & Expansion Blueprints Dédupliquée',
-      icon: <Pencil className="w-5 h-5 text-purple-400" />,
+      icon: <Pencil className="w-5 h-5 text-emerald-400" />,
       points: [
         '✏️ Édition des Minerais Post-Importation : Modifiez directement vos lots de minerais (nom, quantité avec convertisseur µSCU / cSCU / SCU, qualité de 0 à 1000, type d\'extraction, propriétaire et notes).',
-        '🛡️ 50+ Recettes Star Citizen Sans Aucun Doublon : Ajout des Torpilles S9, Gatlings AD4B/AD5B, Quantum Drives S1-S3, Rayon MaxLift et Modules Miniers avec déduplication stricte.',
-        '🧹 Interface Import / Export Épurée : Suppression des modèles vierges superflus pour une importation directe et sans encombrement.',
-        '⏱️ Option "Ne plus afficher" : Mémorisation intelligente du journal des mises à jour jusqu\'au prochain saut de version.'
+        '🛡️ 50+ Recettes Star Citizen Sans Aucun Doublon : Ajout des Torpilles S9, Gatlings AD4B/AD5B, Quantum Drives S1-S3 et pièces d\'armures sans doublon.',
+        '🧹 Interface Import / Export Épurée : Suppression des modèles vierges superflus.'
       ]
     },
     {
-      version: 'Opération 3 • Version 1.5',
+      version: 'Opération 2 • Version 1.5.0',
       date: 'Atelier',
       badge: 'Atelier',
-      badgeColor: 'emerald',
+      badgeColor: 'amber',
       title: 'Atelier Blueprints Personnel & Tri Multi-Colonnes',
-      icon: <CheckSquare className="w-5 h-5 text-emerald-400" />,
+      icon: <CheckSquare className="w-5 h-5 text-amber-400" />,
       points: [
         '🌟 Onglet Dédié "Mes Blueprints (Mon Atelier)" : Consultez et fabriquez uniquement les blueprints que vous possédez ou utilisez régulièrement.',
-        '☑️ Deux modes d\'ajout : Cochez directement la case sur la fiche d\'un plan ou sélectionnez-le depuis le menu déroulant par catégorie.',
-        '🔄 Tri Interactif par En-tête : Cliquez sur les colonnes du tableau pour trier par Nom (A-Z/Z-A), Type (Geo/Vaisseau), Qualité, Quantité SCU ou Valeur aUEC.'
+        '🔄 Tri Interactif par En-tête : Cliquez sur les colonnes du tableau pour trier par Nom, Type, Qualité, Quantité SCU ou Valeur aUEC.'
       ]
     },
     {
-      version: 'Opération 2 • Version 1.4',
+      version: 'Opération 1 • Version 1.4.0',
       date: 'Datamining',
       badge: 'Expansion',
-      badgeColor: 'amber',
+      badgeColor: 'cyan',
       title: 'Expansion Massive des Recettes & Hub Datamining',
-      icon: <BookOpen className="w-5 h-5 text-amber-400" />,
+      icon: <BookOpen className="w-5 h-5 text-sc-cyan" />,
       points: [
         '🔬 Hub Sources & Datamining : Accès direct aux bases communautaires (SC-Craft.tools, scunpacked-data, SPViewer, Erkul, UEX Corp).',
         '📥 Importateur de Packs JSON : Importation de catalogues personnalisés complets en 1 clic.'
-      ]
-    },
-    {
-      version: 'Opération 1 • Version 1.3',
-      date: 'Système',
-      badge: 'Maintenance',
-      badgeColor: 'cyan',
-      title: 'Démarrage Vierge 100% Propre & Réinitialisation Globale',
-      icon: <Trash2 className="w-5 h-5 text-sc-cyan" />,
-      points: [
-        '✨ État Initial 100% Vierge : L\'application démarre propre sans fausse donnée de démonstration pour tous les nouveaux utilisateurs.',
-        '🛡️ Réinitialisation Sécurisée dans Paramètres : Possibilité de vider instantanément toutes les tables avec dialogue de confirmation.'
       ]
     }
   ];
