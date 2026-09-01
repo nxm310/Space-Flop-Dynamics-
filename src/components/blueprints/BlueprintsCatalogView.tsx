@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Blueprint, BlueprintCategory, RefinedStockItem } from '../../types';
-import { BLUEPRINT_CATEGORIES } from '../../data/blueprintsData';
+import { BLUEPRINT_CATEGORIES, BLUEPRINT_SUBCATEGORIES } from '../../data/blueprintsData';
 import { BlueprintDetailsModal } from './BlueprintDetailsModal';
 import { CustomBlueprintModal } from './CustomBlueprintModal';
 import { BlueprintsSourcesModal } from './BlueprintsSourcesModal';
@@ -27,7 +27,8 @@ import {
   Square,
   LayoutGrid,
   Table as TableIcon,
-  ChevronRight
+  ChevronRight,
+  Layers
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -58,6 +59,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
   });
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [feasibilityFilter, setFeasibilityFilter] = useState<'all' | 'craftable' | 'missing'>('all');
   const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint | null>(null);
@@ -135,6 +137,15 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
     // Category filter
     if (selectedCategory !== 'all' && bp.category !== selectedCategory) {
       return false;
+    }
+
+    // Sub-category filter
+    if (selectedCategory !== 'all' && selectedSubCategory !== 'all') {
+      const subCatList = BLUEPRINT_SUBCATEGORIES[selectedCategory];
+      const activeSubCat = subCatList?.find(s => s.key === selectedSubCategory);
+      if (activeSubCat && !activeSubCat.match(bp)) {
+        return false;
+      }
     }
 
     // Search query (name, typeLabel, ingredients, notes)
@@ -338,6 +349,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
           onClick={() => {
             audio.playClick();
             setSelectedCategory('all');
+            setSelectedSubCategory('all');
           }}
           className={`px-3.5 py-2 rounded-xl text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 ${
             selectedCategory === 'all'
@@ -360,6 +372,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
               onClick={() => {
                 audio.playClick();
                 setSelectedCategory(cat.key);
+                setSelectedSubCategory('all');
               }}
               className={`px-3.5 py-2 rounded-xl text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 ${
                 isSelected
@@ -373,6 +386,45 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
           );
         })}
       </div>
+
+      {/* Sub-Category Pills Bar (When a specific category is selected) */}
+      {selectedCategory !== 'all' && BLUEPRINT_SUBCATEGORIES[selectedCategory] && (
+        <div className="p-2.5 rounded-xl bg-[#090e18]/90 border border-sc-border/80 flex items-center gap-1.5 overflow-x-auto custom-scrollbar animate-in fade-in duration-150">
+          <div className="flex items-center gap-1 text-[10px] font-mono text-sc-cyan uppercase font-bold tracking-wider px-2 shrink-0">
+            <Layers className="w-3.5 h-3.5" />
+            <span>Sous-composants :</span>
+          </div>
+
+          {BLUEPRINT_SUBCATEGORIES[selectedCategory].map(sub => {
+            const pool = subTab === 'my_workshop' ? blueprints.filter(b => unlockedIds.includes(b.id)) : blueprints;
+            const catPool = pool.filter(b => b.category === selectedCategory);
+            const count = catPool.filter(sub.match).length;
+            const isSubSelected = selectedSubCategory === sub.key;
+
+            return (
+              <button
+                key={sub.key}
+                onClick={() => {
+                  audio.playClick();
+                  setSelectedSubCategory(sub.key);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap transition-all shrink-0 flex items-center gap-1.5 ${
+                  isSubSelected
+                    ? 'bg-sc-cyan text-slate-950 font-bold shadow-neon-cyan'
+                    : 'bg-sc-card/90 border border-slate-800 text-slate-300 hover:text-white hover:border-sc-cyan/40'
+                }`}
+              >
+                <span>{sub.shortLabel}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  isSubSelected ? 'bg-slate-950/40 text-slate-950' : 'bg-slate-800 text-sc-cyan'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Search, Feasibility Filter & Selection Controls Bar */}
       <div className="bg-sc-card/60 border border-sc-border rounded-xl p-3.5 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">

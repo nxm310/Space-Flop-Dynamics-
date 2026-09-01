@@ -958,6 +958,70 @@ export const STAR_CITIZEN_BLUEPRINTS: Blueprint[] = [
     ]
   },
   {
+    id: 'bp_arm_heavy_defiance_arms',
+    key: 'BP_CRAFT_ARM_DEFIANCE_ARMS',
+    name: 'Brassards Blindés Roush Defiance Arms',
+    category: 'armures',
+    typeLabel: 'Brassards d\'Armure',
+    subtype: 'Heavy Arms Armor',
+    grade: 'Military Heavy 40%',
+    craftTimeSeconds: 350,
+    description: 'Protection d\'avant-bras lourde absorbant le recul et les impacts balistiques.',
+    marketEstimatedAUEC: 2200,
+    ingredients: [
+      { resourceId: 'titanium', resourceName: 'Titanium', quantitySCU: 0.25 },
+      { resourceId: 'tungsten', resourceName: 'Tungsten', quantitySCU: 0.18 }
+    ]
+  },
+  {
+    id: 'bp_arm_heavy_defiance_legs',
+    key: 'BP_CRAFT_ARM_DEFIANCE_LEGS',
+    name: 'Jambières Renforcées Roush Defiance Legs',
+    category: 'armures',
+    typeLabel: 'Jambières d\'Armure',
+    subtype: 'Heavy Legs Armor',
+    grade: 'Military Heavy 40%',
+    craftTimeSeconds: 380,
+    description: 'Jambières blindées motorisées supportant les charges lourdes et réduisant la fatigue.',
+    marketEstimatedAUEC: 2400,
+    ingredients: [
+      { resourceId: 'titanium', resourceName: 'Titanium', quantitySCU: 0.3 },
+      { resourceId: 'tungsten', resourceName: 'Tungsten', quantitySCU: 0.2 }
+    ]
+  },
+  {
+    id: 'bp_arm_heavy_morozov_backpack',
+    key: 'BP_CRAFT_ARM_MOROZOV_BACKPACK',
+    name: 'Sac à Dos Lourd Morozov-SH Thundercell (40K µSCU)',
+    category: 'armures',
+    typeLabel: 'Sac à Dos Lourd',
+    subtype: 'Heavy Backpack',
+    grade: 'Mining & Transport',
+    craftTimeSeconds: 400,
+    description: 'Sac à dos de grande capacité compatible armure lourde pour récolte minière à pied.',
+    marketEstimatedAUEC: 3800,
+    ingredients: [
+      { resourceId: 'aluminum', resourceName: 'Aluminum', quantitySCU: 0.4 },
+      { resourceId: 'silicon', resourceName: 'Silicon', quantitySCU: 0.25 }
+    ]
+  },
+  {
+    id: 'bp_arm_backpack_arden',
+    key: 'BP_CRAFT_ARM_ARDEN_BACKPACK',
+    name: 'Sac à Dos Tactique CDS Arden Backpack',
+    category: 'armures',
+    typeLabel: 'Sac à Dos Moyen',
+    subtype: 'Tactical Backpack',
+    grade: 'Military Standard',
+    craftTimeSeconds: 300,
+    description: 'Sac à dos équilibré compatible avec les armures moyennes et légères.',
+    marketEstimatedAUEC: 2400,
+    ingredients: [
+      { resourceId: 'aluminum', resourceName: 'Aluminum', quantitySCU: 0.3 },
+      { resourceId: 'copper', resourceName: 'Copper', quantitySCU: 0.15 }
+    ]
+  },
+  {
     id: 'bp_arm_suit_novikov',
     key: 'BP_CRAFT_SUIT_NOVIKOV',
     name: 'Combinaison Environnementale Novikov (Grand Froid -150°C)',
@@ -1261,3 +1325,249 @@ export const BLUEPRINT_CATEGORIES: { key: BlueprintCategory; label: string; icon
   { key: 'outils', label: 'Outils & Équipements', icon: 'Wrench', description: 'Multi-tool, modules tracteurs, gadgets de minage, soins, hacking' },
   { key: 'composants_industriels', label: 'Matériaux & Cargo', icon: 'Box', description: 'Boîtes de fret 1 à 32 SCU, caissons miniers Ore Pods, composants électroniques' }
 ];
+
+export interface BlueprintSubCategoryDef {
+  key: string;
+  label: string;
+  shortLabel: string;
+  icon?: string;
+  match: (bp: Blueprint) => boolean;
+}
+
+export const BLUEPRINT_SUBCATEGORIES: Record<string, BlueprintSubCategoryDef[]> = {
+  vaisseau: [
+    {
+      key: 'all',
+      label: 'Tous les Composants',
+      shortLabel: 'Tous',
+      match: () => true
+    },
+    {
+      key: 'quantum',
+      label: '⚡ Quantum Drives (Moteurs Quantiques)',
+      shortLabel: '⚡ Quantum Drives',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('quantum') || bp.name.toLowerCase().includes('quantum')
+    },
+    {
+      key: 'shield',
+      label: '🛡️ Générateurs de Bouclier (Shields)',
+      shortLabel: '🛡️ Boucliers',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('shield') || bp.name.toLowerCase().includes('shield') || bp.name.toLowerCase().includes('bouclier')
+    },
+    {
+      key: 'power',
+      label: '🔋 Génératrices Électriques (Power Plants)',
+      shortLabel: '🔋 Génératrices',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('power') || bp.name.toLowerCase().includes('power') || bp.name.toLowerCase().includes('générateur')
+    },
+    {
+      key: 'cooler',
+      label: '❄️ Refroidisseurs Thermiques (Coolers)',
+      shortLabel: '❄️ Refroidisseurs',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('cooler') || bp.name.toLowerCase().includes('cooler') || bp.name.toLowerCase().includes('refroidisseur')
+    },
+    {
+      key: 'mining_head',
+      label: '⛏️ Têtes & Lasers de Minage (Mining Heads)',
+      shortLabel: '⛏️ Têtes Minières',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('mining head') || bp.name.toLowerCase().includes('mining laser') || bp.name.toLowerCase().includes('helix') || bp.name.toLowerCase().includes('lancet') || bp.name.toLowerCase().includes('impact')
+    },
+    {
+      key: 'mining_sub',
+      label: '🧪 Modules Miniers Consommables (Sub-Items)',
+      shortLabel: '🧪 Modules Miniers',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('mining sub') || bp.typeLabel.toLowerCase().includes('sub-item') || bp.name.toLowerCase().includes('module minier')
+    }
+  ],
+  armes_vaisseau: [
+    {
+      key: 'all',
+      label: 'Toutes les Armes de Bord',
+      shortLabel: 'Toutes',
+      match: () => true
+    },
+    {
+      key: 'laser_repeater',
+      label: '⚡ Répéteurs Laser (Bulldog, Badger, Panther, Rhino)',
+      shortLabel: '⚡ Répéteurs Laser',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('repeater') || bp.name.toLowerCase().includes('repeater')
+    },
+    {
+      key: 'laser_cannon',
+      label: '💥 Canons Laser & Énergie (Omnisky, M7A)',
+      shortLabel: '💥 Canons Laser',
+      match: (bp) => (bp.typeLabel.toLowerCase().includes('laser cannon') || (bp.typeLabel.toLowerCase().includes('cannon') && !bp.typeLabel.toLowerCase().includes('ballistic'))) && !bp.typeLabel.toLowerCase().includes('repeater')
+    },
+    {
+      key: 'ballistic_gatling',
+      label: '🔥 Gatlings Balistiques (Mantis, AD4B, AD5B)',
+      shortLabel: '🔥 Gatlings Balistiques',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('gatling') || bp.name.toLowerCase().includes('gatling')
+    },
+    {
+      key: 'ballistic_cannon',
+      label: '💣 Canons Balistiques Lourds (Deadbolt)',
+      shortLabel: '💣 Canons Balistiques',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('ballistic cannon') || bp.name.toLowerCase().includes('deadbolt')
+    },
+    {
+      key: 'missile_torpedo',
+      label: '🚀 Missiles & Torpilles Lourdes S9 (Tempest, Seeker)',
+      shortLabel: '🚀 Missiles & Torpilles',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('missile') || bp.typeLabel.toLowerCase().includes('torpedo') || bp.name.toLowerCase().includes('missile') || bp.name.toLowerCase().includes('torpedo') || bp.name.toLowerCase().includes('torpille')
+    }
+  ],
+  armes_fps: [
+    {
+      key: 'all',
+      label: 'Toutes les Armes FPS',
+      shortLabel: 'Toutes',
+      match: () => true
+    },
+    {
+      key: 'rifles',
+      label: '🎯 Fusils d\'Assaut & Plasma (P4-AR, Gallant, Karna, S71)',
+      shortLabel: '🎯 Fusils d\'Assaut',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('assaut') || (bp.typeLabel.toLowerCase().includes('fusil') && !bp.typeLabel.toLowerCase().includes('sniper')) || bp.typeLabel.toLowerCase().includes('marksman') || Boolean(bp.subtype?.toLowerCase().includes('rifle'))
+    },
+    {
+      key: 'lmg',
+      label: '💥 Mitrailleuses Lourdes (FS-9 LMG)',
+      shortLabel: '💥 Mitrailleuses (LMG)',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('mitrailleuse') || bp.name.toLowerCase().includes('lmg') || bp.name.toLowerCase().includes('fs-9')
+    },
+    {
+      key: 'sniper',
+      label: '🔭 Fusils de Précision / Sniper (P6-LR, Arrowhead)',
+      shortLabel: '🔭 Snipers',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('sniper') || bp.name.toLowerCase().includes('sniper') || bp.name.toLowerCase().includes('p6-lr')
+    },
+    {
+      key: 'smg',
+      label: '⚡ Mitraillettes / SMG (C54, Custodian)',
+      shortLabel: '⚡ SMG / Mitraillettes',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('mitraillette') || bp.typeLabel.toLowerCase().includes('smg') || Boolean(bp.subtype?.toLowerCase().includes('smg'))
+    },
+    {
+      key: 'heavy_railgun',
+      label: '🦾 Armes Lourdes & Railguns (Scourge Railgun, Animus)',
+      shortLabel: '🦾 Railguns & Lourdes',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('lourde') || bp.typeLabel.toLowerCase().includes('railgun') || bp.name.toLowerCase().includes('railgun') || bp.name.toLowerCase().includes('lanceur')
+    },
+    {
+      key: 'explosives',
+      label: '💣 Explosifs & Grenades Tactiques',
+      shortLabel: '💣 Grenades & Explosifs',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('explosif') || bp.typeLabel.toLowerCase().includes('grenade') || bp.name.toLowerCase().includes('grenade')
+    }
+  ],
+  armures: [
+    {
+      key: 'all',
+      label: 'Toutes les Pièces d\'Armure',
+      shortLabel: 'Toutes',
+      match: () => true
+    },
+    {
+      key: 'helmets',
+      label: '🪖 Casques Intégraux (Helmets)',
+      shortLabel: '🪖 Casques',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('casque') || bp.name.toLowerCase().includes('casque') || bp.name.toLowerCase().includes('helmet')
+    },
+    {
+      key: 'cores',
+      label: '🛡️ Plastrons & Torses (Cores - Defiance, ORC, Morozov)',
+      shortLabel: '🛡️ Plastrons (Torses)',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('plastron') || bp.typeLabel.toLowerCase().includes('torso') || bp.name.toLowerCase().includes('plastron') || bp.name.toLowerCase().includes('core')
+    },
+    {
+      key: 'arms',
+      label: '🦾 Brassards & Bras (Arms Armor)',
+      shortLabel: '🦾 Brassards (Bras)',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('brassard') || bp.typeLabel.toLowerCase().includes('bras') || bp.typeLabel.toLowerCase().includes('arms') || bp.name.toLowerCase().includes('brassard') || bp.name.toLowerCase().includes('arms')
+    },
+    {
+      key: 'legs',
+      label: '🦿 Jambières & Jambes (Legs Armor)',
+      shortLabel: '🦿 Jambières (Jambes)',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('jambi') || bp.typeLabel.toLowerCase().includes('jambe') || bp.typeLabel.toLowerCase().includes('legs') || bp.name.toLowerCase().includes('jambière') || bp.name.toLowerCase().includes('legs')
+    },
+    {
+      key: 'backpacks',
+      label: '🎒 Sacs à Dos (Backpacks - Morozov, Arden)',
+      shortLabel: '🎒 Sacs à Dos',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('sac') || bp.name.toLowerCase().includes('sac') || bp.name.toLowerCase().includes('backpack')
+    },
+    {
+      key: 'suits',
+      label: '❄️ Combinaisons Spécialisées (Novikov Froid / Pembroke Chaud)',
+      shortLabel: '❄️ Combinaisons Temp.',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('combinaison') || bp.name.toLowerCase().includes('novikov') || bp.name.toLowerCase().includes('pembroke') || Boolean(bp.subtype?.toLowerCase().includes('suit'))
+    }
+  ],
+  outils: [
+    {
+      key: 'all',
+      label: 'Tous les Outils & Équipements',
+      shortLabel: 'Tous',
+      match: () => true
+    },
+    {
+      key: 'multitool_tractors',
+      label: '🧲 Multi-Tool & Rayons Tracteurs (Pyro, TruHold, MaxLift)',
+      shortLabel: '🧲 Multi-Tool & Tracteurs',
+      match: (bp) => bp.name.toLowerCase().includes('multi-tool') || bp.name.toLowerCase().includes('tractor') || bp.name.toLowerCase().includes('maxlift') || bp.name.toLowerCase().includes('tracteur')
+    },
+    {
+      key: 'salvage',
+      label: '✂️ Modules de Découpe & Scraping Coque (SRT Cambio)',
+      shortLabel: '✂️ Salvage & Découpe',
+      match: (bp) => bp.name.toLowerCase().includes('salvage') || bp.name.toLowerCase().includes('cambio') || bp.typeLabel.toLowerCase().includes('salvage') || bp.name.toLowerCase().includes('découpage')
+    },
+    {
+      key: 'gadgets',
+      label: '⛏️ Gadgets Miniers Déployables (BoreMax, Sabir 21)',
+      shortLabel: '⛏️ Gadgets Miniers',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('gadget') || bp.name.toLowerCase().includes('gadget') || bp.name.toLowerCase().includes('boremax') || bp.name.toLowerCase().includes('sabir')
+    },
+    {
+      key: 'medical',
+      label: '💉 Matériel Médical & Soins (CureLife MedGun, MedPen)',
+      shortLabel: '💉 Médical & Soins',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('médical') || bp.name.toLowerCase().includes('medgun') || bp.name.toLowerCase().includes('medpen') || bp.name.toLowerCase().includes('médical')
+    },
+    {
+      key: 'hacking',
+      label: '💾 Cryptokeys & Hacking (Puce Tigerclaw CrimeStat)',
+      shortLabel: '💾 Cryptokeys / Hacking',
+      match: (bp) => bp.typeLabel.toLowerCase().includes('cryptokey') || bp.name.toLowerCase().includes('tigerclaw') || Boolean(bp.subtype?.toLowerCase().includes('hacking')) || bp.name.toLowerCase().includes('cryptographique')
+    }
+  ],
+  composants_industriels: [
+    {
+      key: 'all',
+      label: 'Tous les Matériaux & Cargo',
+      shortLabel: 'Tous',
+      match: () => true
+    },
+    {
+      key: 'containers',
+      label: '📦 Boîtes & Conteneurs de Fret (1, 2, 8, 16, 32 SCU)',
+      shortLabel: '📦 Conteneurs Cargo',
+      match: (bp) => bp.name.toLowerCase().includes('conteneur') || bp.name.toLowerCase().includes('boîte') || bp.name.toLowerCase().includes('caisse') || bp.typeLabel.toLowerCase().includes('conteneur')
+    },
+    {
+      key: 'ore_pods',
+      label: '🛢️ Caissons Miniers Détachables (MISC Ore Pod 32 SCU)',
+      shortLabel: '🛢️ Ore Pods Miniers',
+      match: (bp) => bp.name.toLowerCase().includes('ore pod') || bp.name.toLowerCase().includes('caisson')
+    },
+    {
+      key: 'matrices',
+      label: '⚙️ Composants Électroniques, Relais & Matrices Cryo',
+      shortLabel: '⚙️ Relais & Matrices',
+      match: (bp) => bp.name.toLowerCase().includes('relais') || bp.name.toLowerCase().includes('matrice') || bp.typeLabel.toLowerCase().includes('industriel') || bp.typeLabel.toLowerCase().includes('composant')
+    }
+  ]
+};
+
