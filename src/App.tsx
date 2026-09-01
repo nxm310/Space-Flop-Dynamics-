@@ -13,6 +13,7 @@ import { StorageService } from './services/storageService';
 import { STAR_CITIZEN_BLUEPRINTS } from './data/blueprintsData';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { SettingsModal } from './components/settings/SettingsModal';
+import { WhatsNewModal } from './components/common/WhatsNewModal';
 import { audio } from './services/audioService';
 
 // Module Views
@@ -42,6 +43,7 @@ import {
   Volume2,
   VolumeX,
   Plus,
+  Sparkles,
   Menu,
   X
 } from 'lucide-react';
@@ -62,6 +64,7 @@ export function App() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   // Modals & Cross-tab prefill states
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAddRawModalOpen, setIsAddRawModalOpen] = useState(false);
   const [isRefineryModalOpen, setIsRefineryModalOpen] = useState(false);
@@ -617,6 +620,19 @@ export function App() {
                 <span className="hidden sm:inline">Commande</span>
               </button>
 
+              {/* What's New Pop-up Trigger Button */}
+              <button
+                onClick={() => {
+                  audio.playClick();
+                  setIsWhatsNewOpen(true);
+                }}
+                className="px-2.5 py-1.5 rounded-lg border border-sc-cyan/40 bg-sc-cyan/15 hover:bg-sc-cyan/25 text-sc-cyan text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-neon-cyan/20 transition-all"
+                title="Afficher les nouveautés des 5 dernières opérations"
+              >
+                <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                <span className="hidden md:inline">Nouveautés</span>
+              </button>
+
               {/* Sound Toggle */}
               <button
                 onClick={() => {
@@ -860,6 +876,12 @@ export function App() {
         onClearAllData={handleClearAllData}
       />
 
+      {/* What's New Pop-up Modal (Last 5 Operations) */}
+      <WhatsNewModal
+        isOpen={isWhatsNewOpen}
+        onClose={() => setIsWhatsNewOpen(false)}
+      />
+
       {/* Toast Notification Container */}
       <ToastContainer toasts={toasts} onDismiss={(id) => setToasts(prev => prev.filter(t => t.id !== id))} />
 
@@ -872,7 +894,15 @@ export function App() {
           <div className="flex items-center gap-3">
             <span>Données : <a href="https://api.star-citizen.wiki" target="_blank" rel="noreferrer" className="text-sc-cyan hover:underline">api.star-citizen.wiki</a></span>
             <span>•</span>
-            <span>v1.0.0</span>
+            <button
+              onClick={() => {
+                audio.playClick();
+                setIsWhatsNewOpen(true);
+              }}
+              className="text-sc-cyan hover:underline font-bold"
+            >
+              v1.5.0 (Journal des Mises à Jour)
+            </button>
           </div>
         </div>
       </footer>
