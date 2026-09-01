@@ -186,14 +186,34 @@ export class StorageService {
     const existingIdx = clients.findIndex(c => c.name.toLowerCase().trim() === trimmedName.toLowerCase());
 
     const now = new Date().toISOString();
+    const org = clientData.organization?.trim();
+    const contact = clientData.contact?.trim();
+
+    // Compute actual order stats
+    const clientOrders = this.getOrders().filter(o => o.clientName.toLowerCase().trim() === trimmedName.toLowerCase());
+    const orderCount = clientOrders.length;
+    const totalSpentAUEC = clientOrders.reduce((acc, o) => acc + (o.totalPriceAUEC || 0), 0);
 
     if (existingIdx >= 0) {
       const existing = clients[existingIdx];
+      
+      // Update history of organizations
+      const prevOrgs = existing.organizationsHistory || (existing.organization ? [existing.organization] : []);
+      const newOrgs = org ? Array.from(new Set([org, ...prevOrgs])) : prevOrgs;
+
+      // Update history of contacts
+      const prevContacts = existing.contactsHistory || (existing.contact ? [existing.contact] : []);
+      const newContacts = contact ? Array.from(new Set([contact, ...prevContacts])) : prevContacts;
+
       const updated: ClientProfile = {
         ...existing,
-        organization: clientData.organization?.trim() || existing.organization,
-        contact: clientData.contact?.trim() || existing.contact,
+        organization: org || existing.organization,
+        contact: contact || existing.contact,
+        organizationsHistory: newOrgs,
+        contactsHistory: newContacts,
         notes: clientData.notes?.trim() || existing.notes,
+        orderCount: orderCount > 0 ? orderCount : existing.orderCount,
+        totalSpentAUEC: totalSpentAUEC > 0 ? totalSpentAUEC : existing.totalSpentAUEC,
         lastUpdated: now
       };
       clients[existingIdx] = updated;
@@ -203,11 +223,13 @@ export class StorageService {
       const newClient: ClientProfile = {
         id: `client-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         name: trimmedName,
-        organization: clientData.organization?.trim() || undefined,
-        contact: clientData.contact?.trim() || undefined,
+        organization: org || undefined,
+        contact: contact || undefined,
+        organizationsHistory: org ? [org] : [],
+        contactsHistory: contact ? [contact] : [],
         notes: clientData.notes?.trim() || undefined,
-        orderCount: 1,
-        totalSpentAUEC: 0,
+        orderCount: orderCount || 1,
+        totalSpentAUEC: totalSpentAUEC || 0,
         createdAt: now,
         lastUpdated: now
       };
@@ -215,6 +237,23 @@ export class StorageService {
       this.saveClients(clients);
       return newClient;
     }
+  }
+
+  // Get all known client names ever entered in clients, orders, stocks or refinery
+  static getAllKnownClientNames(): string[] {
+    const fromClients = this.getClients().map(c => c.name.trim());
+    const fromOrders = this.getOrders().map(o => o.clientName.trim());
+    const fromStock = this.getRefinedStock().filter(s => s.clientName).map(s => s.clientName!.trim());
+    const fromJobs = this.getRefineryJobs().filter(j => j.clientName).map(j => j.clientName!.trim());
+
+    const all = [...fromClients, ...fromOrders, ...fromStock, ...fromJobs].filter(Boolean);
+    return Array.from(new Set(all)).sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  }
+
+  // Get orders associated with a client name
+  static getClientOrders(clientName: string): CustomerOrder[] {
+    const lower = clientName.toLowerCase().trim();
+    return this.getOrders().filter(o => o.clientName.toLowerCase().trim() === lower);
   }
 
   static deleteClient(id: string) {

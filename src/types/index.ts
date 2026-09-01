@@ -163,6 +163,8 @@ export interface ClientProfile {
   name: string;
   organization?: string;
   contact?: string; // Discord / Spectrum / Comm-Link
+  organizationsHistory?: string[];
+  contactsHistory?: string[];
   notes?: string;
   orderCount?: number;
   totalSpentAUEC?: number;

@@ -4,7 +4,19 @@ import { AutocompleteSelect, AutocompleteOption } from '../common/AutocompleteSe
 import { CustomerOrder, OrderItem, ClientMineralDeposit, Blueprint, OrderStatus, ClientProfile } from '../../types';
 import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
 import { StorageService } from '../../services/storageService';
-import { ClipboardList, Plus, Trash2, User, Coins, Sparkles, Layers, Users, Building, Mail } from 'lucide-react';
+import {
+  ClipboardList,
+  Plus,
+  Trash2,
+  User,
+  Coins,
+  Sparkles,
+  Layers,
+  Users,
+  Building,
+  Mail,
+  CheckCircle2
+} from 'lucide-react';
 import { audio } from '../../services/audioService';
 
 interface CreateOrderModalProps {
@@ -13,6 +25,7 @@ interface CreateOrderModalProps {
   onCreateOrder: (order: Omit<CustomerOrder, 'id' | 'orderNumber' | 'createdAt'>) => void;
   allBlueprints: Blueprint[];
   prefillBlueprint?: Blueprint | null;
+  initialClientName?: string | null;
 }
 
 export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
@@ -20,7 +33,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   onClose,
   onCreateOrder,
   allBlueprints,
-  prefillBlueprint
+  prefillBlueprint,
+  initialClientName
 }) => {
   const [clientName, setClientName] = useState('');
   const [clientOrg, setClientOrg] = useState('');
@@ -33,6 +47,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
   // Clients database directory for auto-complete & quick selection
   const [savedClients, setSavedClients] = useState<ClientProfile[]>(() => StorageService.getClients());
+  const [allKnownNames, setAllKnownNames] = useState<string[]>(() => StorageService.getAllKnownClientNames());
 
   // Selected Order Items
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -44,8 +59,22 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setSavedClients(StorageService.getClients());
+      setAllKnownNames(StorageService.getAllKnownClientNames());
+
+      if (initialClientName) {
+        const found = StorageService.getClients().find(
+          c => c.name.toLowerCase().trim() === initialClientName.toLowerCase().trim()
+        );
+        if (found) {
+          setClientName(found.name);
+          setClientOrg(found.organization || '');
+          setClientContact(found.contact || '');
+        } else {
+          setClientName(initialClientName);
+        }
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialClientName]);
 
   // Autocomplete options for blueprints
   const blueprintOptions: AutocompleteOption[] = allBlueprints.map(bp => ({
@@ -64,7 +93,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     category: m.group
   }));
 
-  // Handle prefill
+  // Handle prefill blueprint
   useEffect(() => {
     if (prefillBlueprint) {
       const unitLabor = prefillBlueprint.marketEstimatedAUEC ? Math.round(prefillBlueprint.marketEstimatedAUEC * 0.2) : 2500;
@@ -96,13 +125,21 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     }
   }, [prefillBlueprint, allBlueprints]);
 
-  // Handle Quick Select Client from Directory
-  const handleSelectClientProfile = (clientId: string) => {
-    if (!clientId) return;
+  // Find active client profile if exists
+  const activeClient = savedClients.find(
+    c => c.name.toLowerCase().trim() === clientName.toLowerCase().trim()
+  );
+
+  // Handle selecting client name from dropdown
+  const handleSelectClientName = (selectedName: string) => {
+    if (!selectedName) return;
     audio.playClick();
-    const found = savedClients.find(c => c.id === clientId);
+    setClientName(selectedName);
+
+    const found = savedClients.find(
+      c => c.name.toLowerCase().trim() === selectedName.toLowerCase().trim()
+    );
     if (found) {
-      setClientName(found.name);
       setClientOrg(found.organization || '');
       setClientContact(found.contact || '');
     }
@@ -242,7 +279,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
     audio.playSuccess();
 
-    // Automatically save or update client profile in database directory
+    // Automatically save or update client profile in database directory with history
     StorageService.saveOrUpdateClient({
       name: clientName.trim(),
       organization: clientOrg.trim() || undefined,
@@ -271,40 +308,42 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Créer une Commande Client"
-      subtitle="Enregistrez une demande de fabrication, les minerais fournis et les devis"
+      subtitle="Enregistrez une commande et mettez à jour automatiquement la fiche & l'historique client"
       icon={<ClipboardList className="w-5 h-5 text-sc-cyan" />}
       maxWidth="3xl"
     >
       <form onSubmit={handleSubmit} className="space-y-5 font-sans">
         
-        {/* Client Directory Header & Quick Selector */}
+        {/* Client Directory Header & Quick Dropdown Selector */}
         <div className="p-3.5 bg-sc-card/70 rounded-xl border border-sc-border space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-sc-cyan" />
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
-                Fiche & Base de Données Client
+                Fiche Client Automatique
               </span>
             </div>
 
-            {/* Quick selector from existing database */}
-            {savedClients.length > 0 && (
+            {/* Prominent Dropdown of all saved & past client names */}
+            {allKnownNames.length > 0 && (
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono text-slate-400">Client existant :</span>
+                <span className="text-[11px] font-mono text-slate-400">Clients connus :</span>
                 <select
                   onChange={(e) => {
-                    handleSelectClientProfile(e.target.value);
-                    e.target.value = '';
+                    handleSelectClientName(e.target.value);
                   }}
-                  defaultValue=""
-                  className="px-2.5 py-1 bg-[#090e18] border border-sc-cyan/40 rounded-lg text-xs font-mono text-sc-cyan focus:outline-none cursor-pointer"
+                  value={allKnownNames.includes(clientName) ? clientName : ''}
+                  className="px-2.5 py-1 bg-[#090e18] border border-sc-cyan/50 rounded-lg text-xs font-mono text-sc-cyan focus:outline-none cursor-pointer"
                 >
-                  <option value="" disabled>👥 Sélectionner dans le répertoire ({savedClients.length})...</option>
-                  {savedClients.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.organization ? `(${c.organization})` : ''} {c.contact ? `• ${c.contact}` : ''}
-                    </option>
-                  ))}
+                  <option value="">👥 Choisir un client ({allKnownNames.length})...</option>
+                  {allKnownNames.map(name => {
+                    const prof = savedClients.find(c => c.name.toLowerCase().trim() === name.toLowerCase().trim());
+                    return (
+                      <option key={name} value={name}>
+                        {name} {prof?.organization ? `(${prof.organization})` : ''}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             )}
@@ -323,14 +362,21 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 list="clients-datalist"
                 placeholder="Ex: Capitaine Travis..."
                 value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
+                onChange={(e) => {
+                  setClientName(e.target.value);
+                  const found = savedClients.find(
+                    c => c.name.toLowerCase().trim() === e.target.value.toLowerCase().trim()
+                  );
+                  if (found) {
+                    setClientOrg(found.organization || '');
+                    setClientContact(found.contact || '');
+                  }
+                }}
                 className="w-full px-3 py-1.5 bg-[#090e18] border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-sans text-xs focus:outline-none"
               />
               <datalist id="clients-datalist">
-                {savedClients.map(c => (
-                  <option key={c.id} value={c.name}>
-                    {c.organization ? `${c.organization} • ` : ''}{c.contact || ''}
-                  </option>
+                {allKnownNames.map(name => (
+                  <option key={name} value={name} />
                 ))}
               </datalist>
             </div>
@@ -342,27 +388,85 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
               </label>
               <input
                 type="text"
+                list="orgs-datalist"
                 placeholder="Ex: Stanton Mining Corp..."
                 value={clientOrg}
                 onChange={(e) => setClientOrg(e.target.value)}
                 className="w-full px-3 py-1.5 bg-[#090e18] border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-sans text-xs focus:outline-none"
               />
+              {/* Datalist of known organizations */}
+              <datalist id="orgs-datalist">
+                {activeClient?.organizationsHistory?.map((org, i) => (
+                  <option key={i} value={org} />
+                ))}
+              </datalist>
+
+              {/* Quick pills for known orgs of this client */}
+              {activeClient?.organizationsHistory && activeClient.organizationsHistory.length > 1 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {activeClient.organizationsHistory.map((org, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setClientOrg(org)}
+                      className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 hover:bg-cyan-900"
+                    >
+                      {org}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>
               <label className="block text-xs font-mono tracking-wider uppercase text-slate-400 mb-1 flex items-center gap-1">
                 <Mail className="w-3.5 h-3.5 text-slate-400" />
-                Contact / Discord / Spectrum
+                Contact (Discord / Spectrum)
               </label>
               <input
                 type="text"
+                list="contacts-datalist"
                 placeholder="Ex: @Travis#1234..."
                 value={clientContact}
                 onChange={(e) => setClientContact(e.target.value)}
                 className="w-full px-3 py-1.5 bg-[#090e18] border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-sans text-xs focus:outline-none"
               />
+              {/* Datalist of known contacts */}
+              <datalist id="contacts-datalist">
+                {activeClient?.contactsHistory?.map((cont, i) => (
+                  <option key={i} value={cont} />
+                ))}
+              </datalist>
+
+              {/* Quick pills for known contacts of this client */}
+              {activeClient?.contactsHistory && activeClient.contactsHistory.length > 1 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {activeClient.contactsHistory.map((cont, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setClientContact(cont)}
+                      className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800 hover:bg-purple-900"
+                    >
+                      {cont}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Client summary badge if already known */}
+          {activeClient && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-sc-cyan/10 border border-sc-cyan/30 text-[11px] font-mono text-cyan-300">
+              <CheckCircle2 className="w-3.5 h-3.5 text-sc-cyan shrink-0" />
+              <span>
+                Fiche client identifiée : <strong>{activeClient.name}</strong> •{' '}
+                {activeClient.orderCount || 0} commande(s) passée(s) •{' '}
+                {(activeClient.totalSpentAUEC || 0).toLocaleString('fr-FR')} aUEC cumulés
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Ordered Items List */}

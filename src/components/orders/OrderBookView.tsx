@@ -49,6 +49,7 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
 }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isClientsModalOpen, setIsClientsModalOpen] = useState(false);
+  const [selectedClientForNewOrder, setSelectedClientForNewOrder] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<CustomerOrder | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -339,11 +340,13 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
         isOpen={isCreateModalOpen}
         onClose={() => {
           setIsCreateModalOpen(false);
+          setSelectedClientForNewOrder(null);
           if (onClearPrefillBlueprint) onClearPrefillBlueprint();
         }}
         onCreateOrder={onCreateOrder}
         allBlueprints={allBlueprints}
         prefillBlueprint={prefillBlueprint}
+        initialClientName={selectedClientForNewOrder}
       />
 
       {/* Order Details Modal */}
@@ -388,7 +391,8 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
       <ClientsDirectoryModal
         isOpen={isClientsModalOpen}
         onClose={() => setIsClientsModalOpen(false)}
-        onSelectClient={() => {
+        onSelectClient={(clientName) => {
+          setSelectedClientForNewOrder(clientName);
           setIsCreateModalOpen(true);
         }}
       />
