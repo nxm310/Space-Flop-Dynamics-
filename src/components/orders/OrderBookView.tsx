@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CustomerOrder, Blueprint, RefinedStockItem, OrderStatus } from '../../types';
 import { CreateOrderModal } from './CreateOrderModal';
 import { OrderDetailsModal } from './OrderDetailsModal';
+import { ClientsDirectoryModal } from './ClientsDirectoryModal';
 import { StatCard } from '../common/StatCard';
 import { OrderStatusBadge, Badge } from '../common/Badge';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -16,7 +17,8 @@ import {
   Coins,
   Clock,
   PackageCheck,
-  Hammer
+  Hammer,
+  Users
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -46,6 +48,7 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
   onClearPrefillBlueprint
 }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isClientsModalOpen, setIsClientsModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<CustomerOrder | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -97,7 +100,19 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => {
+              audio.playClick();
+              setIsClientsModalOpen(true);
+            }}
+            className="px-3 py-2 rounded-lg border border-sc-cyan/40 bg-sc-cyan/10 hover:bg-sc-cyan/20 text-sc-cyan text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-colors shadow-sm"
+            title="Consulter et gérer le répertoire / carnet d'adresses de vos clients"
+          >
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">Répertoire Clients</span>
+          </button>
+
           <button
             onClick={() => {
               audio.playClick();
@@ -367,6 +382,15 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
         }}
         title="Supprimer la commande ?"
         message="Êtes-vous sûr de vouloir supprimer cette commande du carnet ?"
+      />
+
+      {/* Clients Directory Modal */}
+      <ClientsDirectoryModal
+        isOpen={isClientsModalOpen}
+        onClose={() => setIsClientsModalOpen(false)}
+        onSelectClient={() => {
+          setIsCreateModalOpen(true);
+        }}
       />
     </div>
   );

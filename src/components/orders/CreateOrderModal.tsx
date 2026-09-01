@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { AutocompleteSelect, AutocompleteOption } from '../common/AutocompleteSelect';
-import { CustomerOrder, OrderItem, ClientMineralDeposit, Blueprint, OrderStatus } from '../../types';
+import { CustomerOrder, OrderItem, ClientMineralDeposit, Blueprint, OrderStatus, ClientProfile } from '../../types';
 import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
-import { ClipboardList, Plus, Trash2, User, Coins, Sparkles, Layers } from 'lucide-react';
+import { StorageService } from '../../services/storageService';
+import { ClipboardList, Plus, Trash2, User, Coins, Sparkles, Layers, Users, Building, Mail } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
 interface CreateOrderModalProps {
@@ -30,11 +31,21 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   const [additionalCostsAUEC, setAdditionalCostsAUEC] = useState<number>(0);
   const [isPaid, setIsPaid] = useState(false);
 
+  // Clients database directory for auto-complete & quick selection
+  const [savedClients, setSavedClients] = useState<ClientProfile[]>(() => StorageService.getClients());
+
   // Selected Order Items
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
 
   // Client Supplied Minerals
   const [clientMinerals, setClientMinerals] = useState<ClientMineralDeposit[]>([]);
+
+  // Refresh saved clients whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setSavedClients(StorageService.getClients());
+    }
+  }, [isOpen]);
 
   // Autocomplete options for blueprints
   const blueprintOptions: AutocompleteOption[] = allBlueprints.map(bp => ({
@@ -85,6 +96,18 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     }
   }, [prefillBlueprint, allBlueprints]);
 
+  // Handle Quick Select Client from Directory
+  const handleSelectClientProfile = (clientId: string) => {
+    if (!clientId) return;
+    audio.playClick();
+    const found = savedClients.find(c => c.id === clientId);
+    if (found) {
+      setClientName(found.name);
+      setClientOrg(found.organization || '');
+      setClientContact(found.contact || '');
+    }
+  };
+
   // Add Item to Order
   const handleAddItem = () => {
     audio.playClick();
@@ -104,62 +127,59 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     ]);
   };
 
+  const handleRemoveItem = (index: number) => {
+    audio.playClick();
+    setOrderItems(orderItems.filter((_, i) => i !== index));
+  };
+
   const handleItemChange = (index: number, bpId: string) => {
     const bp = allBlueprints.find(b => b.id === bpId);
     if (!bp) return;
-    const updated = [...orderItems];
+
     const unitLabor = bp.marketEstimatedAUEC ? Math.round(bp.marketEstimatedAUEC * 0.2) : 2500;
+    const currentQty = orderItems[index]?.quantity || 1;
+
+    const updated = [...orderItems];
     updated[index] = {
-      ...updated[index],
       blueprintId: bp.id,
       blueprintName: bp.name,
       category: bp.category,
+      quantity: currentQty,
       unitLaborCostAUEC: unitLabor,
-      totalLaborCostAUEC: unitLabor * updated[index].quantity,
+      totalLaborCostAUEC: unitLabor * currentQty,
       requiredIngredients: bp.ingredients
     };
     setOrderItems(updated);
   };
 
-  const handleQuantityChange = (index: number, qty: number) => {
+  const handleQuantityChange = (index: number, quantity: number) => {
+    const q = Math.max(1, quantity);
     const updated = [...orderItems];
-    const q = Math.max(1, qty);
     updated[index].quantity = q;
     updated[index].totalLaborCostAUEC = updated[index].unitLaborCostAUEC * q;
     setOrderItems(updated);
   };
 
   const handleLaborCostChange = (index: number, cost: number) => {
+    const c = Math.max(0, cost);
     const updated = [...orderItems];
-    updated[index].unitLaborCostAUEC = cost;
-    updated[index].totalLaborCostAUEC = cost * updated[index].quantity;
+    updated[index].unitLaborCostAUEC = c;
+    updated[index].totalLaborCostAUEC = c * updated[index].quantity;
     setOrderItems(updated);
   };
 
-  const handleRemoveItem = (index: number) => {
-    audio.playClick();
-    setOrderItems(orderItems.filter((_, i) => i !== index));
-  };
-
-  // Add Client Mineral Deposit
+  // Client Minerals Handlers
   const handleAddClientMineral = () => {
     audio.playClick();
+    const defaultMin = STAR_CITIZEN_MINERALS[0];
     setClientMinerals([
       ...clientMinerals,
-      { mineralId: 'quantainium', mineralName: 'Quantainium', quantitySCU: 1.0 }
+      {
+        mineralId: defaultMin.id,
+        mineralName: defaultMin.name,
+        quantitySCU: 1
+      }
     ]);
-  };
-
-  const handleClientMineralChange = (index: number, field: 'mineralId' | 'quantitySCU', val: string | number) => {
-    const updated = [...clientMinerals];
-    if (field === 'mineralId') {
-      const m = STAR_CITIZEN_MINERALS.find(min => min.id === val);
-      updated[index].mineralId = String(val);
-      updated[index].mineralName = m ? m.name : String(val);
-    } else {
-      updated[index].quantitySCU = Number(val);
-    }
-    setClientMinerals(updated);
   };
 
   const handleRemoveClientMineral = (index: number) => {
@@ -167,36 +187,52 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     setClientMinerals(clientMinerals.filter((_, i) => i !== index));
   };
 
-  // Fast auto-fill client minerals to match all requirements
-  const handleClientProvidesAll = () => {
-    audio.playSuccess();
-    const requirementsMap: Record<string, { mineralId: string; mineralName: string; quantitySCU: number }> = {};
+  const handleClientMineralChange = (index: number, mineralId: string) => {
+    const min = STAR_CITIZEN_MINERALS.find(m => m.id === mineralId);
+    if (!min) return;
+
+    const updated = [...clientMinerals];
+    updated[index].mineralId = min.id;
+    updated[index].mineralName = min.name;
+    setClientMinerals(updated);
+  };
+
+  const handleClientMineralQtyChange = (index: number, qty: number) => {
+    const q = Math.max(0, qty);
+    const updated = [...clientMinerals];
+    updated[index].quantitySCU = q;
+    setClientMinerals(updated);
+  };
+
+  // Auto-Fill Client Minerals from Order Requirements
+  const handleAutoFillRequiredMinerals = () => {
+    audio.playClick();
+    const combined: Record<string, { name: string; qty: number }> = {};
     orderItems.forEach(item => {
       item.requiredIngredients.forEach(ing => {
         const key = ing.resourceId;
         const totalReq = ing.quantitySCU * item.quantity;
-        if (!requirementsMap[key]) {
-          requirementsMap[key] = {
-            mineralId: ing.resourceId,
-            mineralName: ing.resourceName,
-            quantitySCU: totalReq
-          };
+        if (combined[key]) {
+          combined[key].qty += totalReq;
         } else {
-          requirementsMap[key].quantitySCU += totalReq;
+          combined[key] = {
+            name: ing.resourceName,
+            qty: totalReq
+          };
         }
       });
     });
 
-    const newClientDeposits: ClientMineralDeposit[] = Object.values(requirementsMap).map(req => ({
-      mineralId: req.mineralId,
-      mineralName: req.mineralName,
-      quantitySCU: Number(req.quantitySCU.toFixed(2))
+    const newDeposits: ClientMineralDeposit[] = Object.keys(combined).map(key => ({
+      mineralId: key,
+      mineralName: combined[key].name,
+      quantitySCU: Number(combined[key].qty.toFixed(3))
     }));
 
-    setClientMinerals(newClientDeposits);
+    setClientMinerals(newDeposits);
   };
 
-  // Total price calculation
+  // Total Calculations
   const totalLaborCost = orderItems.reduce((acc, i) => acc + i.totalLaborCostAUEC, 0);
   const finalPriceAUEC = totalLaborCost + Number(additionalCostsAUEC || 0);
 
@@ -205,6 +241,14 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     if (!clientName.trim() || orderItems.length === 0) return;
 
     audio.playSuccess();
+
+    // Automatically save or update client profile in database directory
+    StorageService.saveOrUpdateClient({
+      name: clientName.trim(),
+      organization: clientOrg.trim() || undefined,
+      contact: clientContact.trim() || undefined
+    });
+
     onCreateOrder({
       clientName: clientName.trim(),
       clientOrg: clientOrg.trim() || undefined,
@@ -227,52 +271,97 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Créer une Commande Client"
-      subtitle="Enregistrez une demande de fabrication, les minerais fournis et les coûts"
+      subtitle="Enregistrez une demande de fabrication, les minerais fournis et les devis"
       icon={<ClipboardList className="w-5 h-5 text-sc-cyan" />}
       maxWidth="3xl"
     >
       <form onSubmit={handleSubmit} className="space-y-5 font-sans">
-        {/* Client Details */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-sc-card/50 rounded-xl border border-sc-border">
-          <div>
-            <label className="block text-xs font-mono tracking-wider uppercase text-slate-400 mb-1 flex items-center gap-1">
-              <User className="w-3.5 h-3.5 text-sc-cyan" />
-              Nom du Client *
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Ex: Capitaine Travis..."
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              className="w-full px-3 py-1.5 bg-sc-panel border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-sans text-xs focus:outline-none"
-            />
+        
+        {/* Client Directory Header & Quick Selector */}
+        <div className="p-3.5 bg-sc-card/70 rounded-xl border border-sc-border space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-sc-cyan" />
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
+                Fiche & Base de Données Client
+              </span>
+            </div>
+
+            {/* Quick selector from existing database */}
+            {savedClients.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono text-slate-400">Client existant :</span>
+                <select
+                  onChange={(e) => {
+                    handleSelectClientProfile(e.target.value);
+                    e.target.value = '';
+                  }}
+                  defaultValue=""
+                  className="px-2.5 py-1 bg-[#090e18] border border-sc-cyan/40 rounded-lg text-xs font-mono text-sc-cyan focus:outline-none cursor-pointer"
+                >
+                  <option value="" disabled>👥 Sélectionner dans le répertoire ({savedClients.length})...</option>
+                  {savedClients.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.organization ? `(${c.organization})` : ''} {c.contact ? `• ${c.contact}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
-          <div>
-            <label className="block text-xs font-mono tracking-wider uppercase text-slate-400 mb-1">
-              Organisation / Faction
-            </label>
-            <input
-              type="text"
-              placeholder="Ex: Stanton Mining Corp..."
-              value={clientOrg}
-              onChange={(e) => setClientOrg(e.target.value)}
-              className="w-full px-3 py-1.5 bg-sc-panel border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-sans text-xs focus:outline-none"
-            />
-          </div>
+          {/* Client Inputs */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-mono tracking-wider uppercase text-slate-400 mb-1 flex items-center gap-1">
+                <User className="w-3.5 h-3.5 text-sc-cyan" />
+                Nom du Client *
+              </label>
+              <input
+                type="text"
+                required
+                list="clients-datalist"
+                placeholder="Ex: Capitaine Travis..."
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                className="w-full px-3 py-1.5 bg-[#090e18] border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-sans text-xs focus:outline-none"
+              />
+              <datalist id="clients-datalist">
+                {savedClients.map(c => (
+                  <option key={c.id} value={c.name}>
+                    {c.organization ? `${c.organization} • ` : ''}{c.contact || ''}
+                  </option>
+                ))}
+              </datalist>
+            </div>
 
-          <div>
-            <label className="block text-xs font-mono tracking-wider uppercase text-slate-400 mb-1">
-              Contact / Discord / Spectrum
-            </label>
-            <input
-              type="text"
-              placeholder="Ex: @Travis#1234..."
-              value={clientContact}
-              onChange={(e) => setClientContact(e.target.value)}
-              className="w-full px-3 py-1.5 bg-sc-panel border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-sans text-xs focus:outline-none"
-            />
+            <div>
+              <label className="block text-xs font-mono tracking-wider uppercase text-slate-400 mb-1 flex items-center gap-1">
+                <Building className="w-3.5 h-3.5 text-slate-400" />
+                Organisation / Faction
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: Stanton Mining Corp..."
+                value={clientOrg}
+                onChange={(e) => setClientOrg(e.target.value)}
+                className="w-full px-3 py-1.5 bg-[#090e18] border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-sans text-xs focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono tracking-wider uppercase text-slate-400 mb-1 flex items-center gap-1">
+                <Mail className="w-3.5 h-3.5 text-slate-400" />
+                Contact / Discord / Spectrum
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: @Travis#1234..."
+                value={clientContact}
+                onChange={(e) => setClientContact(e.target.value)}
+                className="w-full px-3 py-1.5 bg-[#090e18] border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-sans text-xs focus:outline-none"
+              />
+            </div>
           </div>
         </div>
 
@@ -293,7 +382,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             </button>
           </div>
 
-          <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+          <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
             {orderItems.map((item, idx) => (
               <div key={idx} className="p-3 bg-sc-panel rounded-xl border border-sc-border space-y-2">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -306,29 +395,33 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                     />
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Quantity */}
                     <div className="w-20">
                       <input
                         type="number"
                         min="1"
                         value={item.quantity}
                         onChange={(e) => handleQuantityChange(idx, parseInt(e.target.value) || 1)}
-                        className="w-full px-2.5 py-2 bg-sc-card border border-sc-border rounded-lg text-xs font-mono text-center text-slate-100 focus:border-sc-cyan"
-                        title="Quantité"
+                        className="w-full px-2.5 py-2 bg-[#090e18] border border-sc-border rounded-lg text-xs font-mono text-center text-slate-100 focus:border-sc-cyan [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        title="Quantité d'items"
                       />
                     </div>
 
-                    <div className="w-32 relative">
+                    {/* Unit Labor Cost Input without overlap */}
+                    <div className="w-36 relative">
                       <input
                         type="number"
                         step="100"
                         min="0"
                         value={item.unitLaborCostAUEC}
                         onChange={(e) => handleLaborCostChange(idx, parseInt(e.target.value) || 0)}
-                        className="w-full px-2.5 py-2 bg-sc-card border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:border-sc-cyan"
+                        className="w-full pl-2.5 pr-14 py-2 bg-[#090e18] border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:border-sc-cyan [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         title="Coût de main d'œuvre unitaire"
                       />
-                      <span className="absolute right-2 top-2 text-[10px] font-mono text-slate-500">aUEC</span>
+                      <span className="absolute right-2.5 top-2.5 text-[10px] font-mono text-slate-400 font-bold pointer-events-none">
+                        aUEC
+                      </span>
                     </div>
 
                     {orderItems.length > 1 && (
@@ -336,6 +429,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                         type="button"
                         onClick={() => handleRemoveItem(idx)}
                         className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors"
+                        title="Retirer cet article"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -357,33 +451,32 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
           </div>
         </div>
 
-        {/* Client-Supplied Minerals Section */}
-        <div className="p-3.5 bg-gradient-to-br from-amber-950/20 via-sc-card/60 to-sc-panel rounded-xl border border-amber-500/30 space-y-3">
+        {/* Client Supplied Minerals Section */}
+        <div className="p-3.5 bg-sc-card/50 rounded-xl border border-sc-border space-y-2.5">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-xs font-mono tracking-wider uppercase text-amber-400 font-bold flex items-center gap-1.5">
+              <h4 className="text-xs font-mono tracking-wider uppercase text-amber-300 font-bold flex items-center gap-1.5">
                 <Layers className="w-4 h-4" />
-                Minerais Apportés par le Client
+                Minerais Fournis par le Client ({clientMinerals.length})
               </h4>
-              <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                Si le client fournit ses propres minerais, saisissez-les ici pour les déduire
+              <p className="text-[11px] font-mono text-slate-400 mt-0.5">
+                Minerais apportés par le client et déduits de votre consommation personnelle
               </p>
             </div>
 
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={handleClientProvidesAll}
-                className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[11px] font-mono uppercase transition-colors"
-                title="Déclarer que le client apporte 100% des minerais nécessaires"
+                onClick={handleAutoFillRequiredMinerals}
+                className="px-2.5 py-1 rounded-md bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-[11px] font-mono uppercase transition-colors"
+                title="Remplir automatiquement avec la totalité des minerais requis par la commande"
               >
-                Le client fournit tout
+                Tout fournir
               </button>
-
               <button
                 type="button"
                 onClick={handleAddClientMineral}
-                className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[11px] font-mono uppercase flex items-center gap-1 transition-colors"
+                className="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-mono uppercase flex items-center gap-1 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Ajouter
@@ -392,28 +485,29 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
           </div>
 
           {clientMinerals.length > 0 ? (
-            <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-              {clientMinerals.map((dep, idx) => (
-                <div key={idx} className="flex items-center gap-2 p-2 bg-sc-panel rounded-lg border border-amber-500/20">
+            <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+              {clientMinerals.map((deposit, idx) => (
+                <div key={idx} className="flex items-center gap-2 bg-[#090e18] p-2 rounded-lg border border-slate-800">
                   <div className="flex-1">
                     <AutocompleteSelect
                       options={mineralOptions}
-                      value={dep.mineralId}
-                      onChange={(val) => handleClientMineralChange(idx, 'mineralId', val)}
-                      placeholder="Sélectionner le minerai apporté..."
+                      value={deposit.mineralId}
+                      onChange={(val) => handleClientMineralChange(idx, val)}
+                      placeholder="Sélectionner le minerai fourni..."
                     />
                   </div>
                   <div className="w-32 relative">
                     <input
                       type="number"
-                      step="0.01"
-                      min="0.01"
-                      required
-                      value={dep.quantitySCU}
-                      onChange={(e) => handleClientMineralChange(idx, 'quantitySCU', parseFloat(e.target.value) || 0.1)}
-                      className="w-full px-2.5 py-2 bg-sc-card border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:border-amber-400"
+                      step="0.1"
+                      min="0.001"
+                      value={deposit.quantitySCU}
+                      onChange={(e) => handleClientMineralQtyChange(idx, parseFloat(e.target.value) || 0)}
+                      className="w-full pl-2.5 pr-12 py-2 bg-sc-card border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:border-sc-cyan [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
-                    <span className="absolute right-2 top-2 text-[10px] font-mono text-slate-500">SCU</span>
+                    <span className="absolute right-2.5 top-2.5 text-[10px] font-mono text-slate-400 font-bold pointer-events-none">
+                      SCU
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -438,13 +532,18 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             <label className="block text-xs font-mono tracking-wider uppercase text-slate-400 mb-1">
               Frais Annexes / Remise (aUEC)
             </label>
-            <input
-              type="number"
-              value={additionalCostsAUEC}
-              onChange={(e) => setAdditionalCostsAUEC(parseInt(e.target.value) || 0)}
-              placeholder="Ex: +500 ou -200"
-              className="w-full px-3 py-1.5 bg-sc-panel border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:border-sc-cyan focus:outline-none"
-            />
+            <div className="relative">
+              <input
+                type="number"
+                value={additionalCostsAUEC || ''}
+                onChange={(e) => setAdditionalCostsAUEC(parseInt(e.target.value) || 0)}
+                placeholder="Ex: 500 ou -200"
+                className="w-full pl-3 pr-14 py-1.5 bg-[#090e18] border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:border-sc-cyan focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span className="absolute right-2.5 top-1.5 text-[10px] font-mono text-slate-400 font-bold pointer-events-none">
+                aUEC
+              </span>
+            </div>
           </div>
 
           <div>
@@ -454,7 +553,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as OrderStatus)}
-              className="w-full px-3 py-1.5 bg-sc-panel border border-sc-border rounded-lg text-xs font-sans text-slate-100 focus:border-sc-cyan focus:outline-none"
+              className="w-full px-3 py-1.5 bg-[#090e18] border border-sc-border rounded-lg text-xs font-sans text-slate-100 focus:border-sc-cyan focus:outline-none cursor-pointer"
             >
               <option value="draft">Brouillon</option>
               <option value="pending_resources">En attente de ressources</option>
@@ -473,7 +572,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3 py-1.5 bg-sc-panel border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:border-sc-cyan focus:outline-none"
+              className="w-full px-3 py-1.5 bg-[#090e18] border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:border-sc-cyan focus:outline-none"
             />
           </div>
         </div>
@@ -488,12 +587,12 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             </div>
           </div>
 
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={isPaid}
               onChange={(e) => setIsPaid(e.target.checked)}
-              className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-sc-cyan accent-sc-cyan"
+              className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-sc-cyan accent-sc-cyan cursor-pointer"
             />
             <span className="text-xs text-slate-300">Commande déjà payée</span>
           </label>
@@ -509,7 +608,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             placeholder="Ex: Livrer sur le pad 04 à Everus Harbor..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full px-3 py-1.5 bg-sc-panel border border-sc-border rounded-lg text-xs font-sans text-slate-100 focus:border-sc-cyan focus:outline-none"
+            className="w-full px-3 py-1.5 bg-[#090e18] border border-sc-border rounded-lg text-xs font-sans text-slate-100 focus:border-sc-cyan focus:outline-none"
           />
         </div>
 
@@ -521,16 +620,16 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
               audio.playClick();
               onClose();
             }}
-            className="px-4 py-2 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:text-slate-100 text-xs font-mono uppercase tracking-wider transition-colors"
+            className="px-4 py-2 rounded-lg border border-slate-700 bg-sc-card hover:bg-slate-800 text-slate-300 font-mono text-xs uppercase transition-colors"
           >
             Annuler
           </button>
           <button
             type="submit"
-            className="px-5 py-2 rounded-lg bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold border border-sc-cyan shadow-neon-cyan text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-all duration-200"
+            className="px-5 py-2 rounded-lg bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-neon-cyan transition-all"
           >
-            <Sparkles className="w-4 h-4" />
-            Créer la commande
+            <ClipboardList className="w-4 h-4" />
+            Enregistrer la Commande
           </button>
         </div>
       </form>

@@ -157,6 +157,19 @@ export interface CustomerOrder {
   isPaid?: boolean;
 }
 
+// Client Directory / Database
+export interface ClientProfile {
+  id: string;
+  name: string;
+  organization?: string;
+  contact?: string; // Discord / Spectrum / Comm-Link
+  notes?: string;
+  orderCount?: number;
+  totalSpentAUEC?: number;
+  createdAt: string;
+  lastUpdated: string;
+}
+
 // App Theme & Settings
 export interface AppSettings {
   themeAccent: 'cyan' | 'gold' | 'green' | 'red' | 'purple';
@@ -175,5 +188,6 @@ export interface AppDataBackup {
   refineryJobs: RefineryJob[];
   customBlueprints: Blueprint[];
   orders: CustomerOrder[];
+  clients?: ClientProfile[];
   settings: AppSettings;
 }

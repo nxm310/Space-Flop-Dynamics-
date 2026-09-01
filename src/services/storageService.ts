@@ -4,6 +4,7 @@ import {
   RefineryJob,
   Blueprint,
   CustomerOrder,
+  ClientProfile,
   AppSettings,
   AppDataBackup
 } from '../types';
@@ -16,6 +17,7 @@ const STORAGE_KEYS = {
   CUSTOM_BLUEPRINTS: 'sc_custom_blueprints_v4',
   UNLOCKED_BLUEPRINTS: 'sc_unlocked_blueprints_v4',
   ORDERS: 'sc_orders_v4',
+  CLIENTS: 'sc_clients_directory_v4',
   SETTINGS: 'sc_settings_v4',
   INITIALIZED: 'sc_clean_virgin_v4'
 };
@@ -154,6 +156,72 @@ export class StorageService {
     localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(items));
   }
 
+  // Clients Directory Database
+  static getClients(): ClientProfile[] {
+    this.init();
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CLIENTS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static saveClients(clients: ClientProfile[]) {
+    localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
+  }
+
+  static saveOrUpdateClient(clientData: {
+    name: string;
+    organization?: string;
+    contact?: string;
+    notes?: string;
+  }): ClientProfile {
+    const trimmedName = clientData.name.trim();
+    if (!trimmedName) {
+      throw new Error('Nom de client requis');
+    }
+
+    const clients = this.getClients();
+    const existingIdx = clients.findIndex(c => c.name.toLowerCase().trim() === trimmedName.toLowerCase());
+
+    const now = new Date().toISOString();
+
+    if (existingIdx >= 0) {
+      const existing = clients[existingIdx];
+      const updated: ClientProfile = {
+        ...existing,
+        organization: clientData.organization?.trim() || existing.organization,
+        contact: clientData.contact?.trim() || existing.contact,
+        notes: clientData.notes?.trim() || existing.notes,
+        lastUpdated: now
+      };
+      clients[existingIdx] = updated;
+      this.saveClients(clients);
+      return updated;
+    } else {
+      const newClient: ClientProfile = {
+        id: `client-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        name: trimmedName,
+        organization: clientData.organization?.trim() || undefined,
+        contact: clientData.contact?.trim() || undefined,
+        notes: clientData.notes?.trim() || undefined,
+        orderCount: 1,
+        totalSpentAUEC: 0,
+        createdAt: now,
+        lastUpdated: now
+      };
+      clients.unshift(newClient);
+      this.saveClients(clients);
+      return newClient;
+    }
+  }
+
+  static deleteClient(id: string) {
+    const clients = this.getClients().filter(c => c.id !== id);
+    this.saveClients(clients);
+  }
+
   // Settings
   static getSettings(): AppSettings {
     this.init();
@@ -179,6 +247,7 @@ export class StorageService {
       refineryJobs: this.getRefineryJobs(),
       customBlueprints: this.getCustomBlueprints(),
       orders: this.getOrders(),
+      clients: this.getClients(),
       settings: this.getSettings()
     };
   }
@@ -192,6 +261,7 @@ export class StorageService {
       if (Array.isArray(backup.refineryJobs)) this.saveRefineryJobs(backup.refineryJobs);
       if (Array.isArray(backup.customBlueprints)) this.saveCustomBlueprints(backup.customBlueprints);
       if (Array.isArray(backup.orders)) this.saveOrders(backup.orders);
+      if (Array.isArray(backup.clients)) this.saveClients(backup.clients);
       if (backup.settings) this.saveSettings(backup.settings);
       return true;
     } catch {
@@ -207,5 +277,6 @@ export class StorageService {
     this.saveCustomBlueprints([]);
     this.saveUnlockedBlueprintIds([]);
     this.saveOrders([]);
+    this.saveClients([]);
   }
 }
