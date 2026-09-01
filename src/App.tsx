@@ -281,6 +281,14 @@ export function App() {
   // ACTIONS: BLUEPRINTS & CRAFTING
   // =========================================================================
   const handleAddCustomBlueprint = (bp: Blueprint) => {
+    const exists = allBlueprints.some(b =>
+      b.id.toLowerCase() === bp.id.toLowerCase() ||
+      b.name.toLowerCase().trim() === bp.name.toLowerCase().trim()
+    );
+    if (exists) {
+      addToast('warning', 'Déjà Présent', `Le blueprint "${bp.name}" existe déjà dans votre catalogue.`);
+      return;
+    }
     setCustomBlueprints(prev => [bp, ...prev]);
     addToast('success', 'Blueprint Enregistré', `Le plan "${bp.name}" a été ajouté à votre atelier.`);
   };
@@ -333,15 +341,21 @@ export function App() {
   };
 
   const handleSyncApiBlueprints = (newBps: Blueprint[]) => {
-    // Avoid duplicates
-    const existingIds = new Set(allBlueprints.map(b => b.id));
-    const toAdd = newBps.filter(b => !existingIds.has(b.id));
+    // Strict deduplication against existing IDs and normalized names
+    const existingIds = new Set(allBlueprints.map(b => b.id.toLowerCase()));
+    const existingNames = new Set(allBlueprints.map(b => b.name.toLowerCase().trim()));
+
+    const toAdd = newBps.filter(b => {
+      const lowerId = b.id.toLowerCase();
+      const lowerName = b.name.toLowerCase().trim();
+      return !existingIds.has(lowerId) && !existingNames.has(lowerName);
+    });
 
     if (toAdd.length > 0) {
       setCustomBlueprints(prev => [...toAdd, ...prev]);
-      addToast('success', 'Synchronisation Réussie', `${toAdd.length} nouveaux blueprints importés depuis l'API Wiki.`);
+      addToast('success', 'Synchronisation Réussie', `${toAdd.length} nouveaux blueprints uniques ajoutés.`);
     } else {
-      addToast('info', 'Synchronisation API', 'Tous les blueprints sont déjà à jour.');
+      addToast('info', 'Synchronisation', 'Tous les blueprints sont déjà dans votre catalogue (aucun doublon).');
     }
   };
 

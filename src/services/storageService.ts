@@ -119,10 +119,24 @@ export class StorageService {
     localStorage.setItem(STORAGE_KEYS.UNLOCKED_BLUEPRINTS, JSON.stringify(ids));
   }
 
-  // All Blueprints (Built-in + Custom)
+  // All Blueprints (Built-in + Custom with strict deduplication)
   static getAllBlueprints(): Blueprint[] {
     const custom = this.getCustomBlueprints();
-    return [...STAR_CITIZEN_BLUEPRINTS, ...custom];
+    const seenIds = new Set(STAR_CITIZEN_BLUEPRINTS.map(b => b.id.toLowerCase()));
+    const seenNames = new Set(STAR_CITIZEN_BLUEPRINTS.map(b => b.name.toLowerCase().trim()));
+    const uniqueCustom: Blueprint[] = [];
+
+    custom.forEach(bp => {
+      const lowerId = bp.id.toLowerCase();
+      const lowerName = bp.name.toLowerCase().trim();
+      if (!seenIds.has(lowerId) && !seenNames.has(lowerName)) {
+        seenIds.add(lowerId);
+        seenNames.add(lowerName);
+        uniqueCustom.push(bp);
+      }
+    });
+
+    return [...STAR_CITIZEN_BLUEPRINTS, ...uniqueCustom];
   }
 
   // Orders
