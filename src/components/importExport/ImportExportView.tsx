@@ -26,7 +26,8 @@ import {
   ClipboardPaste,
   HelpCircle,
   Eye,
-  Plus
+  Plus,
+  Zap
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -57,7 +58,6 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
   const [syncSuccessMessage, setSyncSuccessMessage] = useState('');
   const [logSearchQuery, setLogSearchQuery] = useState('');
   const [logStatusFilter, setLogStatusFilter] = useState<'all' | 'new' | 'already_unlocked' | 'unmatched'>('all');
-  const [showRawKeywordLines, setShowRawKeywordLines] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonFileInputRef = useRef<HTMLInputElement>(null);
@@ -96,7 +96,7 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
       const result = GameLogParserService.parseLogFiles(filePayloads);
       setLogAnalysisResult(result);
 
-      if (result.blueprintsFound.length > 0) {
+      if (result.blueprintsFound.length > 0 || result.rawLogLinesWithKeywords.length > 0) {
         audio.playSuccess();
       } else {
         audio.playAlert();
@@ -127,7 +127,7 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
       ]);
       setLogAnalysisResult(result);
 
-      if (result.blueprintsFound.length > 0) {
+      if (result.blueprintsFound.length > 0 || result.rawLogLinesWithKeywords.length > 0) {
         audio.playSuccess();
       } else {
         audio.playAlert();
@@ -140,42 +140,36 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
     }
   };
 
-  // Sync discovered blueprints to "Mes Blueprints"
-  const handleSyncAllDiscoveredBlueprints = () => {
+  // Global Auto-Activate Everything (From structured matches + raw lines sweep)
+  const handleAutoActivateEverything = () => {
     if (!logAnalysisResult) return;
     audio.playSuccess();
 
-    // Extract all matched blueprint IDs
-    const idsToUnlock = logAnalysisResult.blueprintsFound
-      .filter(b => b.matchedBlueprint)
-      .map(b => b.matchedBlueprint!.id);
+    const res = GameLogParserService.autoActivateAllFoundBlueprints(logAnalysisResult);
 
-    if (idsToUnlock.length > 0) {
-      const { addedCount, totalCount } = StorageService.unlockBlueprintIds(idsToUnlock);
+    // Re-run parsing against newly updated storage
+    const updatedFound = logAnalysisResult.blueprintsFound.map(b => {
+      if (b.matchedBlueprint) {
+        return {
+          ...b,
+          isAlreadyUnlocked: true,
+          status: 'matched_already_unlocked' as const
+        };
+      }
+      return b;
+    });
 
-      // Re-run parsing analysis against newly updated storage
-      const updatedFound = logAnalysisResult.blueprintsFound.map(b => {
-        if (b.matchedBlueprint) {
-          return {
-            ...b,
-            isAlreadyUnlocked: true,
-            status: 'matched_already_unlocked' as const
-          };
-        }
-        return b;
-      });
+    setLogAnalysisResult({
+      ...logAnalysisResult,
+      blueprintsFound: updatedFound,
+      newMatchesCount: 0,
+      alreadyUnlockedCount: logAnalysisResult.matchedCount
+    });
 
-      setLogAnalysisResult({
-        ...logAnalysisResult,
-        blueprintsFound: updatedFound,
-        newMatchesCount: 0,
-        alreadyUnlockedCount: logAnalysisResult.matchedCount
-      });
-
-      setSyncSuccessMessage(
-        `🎉 ${addedCount} nouveau(x) blueprint(s) ont été synchronisés et activés dans "Mes Blueprints" ! (Total atelier : ${totalCount} blueprints)`
-      );
-    }
+    const namesPreview = res.activatedBlueprints.map(b => b.name).join(', ');
+    setSyncSuccessMessage(
+      `🎉 ${res.activatedCount > 0 ? `${res.activatedCount} nouveau(x) blueprint(s) ont été activés` : 'Tous les blueprints reconnus sont déjà actifs'} dans votre atelier ! (Total actuel : ${res.totalWorkshopCount} blueprints). ${res.activatedBlueprints.length > 0 ? `\nPlans concernés : ${namesPreview}` : ''}`
+    );
   };
 
   // Quick single unlock from raw line
@@ -266,6 +260,9 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
     return true;
   }) || [];
 
+  const allBlueprints = StorageService.getAllBlueprints();
+  const unlockedIdsSet = new Set(StorageService.getUnlockedBlueprintIds());
+
   return (
     <div className="space-y-8">
       {/* Page Title Header */}
@@ -306,7 +303,7 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
                 Analyseur & Importateur Game.log (Blueprints Débloqués)
               </h3>
               <p className="text-xs font-mono text-slate-400">
-                Glissez votre fichier <code className="text-sc-cyan font-bold">Game.log</code> ou collez vos lignes de journal pour extraire vos recettes d'artisanat
+                Glissez votre fichier <code className="text-sc-cyan font-bold">Game.log</code> ou collez vos lignes de journal pour extraire et auto-activer vos recettes d'artisanat
               </p>
             </div>
           </div>
@@ -428,7 +425,7 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
           <div className="p-4 rounded-xl bg-emerald-950/70 border border-emerald-500/60 text-emerald-200 font-mono text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
             <div className="flex items-center gap-2.5">
               <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-              <span>{syncSuccessMessage}</span>
+              <span className="whitespace-pre-line leading-relaxed">{syncSuccessMessage}</span>
             </div>
             {onNavigateToTab && (
               <button
@@ -448,6 +445,31 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
         {/* Analysis Results Display */}
         {logAnalysisResult && (
           <div className="space-y-5 pt-2 border-t border-slate-800 animate-in fade-in duration-200">
+            {/* Top Auto-Activation Banner Button */}
+            <div className="p-4 rounded-xl bg-gradient-to-r from-sc-cyan/20 via-sc-card to-purple-950/30 border border-sc-cyan/50 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-neon-cyan/10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-sc-cyan text-slate-950 font-bold shrink-0">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold font-sans text-slate-100 uppercase">
+                    Auto-Activation Intelligente de l'Atelier
+                  </h4>
+                  <p className="text-xs font-mono text-slate-300">
+                    Active en 1 clic toutes les recettes détectées dans vos fichiers et lignes de log
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleAutoActivateEverything}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-neon-cyan transition-all shrink-0"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>✨ TOUT AUTO-ACTIVER DANS MES BLUEPRINTS</span>
+              </button>
+            </div>
+
             {/* Session & Player Metadata Banner */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 font-mono text-xs">
               <div className="p-3 rounded-xl bg-[#080d17] border border-slate-800 flex items-center gap-3">
@@ -487,24 +509,99 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
               </div>
             </div>
 
-            {/* Zero Blueprints Found Diagnostic Banner */}
-            {logAnalysisResult.blueprintsFound.length === 0 && (
+            {/* Diagnostic Keyword Lines Viewer with Auto-Activation Badges */}
+            {logAnalysisResult.rawLogLinesWithKeywords.length > 0 && (
+              <div className="bg-[#080d17] p-4 rounded-xl border border-slate-800 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-sc-cyan shrink-0" />
+                    <div>
+                      <h4 className="text-xs font-bold font-sans text-slate-100 uppercase">
+                        Lignes de Journal Détectées ({logAnalysisResult.rawLogLinesWithKeywords.length} lignes)
+                      </h4>
+                      <p className="text-[11px] font-mono text-slate-400">
+                        Chaque ligne a été scannée contre le catalogue complet de 50+ recettes Star Citizen
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleAutoActivateEverything}
+                    className="px-3.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-300 font-mono text-xs uppercase font-bold flex items-center justify-center gap-1.5 transition-colors shrink-0"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Auto-Activer ces lignes</span>
+                  </button>
+                </div>
+
+                <div className="max-h-72 overflow-y-auto space-y-2 custom-scrollbar font-mono text-[11px]">
+                  {logAnalysisResult.rawLogLinesWithKeywords.map((line, lIdx) => {
+                    const matched = GameLogParserService.findMatchingBlueprint(line, allBlueprints);
+                    const isAlreadyUnlocked = matched ? unlockedIdsSet.has(matched.id) : false;
+
+                    return (
+                      <div
+                        key={lIdx}
+                        className="p-2.5 rounded-lg bg-[#05080f] hover:bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <span className="text-slate-300 block truncate text-[11px] select-all font-mono" title={line}>
+                            {line}
+                          </span>
+                          {matched && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] font-bold text-sc-cyan bg-sc-cyan/10 px-1.5 py-0.2 rounded border border-sc-cyan/30">
+                                ✨ Recette reconnue : {matched.name}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                {matched.category} {matched.typeLabel ? `• ${matched.typeLabel}` : ''}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="shrink-0 flex items-center gap-1.5 self-end sm:self-center">
+                          {matched ? (
+                            isAlreadyUnlocked ? (
+                              <span className="px-2 py-1 rounded bg-slate-800 text-slate-400 text-[10px] font-bold border border-slate-700">
+                                ✓ Déjà dans l'Atelier
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleQuickUnlockRawName(line)}
+                                className="px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[10px] uppercase flex items-center gap-1 transition-all"
+                              >
+                                <Plus className="w-3 h-3" />
+                                <span>Activer ({matched.name})</span>
+                              </button>
+                            )
+                          ) : (
+                            <button
+                              onClick={() => handleQuickUnlockRawName(line)}
+                              className="px-2 py-1 rounded bg-slate-800 hover:bg-sc-cyan/20 border border-slate-700 hover:border-sc-cyan/40 text-slate-300 hover:text-sc-cyan text-[10px] font-bold"
+                            >
+                              Tenter Activer
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Zero Blueprints Diagnostic Box if completely empty */}
+            {logAnalysisResult.blueprintsFound.length === 0 && logAnalysisResult.rawLogLinesWithKeywords.length === 0 && (
               <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/50 space-y-3 font-mono text-xs">
                 <div className="flex items-start gap-2.5 text-amber-300 font-bold">
                   <HelpCircle className="w-5 h-5 shrink-0 mt-0.5" />
                   <div>
                     <h4 className="text-sm font-sans uppercase">Aucun événement de déblocage de Blueprint trouvé dans ce fichier</h4>
                     <p className="text-xs font-normal text-amber-200/90 mt-1 leading-relaxed">
-                      Le fichier <code className="text-sc-cyan font-bold">Game.log</code> est réinitialisé à zéro à chaque lancement du jeu Star Citizen. Si vous n'avez pas débloqué de nouveau blueprint pendant la session actuelle, c'est tout à fait normal !
+                      Le fichier <code className="text-sc-cyan font-bold">Game.log</code> est réinitialisé à chaque lancement de Star Citizen. Pour importer l'historique complet de vos blueprints découverts lors de vos sessions passées, ouvrez et glissez les fichiers archivés dans le dossier <code className="text-purple-300 font-bold">\StarCitizen\LIVE\logbackups\</code>.
                     </p>
                   </div>
-                </div>
-
-                <div className="bg-[#080d17] p-3 rounded-lg border border-amber-800/40 text-slate-300 space-y-1.5 text-[11px]">
-                  <p className="font-bold text-sc-cyan">💡 Comment récupérer tous vos blueprints passés :</p>
-                  <p>1. Ouvrez l'explorateur Windows dans : <code className="text-purple-300">C:\Program Files\Roberts Space Industries\StarCitizen\LIVE\logbackups\</code></p>
-                  <p>2. Sélectionnez <strong className="text-slate-100">tous les fichiers .log</strong> présents dans ce dossier et glissez-les ici d'un coup.</p>
-                  <p>3. Star Citizen y conserve l'archive de vos sessions passées.</p>
                 </div>
               </div>
             )}
@@ -586,12 +683,11 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
                     />
 
                     <button
-                      onClick={handleSyncAllDiscoveredBlueprints}
-                      disabled={logAnalysisResult.newMatchesCount === 0}
-                      className="px-4 py-2 rounded-xl bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-neon-cyan transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                      onClick={handleAutoActivateEverything}
+                      className="px-4 py-2 rounded-xl bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-neon-cyan transition-all shrink-0"
                     >
                       <Sparkles className="w-4 h-4" />
-                      <span>Activer {logAnalysisResult.newMatchesCount} dans Mes Blueprints</span>
+                      <span>Auto-Activer Tout</span>
                     </button>
                   </div>
                 </div>
@@ -661,42 +757,6 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
                     </tbody>
                   </table>
                 </div>
-              </div>
-            )}
-
-            {/* Diagnostic Keyword Lines Viewer (Collapsible) */}
-            {logAnalysisResult.rawLogLinesWithKeywords.length > 0 && (
-              <div className="pt-2 border-t border-slate-800">
-                <button
-                  onClick={() => {
-                    audio.playClick();
-                    setShowRawKeywordLines(!showRawKeywordLines);
-                  }}
-                  className="flex items-center gap-2 text-xs font-mono text-slate-400 hover:text-sc-cyan transition-colors"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>
-                    {showRawKeywordLines ? 'Masquer' : 'Afficher'} les {logAnalysisResult.rawLogLinesWithKeywords.length} lignes brutes de journal détectées avec mots-clés (Mode Diagnostic)
-                  </span>
-                </button>
-
-                {showRawKeywordLines && (
-                  <div className="mt-3 p-3 rounded-xl bg-[#05080f] border border-slate-800 max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar font-mono text-[11px]">
-                    {logAnalysisResult.rawLogLinesWithKeywords.map((line, lIdx) => (
-                      <div key={lIdx} className="p-1.5 rounded bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 flex items-start justify-between gap-2 text-slate-300">
-                        <span className="truncate flex-1 select-all">{line}</span>
-                        <button
-                          onClick={() => handleQuickUnlockRawName(line)}
-                          className="px-2 py-0.5 rounded bg-sc-cyan/20 hover:bg-sc-cyan/40 border border-sc-cyan/40 text-sc-cyan text-[10px] font-bold shrink-0 flex items-center gap-1"
-                          title="Tenter de débloquer cette recette dans l'atelier"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>Activer</span>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
           </div>

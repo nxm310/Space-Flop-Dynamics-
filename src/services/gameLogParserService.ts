@@ -39,10 +39,21 @@ export class GameLogParserService {
   }
 
   /**
-   * Tries to find matching official or custom blueprint for a raw name
+   * Cleans extracted raw blueprint names (removes quotes, trailing colons, bracket tags, etc.)
    */
-  public static findMatchingBlueprint(rawName: string, allBlueprints: Blueprint[]): Blueprint | undefined {
-    const normRaw = this.normalizeString(rawName);
+  public static cleanBlueprintName(name: string): string {
+    return name
+      .replace(/^["'\s:\-[\]]+/, '')
+      .replace(/["'\s:\-[\]]+$/, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Tries to find matching official or custom blueprint for a raw name or line
+   */
+  public static findMatchingBlueprint(rawText: string, allBlueprints: Blueprint[]): Blueprint | undefined {
+    const normRaw = this.normalizeString(rawText);
     if (!normRaw || normRaw.length < 2) return undefined;
 
     // 1. Exact or normalized exact match
@@ -53,15 +64,15 @@ export class GameLogParserService {
     });
     if (exact) return exact;
 
-    // 2. Contains match (either blueprint contains raw or raw contains blueprint)
+    // 2. Direct string containment (either blueprint contains raw or raw contains blueprint)
     const contains = allBlueprints.find(b => {
       const normBName = this.normalizeString(b.name);
-      return normRaw.includes(normBName) || (normBName.length > 5 && normBName.includes(normRaw));
+      return (normRaw.length >= 4 && normBName.includes(normRaw)) || (normBName.length >= 4 && normRaw.includes(normBName));
     });
     if (contains) return contains;
 
-    // 3. Significant keyword matching (e.g., AD4B, AD5B, Seeker, Torpedo, Voyager, P8-SC, C54, FS-9, Morozov, etc.)
-    const rawTokens = normRaw.split(' ').filter(t => t.length >= 3);
+    // 3. Significant keyword matching (e.g., AD4B, AD5B, Seeker, Torpedo, Voyager, JS-300, TS-2, P8-SC, C54, FS-9, Morozov, etc.)
+    const rawTokens = normRaw.split(' ').filter(t => t.length >= 2);
     if (rawTokens.length > 0) {
       let bestMatch: Blueprint | undefined;
       let maxMatches = 0;
@@ -73,10 +84,10 @@ export class GameLogParserService {
           if (bpTokens.has(token)) matchCount++;
         }
 
-        // Special priority for specific unique identifiers (AD4B, AD5B, JS-300, TS-2, Seeker, Strikeforce, etc.)
+        // Special priority for specific unique identifiers
         const hasKeycode = rawTokens.some(t => 
-          /^(ad4b|ad5b|js300|ts2|fr76|fr66|fr86|seeker|dominator|strikeforce|voyager|expedition|atlas|siren|spectre|p8sc|c54|fs9|karna|custodian|demeco|klaus)/i.test(t)
-          && bpTokens.has(t)
+          /^(ad4b|ad5b|js300|ts2|fr76|fr66|fr86|seeker|dominator|strikeforce|voyager|expedition|atlas|siren|spectre|p8sc|c54|fs9|karna|custodian|demeco|klaus|morozov|defiance|aril|pyro)/i.test(t)
+          && (bpTokens.has(t) || bp.id.toLowerCase().includes(t))
         );
 
         if (hasKeycode && matchCount >= 1) {
@@ -93,17 +104,6 @@ export class GameLogParserService {
     }
 
     return undefined;
-  }
-
-  /**
-   * Cleans extracted raw blueprint names (removes quotes, trailing colons, bracket tags, etc.)
-   */
-  private static cleanBlueprintName(name: string): string {
-    return name
-      .replace(/^["'\s:\-[\]]+/, '')
-      .replace(/["'\s:\-[\]]+$/, '')
-      .replace(/\s+/g, ' ')
-      .trim();
   }
 
   /**
@@ -127,19 +127,15 @@ export class GameLogParserService {
     const sessionDatesSet = new Set<string>();
     let totalLines = 0;
 
-    // Map of unique raw blueprint names -> details
-    const rawBlueprintsMap = new Map<string, { rawName: string; timestamp?: string; sourceFile: string; originalLine: string }>();
+    // Map of unique raw blueprint names / matched IDs -> details
+    const rawBlueprintsMap = new Map<string, { rawName: string; matchedBp?: Blueprint; timestamp?: string; sourceFile: string; originalLine: string }>();
     const rawKeywordLines: string[] = [];
 
-    // Regex patterns for Blueprints that search ANYWHERE in the line (flexible & resilient)
-    // 1. Standard Star Citizen notification: Added notification "Received Blueprint: <Name>: " [<ID>]
+    // Regex patterns for Blueprints that search ANYWHERE in the line
     const pReceivedNotification = /Received Blueprint:\s*([^"'\r\n]+?)(?:\s*:\s*|\s*"\s*|\s*\[|\s*$)/i;
-    
-    // 2. Direct unlock line variants
-    const pUnlockedBlueprint = /(?:\[Blueprint\]|Blueprint)\s*(?:Unlocked|Received|Learned|Added|Item)?:\s*([^"'\r\n]+?)(?:\s*:\s*|\s*"\s*|\s*\[|\s*$)/i;
-    const pCraftingRecipe = /Crafting recipe\s*(?:learned|unlocked|added|acquired)?:\s*([^"'\r\n]+?)(?:\s*:\s*|\s*"\s*|\s*\[|\s*$)/i;
-    
-    // 3. Generic blueprint prefix or tag (e.g. blueprint_ad4b_gatling or unlock_blueprint)
+    const pGenericNotification = /notification\s*["']([^"'\r\n]+)["']/i;
+    const pUnlockedBlueprint = /(?:\[Blueprint\]|Blueprint|Plan)\s*(?:Unlocked|Received|Learned|Added|Item|Reçu|Débloqué)?:\s*([^"'\r\n]+?)(?:\s*:\s*|\s*"\s*|\s*\[|\s*$)/i;
+    const pCraftingRecipe = /(?:Crafting recipe|Recette)\s*(?:learned|unlocked|added|acquired|débloquée|apprise)?:\s*([^"'\r\n]+?)(?:\s*:\s*|\s*"\s*|\s*\[|\s*$)/i;
     const pBlueprintId = /(?:blueprint|recipe)_([a-zA-Z0-9_\-]+)/i;
 
     // Regex patterns for Player Handle & Account
@@ -164,14 +160,19 @@ export class GameLogParserService {
 
         const lowerLine = line.toLowerCase();
 
-        // Check if line contains keywords for debug capture
-        if (
+        // Check if line contains keywords for capture
+        const hasTriggerKeyword =
           lowerLine.includes('blueprint') ||
           lowerLine.includes('received') ||
           lowerLine.includes('crafting') ||
-          lowerLine.includes('recipe')
-        ) {
-          if (rawKeywordLines.length < 150) {
+          lowerLine.includes('recipe') ||
+          lowerLine.includes('notification') ||
+          lowerLine.includes('plan') ||
+          lowerLine.includes('recette') ||
+          lowerLine.includes('unlocked');
+
+        if (hasTriggerKeyword) {
+          if (rawKeywordLines.length < 250) {
             rawKeywordLines.push(line.trim());
           }
         }
@@ -213,6 +214,7 @@ export class GameLogParserService {
         // BLUEPRINT EXTRACTION LOGIC
         // =================================================================
         let extractedRawName: string | null = null;
+        let matchedBpDirect: Blueprint | undefined;
         const timestamp = this.extractTimestamp(line);
 
         // Check Pattern 1: Received Blueprint (Notification format)
@@ -223,15 +225,26 @@ export class GameLogParserService {
           }
         }
 
-        // Check Pattern 2: [Blueprint] Unlocked / Recipe
-        if (!extractedRawName && (lowerLine.includes('blueprint') || lowerLine.includes('crafting recipe'))) {
+        // Check Pattern 2: Generic Notification with blueprint inside
+        if (!extractedRawName && lowerLine.includes('notification')) {
+          const mNotif = line.match(pGenericNotification);
+          if (mNotif && mNotif[1]) {
+            const inner = mNotif[1];
+            if (/blueprint|plan|recipe|recette/i.test(inner)) {
+              extractedRawName = this.cleanBlueprintName(inner.replace(/^(?:Received Blueprint|Plan reçu|Recette|Blueprint):\s*/i, ''));
+            }
+          }
+        }
+
+        // Check Pattern 3: [Blueprint] Unlocked / Recipe
+        if (!extractedRawName && (lowerLine.includes('blueprint') || lowerLine.includes('crafting recipe') || lowerLine.includes('recette'))) {
           const m2 = line.match(pUnlockedBlueprint) || line.match(pCraftingRecipe);
           if (m2 && m2[1]) {
             extractedRawName = this.cleanBlueprintName(m2[1]);
           }
         }
 
-        // Check Pattern 3: ID tag like blueprint_ad4b
+        // Check Pattern 4: ID tag like blueprint_ad4b
         if (!extractedRawName && lowerLine.includes('blueprint_')) {
           const m3 = line.match(pBlueprintId);
           if (m3 && m3[1]) {
@@ -239,23 +252,26 @@ export class GameLogParserService {
           }
         }
 
-        // Check Pattern 4: Fallback scan — if the line mentions "blueprint" and any known blueprint keyword
-        if (!extractedRawName && lowerLine.includes('blueprint')) {
-          for (const bp of allBlueprints) {
-            const bpNorm = this.normalizeString(bp.name);
-            if (bpNorm.length >= 4 && lowerLine.includes(bpNorm)) {
-              extractedRawName = bp.name;
-              break;
+        // Check Pattern 5: Deep Scan against all known blueprints on ANY line with trigger keywords
+        if (hasTriggerKeyword) {
+          const directMatch = this.findMatchingBlueprint(line, allBlueprints);
+          if (directMatch) {
+            matchedBpDirect = directMatch;
+            if (!extractedRawName) {
+              extractedRawName = directMatch.name;
             }
           }
         }
 
         // Store unique extracted blueprint
         if (extractedRawName && extractedRawName.length >= 2 && !extractedRawName.toLowerCase().startsWith('error')) {
-          const key = this.normalizeString(extractedRawName);
+          const finalMatched = matchedBpDirect || this.findMatchingBlueprint(extractedRawName, allBlueprints);
+          const key = finalMatched ? `bp_${finalMatched.id}` : `raw_${this.normalizeString(extractedRawName)}`;
+
           if (!rawBlueprintsMap.has(key)) {
             rawBlueprintsMap.set(key, {
-              rawName: extractedRawName,
+              rawName: finalMatched ? finalMatched.name : extractedRawName,
+              matchedBp: finalMatched,
               timestamp,
               sourceFile: file.name,
               originalLine: line.trim()
@@ -272,8 +288,8 @@ export class GameLogParserService {
     let alreadyUnlockedCount = 0;
     let unmatchedCustomCount = 0;
 
-    rawBlueprintsMap.forEach(({ rawName, timestamp, sourceFile, originalLine }) => {
-      const matched = this.findMatchingBlueprint(rawName, allBlueprints);
+    rawBlueprintsMap.forEach(({ rawName, matchedBp, timestamp, sourceFile, originalLine }) => {
+      const matched = matchedBp || this.findMatchingBlueprint(rawName, allBlueprints);
       const isAlreadyUnlocked = matched ? unlockedIds.has(matched.id) : false;
 
       let status: 'matched_new' | 'matched_already_unlocked' | 'unmatched_custom' = 'unmatched_custom';
@@ -322,6 +338,48 @@ export class GameLogParserService {
       newMatchesCount,
       alreadyUnlockedCount,
       unmatchedCustomCount
+    };
+  }
+
+  /**
+   * Auto-activates ALL activatable blueprints from both detected blueprints AND raw keyword lines
+   */
+  public static autoActivateAllFoundBlueprints(result: GameLogAnalysisResult): {
+    activatedCount: number;
+    totalWorkshopCount: number;
+    activatedBlueprints: Blueprint[];
+  } {
+    const allBlueprints = StorageService.getAllBlueprints();
+    const idsToUnlock = new Set<string>();
+    const activatedList: Blueprint[] = [];
+
+    // 1. Collect from parsed blueprints
+    result.blueprintsFound.forEach(b => {
+      if (b.matchedBlueprint) {
+        idsToUnlock.add(b.matchedBlueprint.id);
+      }
+    });
+
+    // 2. Collect from all raw keyword lines (exhaustive sweep)
+    result.rawLogLinesWithKeywords.forEach(line => {
+      const matched = this.findMatchingBlueprint(line, allBlueprints);
+      if (matched) {
+        idsToUnlock.add(matched.id);
+      }
+    });
+
+    const idsArray = Array.from(idsToUnlock);
+    const { addedCount, totalCount } = StorageService.unlockBlueprintIds(idsArray);
+
+    idsArray.forEach(id => {
+      const bp = allBlueprints.find(b => b.id === id);
+      if (bp) activatedList.push(bp);
+    });
+
+    return {
+      activatedCount: addedCount,
+      totalWorkshopCount: totalCount,
+      activatedBlueprints: activatedList
     };
   }
 }
