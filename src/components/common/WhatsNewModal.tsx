@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.10.3';
+export const CURRENT_APP_VERSION = '1.10.4';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,16 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 5 • Version 1.10.3',
+      version: 'Opération 5 • Version 1.10.4',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Performance',
+      badge: 'Épuration',
       badgeColor: 'cyan',
-      title: 'Moteur d\'Analyse Asynchrone Non-Bloquant & Barre de Progression Live',
+      title: 'Simplification du Carnet de Commandes (Suppression du Répertoire)',
       icon: <Terminal className="w-5 h-5 text-sc-cyan" />,
       points: [
-        '🚀 Moteur Asynchrone Ultra-Rapide : Traitement par paquets non-bloquants (chunks) évitant tout gel de page ou plantage du navigateur, même en sélectionnant des dizaines de fichiers volumineux dans \\logbackups\\.',
-        '📊 Barre de Progression en Temps Réel : Affichage en direct du fichier en cours, du nombre de lignes analysées et des blueprints détectés avec jauge de progression.',
-        '⚡ Bouton "✨ TOUT AUTO-ACTIVER" : Déclenche en 1 clic l\'activation de tous les blueprints reconnus dans les fichiers et dans l\'ensemble des lignes de journal.',
-        '🔍 Balayage Exhaustif des Lignes : Rapprochement instantané avec les 50+ recettes du catalogue officiel Star Citizen.'
+        '📋 Épuration du Carnet de Commandes : Retrait du bouton et de la vue "Répertoire Clients" pour une interface plus sobre et directe.',
+        '✨ Autocomplétion Conservée : La mémorisation et la suggestion automatique des clients et organisations restent actives lors de la création d\'une commande.',
+        '🚀 Scanner Game.log Asynchrone : Analyse ultra-rapide et auto-activation de vos recettes sans aucun blocage.'
       ]
     },
     {
