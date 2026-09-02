@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.10.5';
+export const CURRENT_APP_VERSION = '1.11.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 5 • Version 1.10.5',
+      version: 'Opération 6 • Version 1.11.0',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Ergonomie',
-      badgeColor: 'cyan',
-      title: 'Menus Déroulants & Mémorisation : Factions et Contacts Discord/Spectrum',
-      icon: <Terminal className="w-5 h-5 text-sc-cyan" />,
+      badge: 'Majeure',
+      badgeColor: 'purple',
+      title: 'Nouvel Onglet "Blueprints Clients" & Gestion Dédiée des Recettes',
+      icon: <Terminal className="w-5 h-5 text-purple-400" />,
       points: [
-        '🏛️ Menus Déroulants Organisation / Faction : Mémorisation automatique de toutes les organisations saisies avec menu de sélection rapide en 1 clic.',
-        '💬 Menus Déroulants Contact (Discord / Spectrum) : Mémorisation automatique de tous les identifiants de contact avec liste déroulante et autocomplétion.',
-        '✨ Remplissage Instantané : Un clic sur une faction ou un contact remplit immédiatement le champ lors de la création d\'une commande.',
-        '💾 Sauvegarde Permanente : Chaque nouvelle organisation ou contact saisi est enregistré pour toutes vos futures commandes.'
+        '👥 Nouvel Espace "Blueprints Clients" : Un onglet dédié dans l\'Atelier pour regrouper, cocher et filtrer les recettes fournies ou commandées par vos clients.',
+        '➕ Sélecteur & Liste Déroulante Dédiés : Ajoutez des blueprints clients en 1 clic via le menu déroulant ou cochez directement les cases "+ Client" sur chaque carte et tableau.',
+        '🏛️ Menus Déroulants Factions & Contacts : Mémorisation persistante et sélection instantanée des organisations et contacts Discord/Spectrum.',
+        '📊 Filtres Complets & Faisabilité : Bénéficiez des mêmes filtres de catégories, sous-composants, recherche et faisabilité de fabrication.'
       ]
     },
     {

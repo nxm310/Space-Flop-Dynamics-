@@ -16,6 +16,7 @@ const STORAGE_KEYS = {
   REFINERY_JOBS: 'sc_refinery_jobs_v4',
   CUSTOM_BLUEPRINTS: 'sc_custom_blueprints_v4',
   UNLOCKED_BLUEPRINTS: 'sc_unlocked_blueprints_v4',
+  CLIENT_UNLOCKED_BLUEPRINTS: 'sc_client_unlocked_blueprints_v4',
   ORDERS: 'sc_orders_v4',
   CLIENTS: 'sc_clients_directory_v4',
   SETTINGS: 'sc_settings_v4',
@@ -106,7 +107,7 @@ export class StorageService {
     localStorage.setItem(STORAGE_KEYS.CUSTOM_BLUEPRINTS, JSON.stringify(items));
   }
 
-  // User Unlocked / Selected Blueprint IDs
+  // User Unlocked / Selected Blueprint IDs (Mon Atelier / Mes Blueprints)
   static getUnlockedBlueprintIds(): string[] {
     this.init();
     try {
@@ -133,6 +134,36 @@ export class StorageService {
     });
     const updated = Array.from(set);
     this.saveUnlockedBlueprintIds(updated);
+    return { addedCount, totalCount: updated.length };
+  }
+
+  // Client Blueprints (Fournis par Clients / Commandes)
+  static getClientBlueprintIds(): string[] {
+    this.init();
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CLIENT_UNLOCKED_BLUEPRINTS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static saveClientBlueprintIds(ids: string[]) {
+    localStorage.setItem(STORAGE_KEYS.CLIENT_UNLOCKED_BLUEPRINTS, JSON.stringify(ids));
+  }
+
+  static unlockClientBlueprintIds(idsToUnlock: string[]): { addedCount: number; totalCount: number } {
+    const current = this.getClientBlueprintIds();
+    const set = new Set(current);
+    let addedCount = 0;
+    idsToUnlock.forEach(id => {
+      if (!set.has(id)) {
+        set.add(id);
+        addedCount++;
+      }
+    });
+    const updated = Array.from(set);
+    this.saveClientBlueprintIds(updated);
     return { addedCount, totalCount: updated.length };
   }
 

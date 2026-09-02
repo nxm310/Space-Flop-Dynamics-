@@ -29,7 +29,8 @@ import {
   Table as TableIcon,
   ChevronRight,
   Layers,
-  Terminal
+  Terminal,
+  Users
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -52,13 +53,18 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
   onSyncApiBlueprints,
   onNavigateToTab
 }) => {
-  // Sub-Tab: 'my_workshop' (Mes Blueprints Débloqués) vs 'all_catalog' (Tous les Blueprints)
-  const [subTab, setSubTab] = useState<'my_workshop' | 'all_catalog'>('my_workshop');
+  // Sub-Tab: 'my_workshop' (Mes Blueprints) vs 'client_blueprints' (Blueprints Clients) vs 'all_catalog' (Tous les Blueprints)
+  const [subTab, setSubTab] = useState<'my_workshop' | 'client_blueprints' | 'all_catalog'>('my_workshop');
   const [viewLayout, setViewLayout] = useState<'grid' | 'table'>('grid');
 
-  // Unlocked / Selected Blueprint IDs by the user
+  // Unlocked / Selected Blueprint IDs by the user (Mon Atelier)
   const [unlockedIds, setUnlockedIds] = useState<string[]>(() => {
     return StorageService.getUnlockedBlueprintIds();
+  });
+
+  // Client Blueprint IDs (Fournis par les clients)
+  const [clientBlueprintIds, setClientBlueprintIds] = useState<string[]>(() => {
+    return StorageService.getClientBlueprintIds();
   });
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -70,7 +76,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
   const [isSourcesModalOpen, setIsSourcesModalOpen] = useState(false);
   const [isSyncingApi, setIsSyncingApi] = useState(false);
 
-  // Synchronize unlocked IDs with StorageService
+  // Synchronize unlocked IDs with StorageService (Mon Atelier)
   const updateUnlockedIds = (newIds: string[]) => {
     setUnlockedIds(newIds);
     StorageService.saveUnlockedBlueprintIds(newIds);
@@ -86,29 +92,60 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
     }
   };
 
+  // Synchronize Client Blueprint IDs with StorageService
+  const updateClientBlueprintIds = (newIds: string[]) => {
+    setClientBlueprintIds(newIds);
+    StorageService.saveClientBlueprintIds(newIds);
+  };
+
+  const toggleClientBlueprint = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    audio.playClick();
+    if (clientBlueprintIds.includes(id)) {
+      updateClientBlueprintIds(clientBlueprintIds.filter(i => i !== id));
+    } else {
+      updateClientBlueprintIds([...clientBlueprintIds, id]);
+    }
+  };
+
   const handleDropdownSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedId = e.target.value;
     if (!selectedId) return;
     audio.playSuccess();
-    if (!unlockedIds.includes(selectedId)) {
-      updateUnlockedIds([...unlockedIds, selectedId]);
+
+    if (subTab === 'client_blueprints') {
+      if (!clientBlueprintIds.includes(selectedId)) {
+        updateClientBlueprintIds([...clientBlueprintIds, selectedId]);
+      }
+    } else {
+      if (!unlockedIds.includes(selectedId)) {
+        updateUnlockedIds([...unlockedIds, selectedId]);
+      }
+      setSubTab('my_workshop');
     }
-    // Switch to my_workshop to view it immediately
-    setSubTab('my_workshop');
     e.target.value = '';
   };
 
   const handleSelectAllCurrent = () => {
     audio.playClick();
     const currentIds = filteredBlueprints.map(b => b.id);
-    const merged = Array.from(new Set([...unlockedIds, ...currentIds]));
-    updateUnlockedIds(merged);
+    if (subTab === 'client_blueprints') {
+      const merged = Array.from(new Set([...clientBlueprintIds, ...currentIds]));
+      updateClientBlueprintIds(merged);
+    } else {
+      const merged = Array.from(new Set([...unlockedIds, ...currentIds]));
+      updateUnlockedIds(merged);
+    }
   };
 
   const handleDeselectAllCurrent = () => {
     audio.playClick();
     const currentIdsSet = new Set(filteredBlueprints.map(b => b.id));
-    updateUnlockedIds(unlockedIds.filter(id => !currentIdsSet.has(id)));
+    if (subTab === 'client_blueprints') {
+      updateClientBlueprintIds(clientBlueprintIds.filter(id => !currentIdsSet.has(id)));
+    } else {
+      updateUnlockedIds(unlockedIds.filter(id => !currentIdsSet.has(id)));
+    }
   };
 
   const handleBatchImport = (importedList: Blueprint[]) => {
@@ -132,8 +169,11 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
 
   // Filter blueprints
   const filteredBlueprints = blueprints.filter(bp => {
-    // SubTab Filter: 'my_workshop' only shows checked/unlocked blueprints
+    // SubTab Filter
     if (subTab === 'my_workshop' && !unlockedIds.includes(bp.id)) {
+      return false;
+    }
+    if (subTab === 'client_blueprints' && !clientBlueprintIds.includes(bp.id)) {
       return false;
     }
 
@@ -176,6 +216,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
 
   const craftableCount = filteredBlueprints.filter(checkFeasibility).length;
   const myBlueprintsTotalCount = blueprints.filter(b => unlockedIds.includes(b.id)).length;
+  const clientBlueprintsTotalCount = blueprints.filter(b => clientBlueprintIds.includes(b.id)).length;
 
   const handleSyncApi = async () => {
     audio.playClick();
@@ -215,7 +256,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
             Atelier de Fabrication & Blueprints
           </h2>
           <p className="text-xs font-mono text-slate-400 mt-1">
-            Gérez votre atelier personnel, sélectionnez vos blueprints débloqués et fabriquez vos items
+            Gérez votre atelier personnel, les plans fournis par vos clients et fabriquez vos commandes
           </p>
         </div>
 
@@ -271,21 +312,36 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
 
       {/* Primary Sub-Tabs & Dropdown Quick Selector Bar */}
       <div className="bg-sc-card/90 border border-sc-border rounded-xl p-3 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-md">
-        {/* Main SubTab Toggle (Mes Blueprints vs Catalogue Global) */}
-        <div className="flex rounded-lg border border-slate-800 p-1 bg-[#090e18]">
+        {/* Main SubTab Toggle (Mes Blueprints vs Blueprints Clients vs Catalogue Global) */}
+        <div className="flex rounded-lg border border-slate-800 p-1 bg-[#090e18] flex-wrap gap-1">
           <button
             onClick={() => {
               audio.playClick();
               setSubTab('my_workshop');
             }}
-            className={`px-4 py-2 text-xs font-mono uppercase tracking-wider rounded-md transition-all flex items-center gap-2 ${
+            className={`px-3.5 py-2 text-xs font-mono uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${
               subTab === 'my_workshop'
                 ? 'bg-sc-cyan text-slate-950 font-bold shadow-neon-cyan'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Bookmark className="w-4 h-4" />
+            <Bookmark className="w-3.5 h-3.5" />
             <span>Mes Blueprints ({myBlueprintsTotalCount})</span>
+          </button>
+
+          <button
+            onClick={() => {
+              audio.playClick();
+              setSubTab('client_blueprints');
+            }}
+            className={`px-3.5 py-2 text-xs font-mono uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${
+              subTab === 'client_blueprints'
+                ? 'bg-purple-500 text-slate-950 font-bold shadow-neon-purple'
+                : 'text-purple-400 hover:text-purple-300'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Blueprints Clients ({clientBlueprintsTotalCount})</span>
           </button>
 
           <button
@@ -293,18 +349,18 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
               audio.playClick();
               setSubTab('all_catalog');
             }}
-            className={`px-4 py-2 text-xs font-mono uppercase tracking-wider rounded-md transition-all flex items-center gap-2 ${
+            className={`px-3.5 py-2 text-xs font-mono uppercase tracking-wider rounded-md transition-all flex items-center gap-1.5 ${
               subTab === 'all_catalog'
                 ? 'bg-slate-700 text-slate-100 font-bold'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Scroll className="w-4 h-4" />
+            <Scroll className="w-3.5 h-3.5" />
             <span>Catalogue Global ({blueprints.length})</span>
           </button>
         </div>
 
-        {/* Dropdown Quick Selector for adding to My Blueprints */}
+        {/* Dropdown Quick Selector */}
         <div className="flex items-center gap-2.5 flex-1 max-w-md">
           <div className="relative w-full">
             <select
@@ -313,7 +369,9 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
               className="w-full px-3 py-2 bg-[#090e18] border border-sc-border hover:border-sc-cyan/50 focus:border-sc-cyan rounded-lg text-xs font-mono text-slate-200 focus:outline-none cursor-pointer"
             >
               <option value="" disabled>
-                ➕ Ajouter un blueprint à ma sélection (liste déroulante)...
+                {subTab === 'client_blueprints'
+                  ? '👥 Ajouter un blueprint client (liste déroulante)...'
+                  : '➕ Ajouter un blueprint à ma sélection (liste déroulante)...'}
               </option>
               {BLUEPRINT_CATEGORIES.map(cat => {
                 const catBps = blueprints.filter(b => b.category === cat.key);
@@ -322,7 +380,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
                 return (
                   <optgroup key={cat.key} label={`── ${cat.label.toUpperCase()} ──`} className="bg-slate-900 text-sc-cyan font-bold">
                     {catBps.map(bp => {
-                      const isAlreadyIn = unlockedIds.includes(bp.id);
+                      const isAlreadyIn = subTab === 'client_blueprints' ? clientBlueprintIds.includes(bp.id) : unlockedIds.includes(bp.id);
                       return (
                         <option
                           key={bp.id}
@@ -330,7 +388,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
                           disabled={isAlreadyIn}
                           className="bg-sc-panel text-slate-200 font-normal"
                         >
-                          {isAlreadyIn ? `✓ ${bp.name} (Déjà dans l'atelier)` : `+ ${bp.name} (${bp.typeLabel})`}
+                          {isAlreadyIn ? `✓ ${bp.name} (Déjà sélectionné)` : `+ ${bp.name} (${bp.typeLabel})`}
                         </option>
                       );
                     })}
@@ -375,11 +433,15 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
           }`}
         >
           <Scroll className="w-4 h-4" />
-          <span>Toutes ({subTab === 'my_workshop' ? myBlueprintsTotalCount : blueprints.length})</span>
+          <span>Toutes ({subTab === 'my_workshop' ? myBlueprintsTotalCount : subTab === 'client_blueprints' ? clientBlueprintsTotalCount : blueprints.length})</span>
         </button>
 
         {BLUEPRINT_CATEGORIES.map(cat => {
-          const pool = subTab === 'my_workshop' ? blueprints.filter(b => unlockedIds.includes(b.id)) : blueprints;
+          const pool = subTab === 'my_workshop'
+            ? blueprints.filter(b => unlockedIds.includes(b.id))
+            : subTab === 'client_blueprints'
+            ? blueprints.filter(b => clientBlueprintIds.includes(b.id))
+            : blueprints;
           const count = pool.filter(b => b.category === cat.key).length;
           const isSelected = selectedCategory === cat.key;
 
@@ -413,7 +475,11 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
           </div>
 
           {BLUEPRINT_SUBCATEGORIES[selectedCategory].map(sub => {
-            const pool = subTab === 'my_workshop' ? blueprints.filter(b => unlockedIds.includes(b.id)) : blueprints;
+            const pool = subTab === 'my_workshop'
+              ? blueprints.filter(b => unlockedIds.includes(b.id))
+              : subTab === 'client_blueprints'
+              ? blueprints.filter(b => clientBlueprintIds.includes(b.id))
+              : blueprints;
             const catPool = pool.filter(b => b.category === selectedCategory);
             const count = catPool.filter(sub.match).length;
             const isSubSelected = selectedSubCategory === sub.key;
@@ -450,37 +516,41 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
           <Search className="w-4 h-4 text-sc-cyan absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Rechercher (ex: Omnisky, P4-AR, Atlas, FR-66, Hadanite)..."
+            placeholder={
+              subTab === 'client_blueprints'
+                ? 'Rechercher dans les blueprints clients...'
+                : subTab === 'my_workshop'
+                ? 'Rechercher dans mon atelier...'
+                : 'Rechercher parmi 50+ recettes...'
+            }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 bg-[#090e18] border border-sc-border focus:border-sc-cyan rounded-lg text-xs font-mono text-slate-100 placeholder:text-slate-500 focus:outline-none"
           />
         </div>
 
-        {/* Selection Batch Controls & Feasibility Filter */}
-        <div className="flex flex-wrap items-center justify-between lg:justify-end gap-2 text-xs font-mono">
-          {/* Quick Check/Uncheck All in current view */}
-          <div className="flex items-center gap-1.5 border-r border-slate-800 pr-3">
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Quick Selection Buttons */}
+          <div className="flex items-center gap-1 border-r border-slate-800 pr-2 mr-1">
             <button
               onClick={handleSelectAllCurrent}
-              className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] flex items-center gap-1 transition-colors"
-              title="Ajouter tous les blueprints affichés à mes blueprints"
+              className="px-2.5 py-1 bg-[#090e18] hover:bg-slate-800 border border-slate-800 hover:border-sc-cyan/40 rounded text-[11px] font-mono text-slate-300 hover:text-sc-cyan transition-colors"
+              title={subTab === 'client_blueprints' ? 'Tout cocher comme blueprint client' : 'Tout cocher dans mon atelier'}
             >
-              <CheckSquare className="w-3.5 h-3.5 text-sc-cyan" />
-              <span>Tout Cocher</span>
+              Tout Cocher
             </button>
             <button
               onClick={handleDeselectAllCurrent}
-              className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-rose-300 text-[11px] flex items-center gap-1 transition-colors"
-              title="Retirer les blueprints affichés de mes blueprints"
+              className="px-2.5 py-1 bg-[#090e18] hover:bg-slate-800 border border-slate-800 hover:border-rose-500/40 rounded text-[11px] font-mono text-slate-400 hover:text-rose-400 transition-colors"
+              title={subTab === 'client_blueprints' ? 'Tout décocher des blueprints clients' : 'Tout décocher de mon atelier'}
             >
-              <Square className="w-3.5 h-3.5" />
-              <span>Décocher</span>
+              Tout Décocher
             </button>
           </div>
 
-          {/* Feasibility Filter */}
-          <div className="flex rounded-lg border border-slate-800 p-0.5 bg-[#090e18]">
+          {/* Feasibility Filter Buttons */}
+          <div className="flex items-center border border-slate-800 rounded-lg p-0.5 bg-[#090e18]">
             <button
               onClick={() => {
                 audio.playClick();
@@ -534,6 +604,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
             {filteredBlueprints.map((bp) => {
               const isCraftable = checkFeasibility(bp);
               const isUnlocked = unlockedIds.includes(bp.id);
+              const isClientBp = clientBlueprintIds.includes(bp.id);
 
               return (
                 <div
@@ -543,7 +614,11 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
                     setSelectedBlueprint(bp);
                   }}
                   className={`bg-sc-card border rounded-xl p-4 flex flex-col justify-between gap-3 cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.01] group relative ${
-                    isUnlocked ? 'ring-1 ring-sc-cyan/50' : ''
+                    subTab === 'client_blueprints' && isClientBp
+                      ? 'ring-1 ring-purple-500/50'
+                      : isUnlocked
+                      ? 'ring-1 ring-sc-cyan/50'
+                      : ''
                   } ${
                     isCraftable
                       ? 'border-emerald-500/40 hover:border-emerald-400 shadow-emerald-950/20'
@@ -555,20 +630,66 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          {/* Checkbox to add/remove from My Blueprints */}
-                          <button
-                            type="button"
-                            onClick={(e) => toggleUnlockBlueprint(bp.id, e)}
-                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1.5 transition-all ${
-                              isUnlocked
-                                ? 'bg-sc-cyan text-slate-950 shadow-neon-cyan'
-                                : 'bg-slate-800/90 text-slate-400 hover:text-slate-200 hover:bg-slate-700 border border-slate-700'
-                            }`}
-                            title={isUnlocked ? 'Dans mon atelier (Cliquer pour retirer)' : 'Ajouter à mes blueprints débloqués'}
-                          >
-                            {isUnlocked ? <CheckSquare className="w-3 h-3" /> : <Square className="w-3 h-3" />}
-                            <span>{isUnlocked ? 'Mon Atelier' : '+ Ajouter'}</span>
-                          </button>
+                          {/* Checkbox selector */}
+                          {subTab === 'client_blueprints' ? (
+                            <button
+                              type="button"
+                              onClick={(e) => toggleClientBlueprint(bp.id, e)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1.5 transition-all ${
+                                isClientBp
+                                  ? 'bg-purple-500 text-slate-950 shadow-neon-purple'
+                                  : 'bg-slate-800/90 text-purple-400 hover:text-purple-200 hover:bg-slate-700 border border-purple-800/60'
+                              }`}
+                              title={isClientBp ? 'Dans les blueprints clients (Cliquer pour retirer)' : 'Ajouter aux blueprints clients'}
+                            >
+                              {isClientBp ? <CheckSquare className="w-3 h-3" /> : <Square className="w-3 h-3" />}
+                              <span>{isClientBp ? 'Client' : '+ Client'}</span>
+                            </button>
+                          ) : subTab === 'all_catalog' ? (
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={(e) => toggleUnlockBlueprint(bp.id, e)}
+                                className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1 transition-all ${
+                                  isUnlocked
+                                    ? 'bg-sc-cyan text-slate-950 shadow-neon-cyan'
+                                    : 'bg-slate-800/90 text-slate-400 hover:text-slate-200 border border-slate-700'
+                                }`}
+                                title={isUnlocked ? 'Dans Mon Atelier' : 'Ajouter à Mon Atelier'}
+                              >
+                                {isUnlocked ? <CheckSquare className="w-2.5 h-2.5" /> : <Square className="w-2.5 h-2.5" />}
+                                <span>Atelier</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={(e) => toggleClientBlueprint(bp.id, e)}
+                                className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1 transition-all ${
+                                  isClientBp
+                                    ? 'bg-purple-500 text-slate-950 shadow-neon-purple'
+                                    : 'bg-slate-800/90 text-purple-400 hover:text-purple-200 border border-purple-800/60'
+                                }`}
+                                title={isClientBp ? 'Dans Blueprints Clients' : 'Ajouter aux Blueprints Clients'}
+                              >
+                                {isClientBp ? <CheckSquare className="w-2.5 h-2.5" /> : <Square className="w-2.5 h-2.5" />}
+                                <span>Client</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => toggleUnlockBlueprint(bp.id, e)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1.5 transition-all ${
+                                isUnlocked
+                                  ? 'bg-sc-cyan text-slate-950 shadow-neon-cyan'
+                                  : 'bg-slate-800/90 text-slate-400 hover:text-slate-200 hover:bg-slate-700 border border-slate-700'
+                              }`}
+                              title={isUnlocked ? 'Dans mon atelier (Cliquer pour retirer)' : 'Ajouter à mes blueprints débloqués'}
+                            >
+                              {isUnlocked ? <CheckSquare className="w-3 h-3" /> : <Square className="w-3 h-3" />}
+                              <span>{isUnlocked ? 'Mon Atelier' : '+ Ajouter'}</span>
+                            </button>
+                          )}
 
                           <span className="text-[10px] font-mono text-sc-cyan tracking-wider uppercase">
                             {bp.typeLabel}
@@ -662,7 +783,9 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
             <table className="w-full text-left text-xs font-mono">
               <thead>
                 <tr className="border-b border-sc-border bg-[#090e18] text-slate-400 uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4 font-semibold text-center w-28">Mon Atelier</th>
+                  <th className="py-3 px-4 font-semibold text-center w-36">
+                    {subTab === 'client_blueprints' ? 'Blueprint Client' : subTab === 'all_catalog' ? 'Atelier / Client' : 'Mon Atelier'}
+                  </th>
                   <th className="py-3 px-4 font-semibold">Nom du Blueprint</th>
                   <th className="py-3 px-4 font-semibold">Catégorie</th>
                   <th className="py-3 px-4 font-semibold">Type & Taille</th>
@@ -676,6 +799,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
                 {filteredBlueprints.map((bp) => {
                   const isCraftable = checkFeasibility(bp);
                   const isUnlocked = unlockedIds.includes(bp.id);
+                  const isClientBp = clientBlueprintIds.includes(bp.id);
 
                   return (
                     <tr
@@ -685,24 +809,71 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
                         setSelectedBlueprint(bp);
                       }}
                       className={`hover:bg-slate-800/40 transition-colors cursor-pointer group ${
-                        isUnlocked ? 'bg-sc-cyan/5' : ''
+                        subTab === 'client_blueprints' && isClientBp
+                          ? 'bg-purple-950/15'
+                          : isUnlocked
+                          ? 'bg-sc-cyan/5'
+                          : ''
                       }`}
                     >
-                      {/* Checkbox */}
+                      {/* Checkbox / Action Cell */}
                       <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          onClick={() => toggleUnlockBlueprint(bp.id)}
-                          className={`p-1.5 rounded-lg border transition-all inline-flex items-center gap-1 text-[10px] font-bold ${
-                            isUnlocked
-                              ? 'bg-sc-cyan text-slate-950 border-sc-cyan shadow-neon-cyan'
-                              : 'bg-slate-800 text-slate-400 hover:text-slate-200 border-slate-700'
-                          }`}
-                          title={isUnlocked ? 'Dans mon atelier (Cliquer pour retirer)' : 'Ajouter à mon atelier'}
-                        >
-                          {isUnlocked ? <CheckSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
-                          <span className="hidden sm:inline">{isUnlocked ? 'Actif' : '+'}</span>
-                        </button>
+                        {subTab === 'client_blueprints' ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleClientBlueprint(bp.id)}
+                            className={`p-1.5 rounded-lg border transition-all inline-flex items-center gap-1 text-[10px] font-bold ${
+                              isClientBp
+                                ? 'bg-purple-500 text-slate-950 border-purple-500 shadow-neon-purple'
+                                : 'bg-slate-800 text-purple-400 hover:text-purple-200 border-purple-800/60'
+                            }`}
+                            title={isClientBp ? 'Dans les blueprints clients (Cliquer pour retirer)' : 'Ajouter aux blueprints clients'}
+                          >
+                            {isClientBp ? <CheckSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
+                            <span className="hidden sm:inline">{isClientBp ? 'Client' : '+'}</span>
+                          </button>
+                        ) : subTab === 'all_catalog' ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => toggleUnlockBlueprint(bp.id)}
+                              className={`p-1 rounded border text-[9px] font-bold ${
+                                isUnlocked
+                                  ? 'bg-sc-cyan text-slate-950 border-sc-cyan'
+                                  : 'bg-slate-800 text-slate-400 border-slate-700'
+                              }`}
+                              title={isUnlocked ? 'Dans Mon Atelier' : 'Ajouter Atelier'}
+                            >
+                              {isUnlocked ? <CheckSquare className="w-3 h-3" /> : <Square className="w-3 h-3" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => toggleClientBlueprint(bp.id)}
+                              className={`p-1 rounded border text-[9px] font-bold ${
+                                isClientBp
+                                  ? 'bg-purple-500 text-slate-950 border-purple-500'
+                                  : 'bg-slate-800 text-purple-400 border-purple-800/60'
+                              }`}
+                              title={isClientBp ? 'Dans Blueprints Clients' : 'Ajouter Client'}
+                            >
+                              {isClientBp ? <CheckSquare className="w-3 h-3" /> : <Square className="w-3 h-3" />}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => toggleUnlockBlueprint(bp.id)}
+                            className={`p-1.5 rounded-lg border transition-all inline-flex items-center gap-1 text-[10px] font-bold ${
+                              isUnlocked
+                                ? 'bg-sc-cyan text-slate-950 border-sc-cyan shadow-neon-cyan'
+                                : 'bg-slate-800 text-slate-400 hover:text-slate-200 border-slate-700'
+                            }`}
+                            title={isUnlocked ? 'Dans mon atelier (Cliquer pour retirer)' : 'Ajouter à mon atelier'}
+                          >
+                            {isUnlocked ? <CheckSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
+                            <span className="hidden sm:inline">{isUnlocked ? 'Actif' : '+'}</span>
+                          </button>
+                        )}
                       </td>
 
                       {/* Name */}
@@ -787,15 +958,21 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
         <div className="bg-sc-card/40 border border-sc-border/60 rounded-xl p-12 text-center space-y-3">
           <Scroll className="w-12 h-12 text-slate-600 mx-auto" />
           <h4 className="text-base font-bold text-slate-300 font-sans uppercase">
-            {subTab === 'my_workshop' ? 'Aucun blueprint dans votre atelier' : 'Aucun blueprint trouvé'}
+            {subTab === 'client_blueprints'
+              ? 'Aucun blueprint client sélectionné'
+              : subTab === 'my_workshop'
+              ? 'Aucun blueprint dans votre atelier'
+              : 'Aucun blueprint trouvé'}
           </h4>
           <p className="text-xs text-slate-500 font-mono max-w-md mx-auto">
-            {subTab === 'my_workshop'
+            {subTab === 'client_blueprints'
+              ? 'Cochez des blueprints comme "Client" ou utilisez la liste déroulante ci-dessus pour regrouper les plans fournis par vos clients.'
+              : subTab === 'my_workshop'
               ? 'Sélectionnez des blueprints à l\'aide des cases à cocher ou de la liste déroulante ci-dessus pour composer votre atelier personnel.'
               : 'Aucun blueprint ne correspond aux critères de recherche.'}
           </p>
 
-          {subTab === 'my_workshop' && (
+          {subTab !== 'all_catalog' && (
             <button
               onClick={() => {
                 audio.playClick();
