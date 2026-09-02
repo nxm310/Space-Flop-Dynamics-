@@ -28,7 +28,8 @@ import {
   LayoutGrid,
   Table as TableIcon,
   ChevronRight,
-  Layers
+  Layers,
+  Terminal
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -39,6 +40,7 @@ interface BlueprintsCatalogViewProps {
   onCraftNow: (bp: Blueprint, quantity: number) => void;
   onCreateOrderFromBlueprint: (bp: Blueprint) => void;
   onSyncApiBlueprints: (newBps: Blueprint[]) => void;
+  onNavigateToTab?: (tab: string) => void;
 }
 
 export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
@@ -47,7 +49,8 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
   onAddCustomBlueprint,
   onCraftNow,
   onCreateOrderFromBlueprint,
-  onSyncApiBlueprints
+  onSyncApiBlueprints,
+  onNavigateToTab
 }) => {
   // Sub-Tab: 'my_workshop' (Mes Blueprints Débloqués) vs 'all_catalog' (Tous les Blueprints)
   const [subTab, setSubTab] = useState<'my_workshop' | 'all_catalog'>('my_workshop');
@@ -217,6 +220,20 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {onNavigateToTab && (
+            <button
+              onClick={() => {
+                audio.playClick();
+                onNavigateToTab('importExport');
+              }}
+              className="px-3 py-2 rounded-lg border border-sc-cyan/40 bg-sc-cyan/15 hover:bg-sc-cyan/25 text-sc-cyan text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2 shadow-neon-cyan/20 transition-all"
+              title="Importer et analyser votre Game.log pour détecter vos blueprints débloqués"
+            >
+              <Terminal className="w-4 h-4 text-sc-cyan" />
+              <span className="hidden sm:inline">Importer Game.log</span>
+            </button>
+          )}
+
           <button
             onClick={() => {
               audio.playClick();

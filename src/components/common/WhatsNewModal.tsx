@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import {
   Sparkles,
   X,
-  Boxes,
   LayoutGrid,
   Users,
   Pencil,
+  Terminal,
   Rocket
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.9.1';
+export const CURRENT_APP_VERSION = '1.10.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 5 • Version 1.9.1',
+      version: 'Opération 5 • Version 1.10.0',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Mineure',
+      badge: 'Majeure',
       badgeColor: 'cyan',
-      title: 'Masquage de la Valeur Estimée dans le Stock Minerais & Épuration',
-      icon: <Boxes className="w-5 h-5 text-sc-cyan" />,
+      title: 'Analyseur Game.log StarEngine & Détection Automatique des Blueprints',
+      icon: <Terminal className="w-5 h-5 text-sc-cyan" />,
       points: [
-        '💎 Masquage de la Valeur Estimée dans l\'Inventaire : Retrait complet de la colonne et des estimations en aUEC dans le tableau, la synthèse et les fiches du stock de minerais pour un affichage centré sur les quantités et qualités brutes.',
-        '📦 Remplacement par le Volume Global Cumulé : Le 4ème indicateur KPI affiche désormais le volume total cumulé en SCU (Stock Personnel + Dépôts Clients).',
-        '🧹 Suppression des Onglets Minage Brut & Raffinerie : Interface épurée et recentrée sur le Stock de Minerais, l\'Atelier Blueprints et les Commandes.',
-        '🚀 Header HUD 2 Lignes 100% Responsive : Navigation ergonomique fluide sur mobile, tablette et PC.'
+        '📥 Importateur & Analyseur Game.log StarEngine : Glissez-déposez votre fichier Game.log (ou plusieurs fichiers de sessions passées depuis \\logbackups\\) pour extraire automatiquement tous vos blueprints débloqués en jeu (événements Received Blueprint).',
+        '✨ Synchronisation Directe en 1 Clic : Activez et cochez automatiquement tous les blueprints reconnus dans "Mes Blueprints" (Mon Atelier).',
+        '👤 Détection de l\'Identité Pilote & Métadonnées : Récupération du Handle / Pseudo joueur, version du jeu et horodatage de chaque découverte.',
+        '💎 Épuration du Stock Minerais : Retrait complet des valeurs estimées en aUEC pour un affichage 100% axé sur les volumes réels, la qualité et la traçabilité.'
       ]
     },
     {

@@ -633,6 +633,10 @@ export function App() {
             onCraftNow={handleCraftNow}
             onCreateOrderFromBlueprint={handleCreateOrderFromBlueprint}
             onSyncApiBlueprints={handleSyncApiBlueprints}
+            onNavigateToTab={(tab) => {
+              audio.playClick();
+              setActiveTab(tab);
+            }}
           />
         )}
 
@@ -656,6 +660,10 @@ export function App() {
             stock={refinedStock}
             onImportStock={handleImportStock}
             onRestoreBackup={handleRestoreBackup}
+            onNavigateToTab={(tab) => {
+              audio.playClick();
+              setActiveTab(tab);
+            }}
           />
         )}
       </main>

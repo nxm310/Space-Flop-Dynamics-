@@ -121,6 +121,21 @@ export class StorageService {
     localStorage.setItem(STORAGE_KEYS.UNLOCKED_BLUEPRINTS, JSON.stringify(ids));
   }
 
+  static unlockBlueprintIds(idsToUnlock: string[]): { addedCount: number; totalCount: number } {
+    const current = this.getUnlockedBlueprintIds();
+    const set = new Set(current);
+    let addedCount = 0;
+    idsToUnlock.forEach(id => {
+      if (!set.has(id)) {
+        set.add(id);
+        addedCount++;
+      }
+    });
+    const updated = Array.from(set);
+    this.saveUnlockedBlueprintIds(updated);
+    return { addedCount, totalCount: updated.length };
+  }
+
   // All Blueprints (Built-in + Custom with strict deduplication)
   static getAllBlueprints(): Blueprint[] {
     const custom = this.getCustomBlueprints();
