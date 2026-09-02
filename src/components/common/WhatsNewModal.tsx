@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.10.0';
+export const CURRENT_APP_VERSION = '1.10.1';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 5 • Version 1.10.0',
+      version: 'Opération 5 • Version 1.10.1',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Majeure',
+      badge: 'Correctif',
       badgeColor: 'cyan',
-      title: 'Analyseur Game.log StarEngine & Détection Automatique des Blueprints',
+      title: 'Scanner Game.log Multi-Pass, Mode Copier-Coller & Diagnostic',
       icon: <Terminal className="w-5 h-5 text-sc-cyan" />,
       points: [
-        '📥 Importateur & Analyseur Game.log StarEngine : Glissez-déposez votre fichier Game.log (ou plusieurs fichiers de sessions passées depuis \\logbackups\\) pour extraire automatiquement tous vos blueprints débloqués en jeu (événements Received Blueprint).',
-        '✨ Synchronisation Directe en 1 Clic : Activez et cochez automatiquement tous les blueprints reconnus dans "Mes Blueprints" (Mon Atelier).',
-        '👤 Détection de l\'Identité Pilote & Métadonnées : Récupération du Handle / Pseudo joueur, version du jeu et horodatage de chaque découverte.',
-        '💎 Épuration du Stock Minerais : Retrait complet des valeurs estimées en aUEC pour un affichage 100% axé sur les volumes réels, la qualité et la traçabilité.'
+        '⚡ Moteur d\'Extraction Multi-Pass : Prise en charge de toutes les variantes de logs Star Citizen (notifications, réceptions d\'items, tags internes et formats CryEngine).',
+        '📋 Mode Saisie Rapide (Copier-Coller) : Collez directement le texte ou les lignes de votre Game.log pour analyse instantanée sans avoir à chercher le fichier.',
+        '🔍 Mode Diagnostic & Lignes Brutes : Visualisation complète des lignes contenant des mots-clés de blueprint avec bouton d\'activation directe en 1 clic.',
+        '💡 Explications Claires : Guide pas-à-pas pour importer tous les logs archivés dans \\StarCitizen\\LIVE\\logbackups\\.'
       ]
     },
     {

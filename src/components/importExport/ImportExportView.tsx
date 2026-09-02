@@ -22,7 +22,11 @@ import {
   FolderOpen,
   ArrowRight,
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  ClipboardPaste,
+  HelpCircle,
+  Eye,
+  Plus
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -46,11 +50,14 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
   const [copiedPath, setCopiedPath] = useState(false);
 
   // Game.log Parsing State
+  const [logInputMode, setLogInputMode] = useState<'file' | 'paste'>('file');
+  const [pastedLogText, setPastedLogText] = useState('');
   const [logAnalysisResult, setLogAnalysisResult] = useState<GameLogAnalysisResult | null>(null);
   const [isParsingLogs, setIsParsingLogs] = useState(false);
   const [syncSuccessMessage, setSyncSuccessMessage] = useState('');
   const [logSearchQuery, setLogSearchQuery] = useState('');
   const [logStatusFilter, setLogStatusFilter] = useState<'all' | 'new' | 'already_unlocked' | 'unmatched'>('all');
+  const [showRawKeywordLines, setShowRawKeywordLines] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const jsonFileInputRef = useRef<HTMLInputElement>(null);
@@ -103,6 +110,36 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
     }
   };
 
+  // Process Game.log from Direct Text Paste
+  const handleAnalyzePastedText = () => {
+    if (!pastedLogText.trim()) return;
+
+    audio.playClick();
+    setIsParsingLogs(true);
+    setSyncSuccessMessage('');
+
+    try {
+      const result = GameLogParserService.parseLogFiles([
+        {
+          name: 'Texte collé',
+          content: pastedLogText
+        }
+      ]);
+      setLogAnalysisResult(result);
+
+      if (result.blueprintsFound.length > 0) {
+        audio.playSuccess();
+      } else {
+        audio.playAlert();
+      }
+    } catch (err) {
+      console.error('Error parsing pasted text:', err);
+      audio.playAlert();
+    } finally {
+      setIsParsingLogs(false);
+    }
+  };
+
   // Sync discovered blueprints to "Mes Blueprints"
   const handleSyncAllDiscoveredBlueprints = () => {
     if (!logAnalysisResult) return;
@@ -138,6 +175,20 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
       setSyncSuccessMessage(
         `🎉 ${addedCount} nouveau(x) blueprint(s) ont été synchronisés et activés dans "Mes Blueprints" ! (Total atelier : ${totalCount} blueprints)`
       );
+    }
+  };
+
+  // Quick single unlock from raw line
+  const handleQuickUnlockRawName = (rawText: string) => {
+    const allBlueprints = StorageService.getAllBlueprints();
+    const matched = GameLogParserService.findMatchingBlueprint(rawText, allBlueprints);
+    if (matched) {
+      audio.playSuccess();
+      StorageService.unlockBlueprintIds([matched.id]);
+      setSyncSuccessMessage(`✓ Le blueprint "${matched.name}" a été activé dans votre atelier !`);
+    } else {
+      audio.playClick();
+      alert(`Aucune correspondance exacte trouvée pour "${rawText}". Vous pouvez créer ce blueprint manuellement via le bouton "Nouveau Blueprint" dans l'onglet Blueprints.`);
     }
   };
 
@@ -248,14 +299,14 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="cyan" size="sm">Nouveau • Module StarEngine</Badge>
+                <Badge variant="cyan" size="sm">Nouveau • StarEngine Scanner</Badge>
                 <span className="text-[10px] font-mono text-slate-400">100% Local & Sécurisé</span>
               </div>
               <h3 className="text-lg sm:text-xl font-bold font-sans text-slate-100 uppercase mt-0.5">
                 Analyseur & Importateur Game.log (Blueprints Débloqués)
               </h3>
               <p className="text-xs font-mono text-slate-400">
-                Glissez votre fichier <code className="text-sc-cyan font-bold">Game.log</code> pour extraire instantanément toutes les recettes d'artisanat débloquées dans vos sessions
+                Glissez votre fichier <code className="text-sc-cyan font-bold">Game.log</code> ou collez vos lignes de journal pour extraire vos recettes d'artisanat
               </p>
             </div>
           </div>
@@ -263,7 +314,7 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
           {/* Path helper & Copy button */}
           <div className="flex items-center gap-2 bg-[#080d17] border border-slate-800 px-3 py-2 rounded-xl">
             <FolderOpen className="w-4 h-4 text-slate-400 shrink-0" />
-            <div className="text-[11px] font-mono text-slate-300 truncate max-w-[280px] sm:max-w-md" title={GAME_LOG_DEFAULT_PATH}>
+            <div className="text-[11px] font-mono text-slate-300 truncate max-w-[260px] sm:max-w-xs" title={GAME_LOG_DEFAULT_PATH}>
               {GAME_LOG_DEFAULT_PATH}
             </div>
             <button
@@ -276,44 +327,101 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
           </div>
         </div>
 
-        {/* Drag & Drop Zone */}
-        <div
-          onClick={() => logFileInputRef.current?.click()}
-          className="border-2 border-dashed border-sc-cyan/50 hover:border-sc-cyan bg-sc-panel/80 hover:bg-[#0b1424] rounded-xl p-6 sm:p-8 text-center cursor-pointer transition-all duration-200 group"
-        >
-          <input
-            ref={logFileInputRef}
-            type="file"
-            accept=".log, .txt"
-            multiple
-            onChange={handleLogFilesChange}
-            className="hidden"
-          />
+        {/* Input Mode Selector (Files vs Paste) */}
+        <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+          <button
+            onClick={() => {
+              audio.playClick();
+              setLogInputMode('file');
+            }}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-all ${
+              logInputMode === 'file'
+                ? 'bg-sc-cyan text-slate-950 font-bold shadow-neon-cyan/20'
+                : 'text-slate-400 hover:text-slate-200 bg-slate-900 border border-slate-800'
+            }`}
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>1. Déposer Fichier(s) .log</span>
+          </button>
 
-          {isParsingLogs ? (
-            <div className="flex flex-col items-center justify-center space-y-3">
-              <RefreshCw className="w-10 h-10 text-sc-cyan animate-spin" />
-              <p className="text-sm font-bold font-sans text-slate-100">
-                Analyse des fichiers logs en cours...
-              </p>
-              <p className="text-xs font-mono text-slate-400">
-                Balayage des lignes de déblocage d'artisanat & correspondances avec le catalogue
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="w-12 h-12 mx-auto rounded-xl bg-sc-cyan/10 border border-sc-cyan/30 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Upload className="w-6 h-6 text-sc-cyan" />
-              </div>
-              <p className="text-base font-bold text-slate-100 font-sans">
-                Cliquez ou glissez-déposez votre <span className="text-sc-cyan">Game.log</span> ici
-              </p>
-              <p className="text-xs font-mono text-slate-400 max-w-xl mx-auto">
-                Astuce : Vous pouvez également sélectionner <strong className="text-slate-200">plusieurs fichiers</strong> dans le dossier <code className="text-purple-300 font-bold">\StarCitizen\LIVE\logbackups\</code> pour importer l'historique de toutes vos sessions passées !
-              </p>
-            </div>
-          )}
+          <button
+            onClick={() => {
+              audio.playClick();
+              setLogInputMode('paste');
+            }}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-all ${
+              logInputMode === 'paste'
+                ? 'bg-sc-cyan text-slate-950 font-bold shadow-neon-cyan/20'
+                : 'text-slate-400 hover:text-slate-200 bg-slate-900 border border-slate-800'
+            }`}
+          >
+            <ClipboardPaste className="w-3.5 h-3.5" />
+            <span>2. Coller du Texte Brut</span>
+          </button>
         </div>
+
+        {/* MODE A: DRAG & DROP FILE ZONE */}
+        {logInputMode === 'file' && (
+          <div
+            onClick={() => logFileInputRef.current?.click()}
+            className="border-2 border-dashed border-sc-cyan/50 hover:border-sc-cyan bg-sc-panel/80 hover:bg-[#0b1424] rounded-xl p-6 sm:p-8 text-center cursor-pointer transition-all duration-200 group"
+          >
+            <input
+              ref={logFileInputRef}
+              type="file"
+              accept=".log, .txt"
+              multiple
+              onChange={handleLogFilesChange}
+              className="hidden"
+            />
+
+            {isParsingLogs ? (
+              <div className="flex flex-col items-center justify-center space-y-3">
+                <RefreshCw className="w-10 h-10 text-sc-cyan animate-spin" />
+                <p className="text-sm font-bold font-sans text-slate-100">
+                  Analyse des fichiers logs en cours...
+                </p>
+                <p className="text-xs font-mono text-slate-400">
+                  Balayage des lignes d'événements & correspondances avec le catalogue
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="w-12 h-12 mx-auto rounded-xl bg-sc-cyan/10 border border-sc-cyan/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Upload className="w-6 h-6 text-sc-cyan" />
+                </div>
+                <p className="text-base font-bold text-slate-100 font-sans">
+                  Cliquez ou glissez-déposez votre <span className="text-sc-cyan">Game.log</span> ici
+                </p>
+                <p className="text-xs font-mono text-slate-400 max-w-xl mx-auto">
+                  Astuce : Vous pouvez sélectionner <strong className="text-slate-200">tous les fichiers</strong> dans <code className="text-purple-300 font-bold">\StarCitizen\LIVE\logbackups\</code> pour importer l'historique complet de toutes vos sessions passées !
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* MODE B: DIRECT TEXT PASTE AREA */}
+        {logInputMode === 'paste' && (
+          <div className="space-y-3">
+            <textarea
+              rows={6}
+              value={pastedLogText}
+              onChange={(e) => setPastedLogText(e.target.value)}
+              placeholder="Collez ici le contenu de votre Game.log ou vos lignes de journal (ex: Added notification &quot;Received Blueprint: Behring AD4B Ballistic Gatling: &quot; [123456])..."
+              className="w-full p-3 bg-[#080d17] border border-slate-700 focus:border-sc-cyan rounded-xl text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none"
+            />
+
+            <button
+              onClick={handleAnalyzePastedText}
+              disabled={!pastedLogText.trim() || isParsingLogs}
+              className="px-5 py-2.5 rounded-xl bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-neon-cyan transition-all disabled:opacity-40"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Analyser le Texte Collé</span>
+            </button>
+          </div>
+        )}
 
         {/* Sync Success Message */}
         {syncSuccessMessage && (
@@ -346,7 +454,7 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
                 <User className="w-4 h-4 text-sc-cyan shrink-0" />
                 <div>
                   <span className="text-[10px] text-slate-500 block uppercase">Pilote Détecté</span>
-                  <strong className="text-slate-200 text-sm">{logAnalysisResult.playerHandle || 'Non identifié'}</strong>
+                  <strong className="text-slate-200 text-sm">{logAnalysisResult.playerHandle || 'Session en cours'}</strong>
                 </div>
               </div>
 
@@ -373,161 +481,224 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
                 <div>
                   <span className="text-[10px] text-slate-500 block uppercase">Blueprints Détectés</span>
                   <strong className="text-amber-300 text-sm">
-                    {logAnalysisResult.blueprintsFound.length} recettes uniques
+                    {logAnalysisResult.blueprintsFound.length} recettes extraites
                   </strong>
                 </div>
               </div>
             </div>
 
-            {/* Action & Filter Bar */}
-            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-4 rounded-xl bg-[#080d17] border border-slate-800">
-              {/* Filter Tabs */}
-              <div className="flex items-center gap-1.5 flex-wrap text-xs font-mono">
+            {/* Zero Blueprints Found Diagnostic Banner */}
+            {logAnalysisResult.blueprintsFound.length === 0 && (
+              <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/50 space-y-3 font-mono text-xs">
+                <div className="flex items-start gap-2.5 text-amber-300 font-bold">
+                  <HelpCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-sans uppercase">Aucun événement de déblocage de Blueprint trouvé dans ce fichier</h4>
+                    <p className="text-xs font-normal text-amber-200/90 mt-1 leading-relaxed">
+                      Le fichier <code className="text-sc-cyan font-bold">Game.log</code> est réinitialisé à zéro à chaque lancement du jeu Star Citizen. Si vous n'avez pas débloqué de nouveau blueprint pendant la session actuelle, c'est tout à fait normal !
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-[#080d17] p-3 rounded-lg border border-amber-800/40 text-slate-300 space-y-1.5 text-[11px]">
+                  <p className="font-bold text-sc-cyan">💡 Comment récupérer tous vos blueprints passés :</p>
+                  <p>1. Ouvrez l'explorateur Windows dans : <code className="text-purple-300">C:\Program Files\Roberts Space Industries\StarCitizen\LIVE\logbackups\</code></p>
+                  <p>2. Sélectionnez <strong className="text-slate-100">tous les fichiers .log</strong> présents dans ce dossier et glissez-les ici d'un coup.</p>
+                  <p>3. Star Citizen y conserve l'archive de vos sessions passées.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Blueprints Extracted Table */}
+            {logAnalysisResult.blueprintsFound.length > 0 && (
+              <div className="space-y-3">
+                {/* Action & Filter Bar */}
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-4 rounded-xl bg-[#080d17] border border-slate-800">
+                  {/* Filter Tabs */}
+                  <div className="flex items-center gap-1.5 flex-wrap text-xs font-mono">
+                    <button
+                      onClick={() => {
+                        audio.playClick();
+                        setLogStatusFilter('all');
+                      }}
+                      className={`px-3 py-1.5 rounded-lg transition-colors ${
+                        logStatusFilter === 'all'
+                          ? 'bg-sc-cyan text-slate-950 font-bold'
+                          : 'text-slate-400 hover:text-slate-200 bg-slate-900 border border-slate-800'
+                      }`}
+                    >
+                      Tous ({logAnalysisResult.blueprintsFound.length})
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        audio.playClick();
+                        setLogStatusFilter('new');
+                      }}
+                      className={`px-3 py-1.5 rounded-lg transition-colors ${
+                        logStatusFilter === 'new'
+                          ? 'bg-emerald-500 text-slate-950 font-bold'
+                          : 'text-emerald-400 hover:text-emerald-300 bg-emerald-950/40 border border-emerald-800/60'
+                      }`}
+                    >
+                      À Activer ({logAnalysisResult.newMatchesCount})
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        audio.playClick();
+                        setLogStatusFilter('already_unlocked');
+                      }}
+                      className={`px-3 py-1.5 rounded-lg transition-colors ${
+                        logStatusFilter === 'already_unlocked'
+                          ? 'bg-slate-700 text-slate-100 font-bold'
+                          : 'text-slate-400 hover:text-slate-200 bg-slate-900 border border-slate-800'
+                      }`}
+                    >
+                      Déjà dans l'Atelier ({logAnalysisResult.alreadyUnlockedCount})
+                    </button>
+
+                    {logAnalysisResult.unmatchedCustomCount > 0 && (
+                      <button
+                        onClick={() => {
+                          audio.playClick();
+                          setLogStatusFilter('unmatched');
+                        }}
+                        className={`px-3 py-1.5 rounded-lg transition-colors ${
+                          logStatusFilter === 'unmatched'
+                            ? 'bg-amber-500 text-slate-950 font-bold'
+                            : 'text-amber-400 hover:text-amber-300 bg-amber-950/40 border border-amber-800/60'
+                        }`}
+                      >
+                        Non répertoriés ({logAnalysisResult.unmatchedCustomCount})
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Search & Sync Buttons */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Filtrer un blueprint..."
+                      value={logSearchQuery}
+                      onChange={(e) => setLogSearchQuery(e.target.value)}
+                      className="px-3 py-1.5 bg-[#0b1220] border border-slate-700 focus:border-sc-cyan rounded-lg text-xs font-mono text-slate-100 placeholder:text-slate-500 focus:outline-none"
+                    />
+
+                    <button
+                      onClick={handleSyncAllDiscoveredBlueprints}
+                      disabled={logAnalysisResult.newMatchesCount === 0}
+                      className="px-4 py-2 rounded-xl bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-neon-cyan transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>Activer {logAnalysisResult.newMatchesCount} dans Mes Blueprints</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Blueprints Table Preview */}
+                <div className="overflow-x-auto rounded-xl border border-slate-800 bg-[#080d17]">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead>
+                      <tr className="border-b border-slate-800 bg-[#0b1220] text-slate-400 uppercase tracking-wider text-[11px]">
+                        <th className="py-2.5 px-4 font-semibold">#</th>
+                        <th className="py-2.5 px-4 font-semibold">Blueprint Extrait du Log</th>
+                        <th className="py-2.5 px-4 font-semibold">Correspondance Catalogue</th>
+                        <th className="py-2.5 px-4 font-semibold">Statut Atelier</th>
+                        <th className="py-2.5 px-4 font-semibold">Horodatage / Fichier</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {filteredLogBlueprints.length > 0 ? (
+                        filteredLogBlueprints.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
+                            <td className="py-2.5 px-4 text-slate-500">{idx + 1}</td>
+                            <td className="py-2.5 px-4">
+                              <strong className="text-slate-100 font-sans block">{item.rawName}</strong>
+                              <span className="text-[10px] text-slate-500">Source : {item.sourceFile}</span>
+                            </td>
+                            <td className="py-2.5 px-4">
+                              {item.matchedBlueprint ? (
+                                <div>
+                                  <span className="text-sc-cyan font-bold">{item.matchedBlueprint.name}</span>
+                                  <span className="text-[10px] text-slate-400 block uppercase">
+                                    {item.matchedBlueprint.category} {item.matchedBlueprint.typeLabel ? `• ${item.matchedBlueprint.typeLabel}` : ''}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-amber-400 italic text-[11px]">Non catalogué officiel</span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-4">
+                              {item.status === 'matched_new' && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-800">
+                                  ✨ Prêt à activer
+                                </span>
+                              )}
+                              {item.status === 'matched_already_unlocked' && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                                  ✓ Déjà dans l'Atelier
+                                </span>
+                              )}
+                              {item.status === 'unmatched_custom' && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950/60 text-amber-300 border border-amber-800">
+                                  Recette personnalisée
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-4 text-slate-400 text-[11px]">
+                              {item.timestamp ? new Date(item.timestamp).toLocaleString('fr-FR') : 'Session active'}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="py-6 text-center text-slate-500">
+                            Aucun blueprint ne correspond aux critères de recherche.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Diagnostic Keyword Lines Viewer (Collapsible) */}
+            {logAnalysisResult.rawLogLinesWithKeywords.length > 0 && (
+              <div className="pt-2 border-t border-slate-800">
                 <button
                   onClick={() => {
                     audio.playClick();
-                    setLogStatusFilter('all');
+                    setShowRawKeywordLines(!showRawKeywordLines);
                   }}
-                  className={`px-3 py-1.5 rounded-lg transition-colors ${
-                    logStatusFilter === 'all'
-                      ? 'bg-sc-cyan text-slate-950 font-bold'
-                      : 'text-slate-400 hover:text-slate-200 bg-slate-900 border border-slate-800'
-                  }`}
+                  className="flex items-center gap-2 text-xs font-mono text-slate-400 hover:text-sc-cyan transition-colors"
                 >
-                  Tous ({logAnalysisResult.blueprintsFound.length})
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>
+                    {showRawKeywordLines ? 'Masquer' : 'Afficher'} les {logAnalysisResult.rawLogLinesWithKeywords.length} lignes brutes de journal détectées avec mots-clés (Mode Diagnostic)
+                  </span>
                 </button>
 
-                <button
-                  onClick={() => {
-                    audio.playClick();
-                    setLogStatusFilter('new');
-                  }}
-                  className={`px-3 py-1.5 rounded-lg transition-colors ${
-                    logStatusFilter === 'new'
-                      ? 'bg-emerald-500 text-slate-950 font-bold'
-                      : 'text-emerald-400 hover:text-emerald-300 bg-emerald-950/40 border border-emerald-800/60'
-                  }`}
-                >
-                  À Activer ({logAnalysisResult.newMatchesCount})
-                </button>
-
-                <button
-                  onClick={() => {
-                    audio.playClick();
-                    setLogStatusFilter('already_unlocked');
-                  }}
-                  className={`px-3 py-1.5 rounded-lg transition-colors ${
-                    logStatusFilter === 'already_unlocked'
-                      ? 'bg-slate-700 text-slate-100 font-bold'
-                      : 'text-slate-400 hover:text-slate-200 bg-slate-900 border border-slate-800'
-                  }`}
-                >
-                  Déjà dans l'Atelier ({logAnalysisResult.alreadyUnlockedCount})
-                </button>
-
-                {logAnalysisResult.unmatchedCustomCount > 0 && (
-                  <button
-                    onClick={() => {
-                      audio.playClick();
-                      setLogStatusFilter('unmatched');
-                    }}
-                    className={`px-3 py-1.5 rounded-lg transition-colors ${
-                      logStatusFilter === 'unmatched'
-                        ? 'bg-amber-500 text-slate-950 font-bold'
-                        : 'text-amber-400 hover:text-amber-300 bg-amber-950/40 border border-amber-800/60'
-                    }`}
-                  >
-                    Non répertoriés ({logAnalysisResult.unmatchedCustomCount})
-                  </button>
+                {showRawKeywordLines && (
+                  <div className="mt-3 p-3 rounded-xl bg-[#05080f] border border-slate-800 max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar font-mono text-[11px]">
+                    {logAnalysisResult.rawLogLinesWithKeywords.map((line, lIdx) => (
+                      <div key={lIdx} className="p-1.5 rounded bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 flex items-start justify-between gap-2 text-slate-300">
+                        <span className="truncate flex-1 select-all">{line}</span>
+                        <button
+                          onClick={() => handleQuickUnlockRawName(line)}
+                          className="px-2 py-0.5 rounded bg-sc-cyan/20 hover:bg-sc-cyan/40 border border-sc-cyan/40 text-sc-cyan text-[10px] font-bold shrink-0 flex items-center gap-1"
+                          title="Tenter de débloquer cette recette dans l'atelier"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Activer</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-
-              {/* Search & Sync Buttons */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Filtrer un blueprint..."
-                  value={logSearchQuery}
-                  onChange={(e) => setLogSearchQuery(e.target.value)}
-                  className="px-3 py-1.5 bg-[#0b1220] border border-slate-700 focus:border-sc-cyan rounded-lg text-xs font-mono text-slate-100 placeholder:text-slate-500 focus:outline-none"
-                />
-
-                <button
-                  onClick={handleSyncAllDiscoveredBlueprints}
-                  disabled={logAnalysisResult.newMatchesCount === 0}
-                  className="px-4 py-2 rounded-xl bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-neon-cyan transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Activer {logAnalysisResult.newMatchesCount} dans Mes Blueprints</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Blueprints Table Preview */}
-            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-[#080d17]">
-              <table className="w-full text-left text-xs font-mono">
-                <thead>
-                  <tr className="border-b border-slate-800 bg-[#0b1220] text-slate-400 uppercase tracking-wider text-[11px]">
-                    <th className="py-2.5 px-4 font-semibold">#</th>
-                    <th className="py-2.5 px-4 font-semibold">Blueprint Extrait du Log</th>
-                    <th className="py-2.5 px-4 font-semibold">Correspondance Catalogue</th>
-                    <th className="py-2.5 px-4 font-semibold">Statut Atelier</th>
-                    <th className="py-2.5 px-4 font-semibold">Horodatage / Fichier</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {filteredLogBlueprints.length > 0 ? (
-                    filteredLogBlueprints.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="py-2.5 px-4 text-slate-500">{idx + 1}</td>
-                        <td className="py-2.5 px-4">
-                          <strong className="text-slate-100 font-sans block">{item.rawName}</strong>
-                          <span className="text-[10px] text-slate-500">Source : {item.sourceFile}</span>
-                        </td>
-                        <td className="py-2.5 px-4">
-                          {item.matchedBlueprint ? (
-                            <div>
-                              <span className="text-sc-cyan font-bold">{item.matchedBlueprint.name}</span>
-                              <span className="text-[10px] text-slate-400 block uppercase">
-                                {item.matchedBlueprint.category} {item.matchedBlueprint.typeLabel ? `• ${item.matchedBlueprint.typeLabel}` : ''}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-amber-400 italic text-[11px]">Non catalogué officiel</span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-4">
-                          {item.status === 'matched_new' && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-800">
-                              ✨ Prêt à activer
-                            </span>
-                          )}
-                          {item.status === 'matched_already_unlocked' && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                              ✓ Déjà dans l'Atelier
-                            </span>
-                          )}
-                          {item.status === 'unmatched_custom' && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950/60 text-amber-300 border border-amber-800">
-                              Recette personnalisée
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-4 text-slate-400 text-[11px]">
-                          {item.timestamp ? new Date(item.timestamp).toLocaleString('fr-FR') : 'Session active'}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={5} className="py-6 text-center text-slate-500">
-                        Aucun blueprint ne correspond aux critères de recherche.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            )}
           </div>
         )}
       </div>
