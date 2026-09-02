@@ -2,16 +2,16 @@ import React, { useState } from 'react';
 import {
   Sparkles,
   X,
+  Boxes,
   LayoutGrid,
   Users,
   Pencil,
   CheckSquare,
-  BookOpen,
   Rocket
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.8.0';
+export const CURRENT_APP_VERSION = '1.9.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -47,38 +47,50 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 5 • Version 1.8.0',
+      version: 'Opération 5 • Version 1.9.0',
       date: 'Dernière mise à jour (Actuelle)',
       badge: 'Majeure',
       badgeColor: 'cyan',
-      title: 'Header HUD Supérieur sur 2 Lignes & Ergonomie 100% Responsive',
-      icon: <LayoutGrid className="w-5 h-5 text-sc-cyan" />,
+      title: 'Interface Épurée : Recentrage sur le Stock, Blueprints & Commandes',
+      icon: <Boxes className="w-5 h-5 text-sc-cyan" />,
       points: [
-        '🚀 Nouveau Header HUD sur 2 Lignes : Séparation claire entre la barre de télémétrie/statut en haut et la barre de navigation dédiée pour un affichage aéré et parfaitement responsive sur mobile, tablette et PC.',
-        '📊 Télémétrie Live Épurée : Affichage direct des jauges Soute Brute (SCU), Stock Raffiné (SCU) et Commandes Actives dans des capsules haute visibilité.',
-        '👥 Fiches Clients 360° & Historique Automatique : Enregistrement automatique des clients avec historique complet des commandes, des corporations/factions et des contacts Discord & Spectrum.',
+        '🧹 Suppression des Onglets Minage Brut & Raffinerie : Interface épurée et recentrée à 100% sur vos besoins réels (Stock de Minerais, Blueprints & Craft, Commandes Clients et Import/Export).',
+        '📊 Tableau de Bord & Télémétrie Simplifiés : Visualisation en direct du stock raffiné total, de sa valeur estimée en aUEC et des commandes en cours sans encombrement inutile.',
+        '🚀 Header HUD 2 Lignes 100% Responsive : Barre de télémétrie/statut en haut et barre d\'onglets dédiée en bas avec défilement fluide sur mobile, tablette et PC.',
+        '👥 Fiches Clients 360° & Historique Automatique : Enregistrement automatique des clients avec historique complet des commandes, factions et contacts Discord & Spectrum.'
+      ]
+    },
+    {
+      version: 'Opération 4 • Version 1.8.0',
+      date: 'Étape précédente',
+      badge: 'Majeure',
+      badgeColor: 'purple',
+      title: 'Header HUD Supérieur sur 2 Lignes & Ergonomie Responsive',
+      icon: <LayoutGrid className="w-5 h-5 text-purple-400" />,
+      points: [
+        '🚀 Refonte du Header sur 2 Lignes : Séparation claire entre la barre supérieure de télémétrie et la barre de navigation dédiée.',
         '📑 Menu Déroulant Clients & Sous-Composants Blueprints : Sélecteur déroulant complet de tous les clients et tri par sous-composants dans chaque catégorie de recettes.'
       ]
     },
     {
-      version: 'Opération 4 • Version 1.7.0',
-      date: 'Étape précédente',
+      version: 'Opération 3 • Version 1.7.0',
+      date: 'Commerce & Fiches',
       badge: 'Majeure',
-      badgeColor: 'purple',
+      badgeColor: 'emerald',
       title: 'Répertoire Clients & Correction Visuelle des Prix aUEC',
-      icon: <Users className="w-5 h-5 text-purple-400" />,
+      icon: <Users className="w-5 h-5 text-emerald-400" />,
       points: [
-        '👥 Répertoire & Base de Données Clients : Gestion complète des fiches clients avec historique des transactions.',
+        '👥 Répertoire & Base de Données Clients : Fiches clients 360° avec historique des transactions.',
         '🛠️ Correction d\'Affichage du Prix aUEC : Espacement net des champs de saisie numérique et suppression du chevauchement avec le badge aUEC.'
       ]
     },
     {
-      version: 'Opération 3 • Version 1.6.0',
+      version: 'Opération 2 • Version 1.6.0',
       date: 'Minerais & Blueprints',
       badge: 'Majeure',
-      badgeColor: 'emerald',
+      badgeColor: 'amber',
       title: 'Édition Complète des Minerais & Expansion Blueprints Dédupliquée',
-      icon: <Pencil className="w-5 h-5 text-emerald-400" />,
+      icon: <Pencil className="w-5 h-5 text-amber-400" />,
       points: [
         '✏️ Édition des Minerais Post-Importation : Modifiez directement vos lots de minerais (nom, quantité avec convertisseur µSCU / cSCU / SCU, qualité de 0 à 1000, type d\'extraction, propriétaire et notes).',
         '🛡️ 50+ Recettes Star Citizen Sans Aucun Doublon : Ajout des Torpilles S9, Gatlings AD4B/AD5B, Quantum Drives S1-S3 et pièces d\'armures sans doublon.',
@@ -86,27 +98,15 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
       ]
     },
     {
-      version: 'Opération 2 • Version 1.5.0',
+      version: 'Opération 1 • Version 1.5.0',
       date: 'Atelier',
       badge: 'Atelier',
-      badgeColor: 'amber',
-      title: 'Atelier Blueprints Personnel & Tri Multi-Colonnes',
-      icon: <CheckSquare className="w-5 h-5 text-amber-400" />,
-      points: [
-        '🌟 Onglet Dédié "Mes Blueprints (Mon Atelier)" : Consultez et fabriquez uniquement les blueprints que vous possédez ou utilisez régulièrement.',
-        '🔄 Tri Interactif par En-tête : Cliquez sur les colonnes du tableau pour trier par Nom, Type, Qualité, Quantité SCU ou Valeur aUEC.'
-      ]
-    },
-    {
-      version: 'Opération 1 • Version 1.4.0',
-      date: 'Datamining',
-      badge: 'Expansion',
       badgeColor: 'cyan',
-      title: 'Expansion Massive des Recettes & Hub Datamining',
-      icon: <BookOpen className="w-5 h-5 text-sc-cyan" />,
+      title: 'Atelier Blueprints Personnel & Tri Multi-Colonnes',
+      icon: <CheckSquare className="w-5 h-5 text-sc-cyan" />,
       points: [
-        '🔬 Hub Sources & Datamining : Accès direct aux bases communautaires (SC-Craft.tools, scunpacked-data, SPViewer, Erkul, UEX Corp).',
-        '📥 Importateur de Packs JSON : Importation de catalogues personnalisés complets en 1 clic.'
+        '🌟 Onglet Dédié "Mes Blueprints (Mon Atelier)" : Consultez et fabriquez uniquement les blueprints débloqués.',
+        '🔄 Tri Interactif par En-tête : Cliquez sur les colonnes du tableau pour trier par Nom, Type, Qualité, Quantité SCU ou Valeur aUEC.'
       ]
     }
   ];

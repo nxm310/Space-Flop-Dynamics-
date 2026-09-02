@@ -11,6 +11,7 @@ import {
 } from './types';
 import { StorageService } from './services/storageService';
 import { STAR_CITIZEN_BLUEPRINTS } from './data/blueprintsData';
+import { STAR_CITIZEN_MINERALS } from './data/mineralsData';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { WhatsNewModal, CURRENT_APP_VERSION, STORAGE_KEY_LAST_SEEN_VERSION } from './components/common/WhatsNewModal';
@@ -18,23 +19,17 @@ import { audio } from './services/audioService';
 
 // Module Views
 import { DashboardView } from './components/dashboard/DashboardView';
-import { MiningCargoView } from './components/mining/MiningCargoView';
-import { RefineryView } from './components/refinery/RefineryView';
 import { RefinedInventoryView } from './components/inventory/RefinedInventoryView';
 import { BlueprintsCatalogView } from './components/blueprints/BlueprintsCatalogView';
 import { OrderBookView } from './components/orders/OrderBookView';
 import { ImportExportView } from './components/importExport/ImportExportView';
 
 // Sub Modals triggered from header or dashboard
-import { AddRawCargoModal } from './components/mining/AddRawCargoModal';
-import { RefineryCalculatorModal } from './components/refinery/RefineryCalculatorModal';
 import { CreateOrderModal } from './components/orders/CreateOrderModal';
 
 // Icons
 import {
   LayoutDashboard,
-  Pickaxe,
-  Flame,
   Boxes,
   Scroll,
   ClipboardList,
@@ -43,7 +38,8 @@ import {
   Volume2,
   VolumeX,
   Plus,
-  Sparkles
+  Sparkles,
+  Coins
 } from 'lucide-react';
 
 export function App() {
@@ -66,11 +62,8 @@ export function App() {
     return localStorage.getItem(STORAGE_KEY_LAST_SEEN_VERSION) !== CURRENT_APP_VERSION;
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isAddRawModalOpen, setIsAddRawModalOpen] = useState(false);
-  const [isRefineryModalOpen, setIsRefineryModalOpen] = useState(false);
   const [isCreateOrderModalOpen, setIsCreateOrderModalOpen] = useState(false);
 
-  const [prefillRawCargo, setPrefillRawCargo] = useState<RawCargoItem | null>(null);
   const [prefillBlueprint, setPrefillBlueprint] = useState<Blueprint | null>(null);
 
   // Sync sound settings to audio service
@@ -114,113 +107,6 @@ export function App() {
 
   // All blueprints combined
   const allBlueprints = [...STAR_CITIZEN_BLUEPRINTS, ...customBlueprints];
-
-  // =========================================================================
-  // ACTIONS: RAW MINING CARGO
-  // =========================================================================
-  const handleAddRawCargo = (item: Omit<RawCargoItem, 'id' | 'extractedAt'>) => {
-    const newItem: RawCargoItem = {
-      ...item,
-      id: `raw-${Date.now()}`,
-      extractedAt: new Date().toISOString()
-    };
-    setRawCargo(prev => [newItem, ...prev]);
-    addToast('success', 'Cargaison Enregistrée', `${newItem.quantitySCU} SCU de ${newItem.mineralName} ajoutés à vos cales.`);
-  };
-
-  const handleDeleteRawCargo = (id: string) => {
-    setRawCargo(prev => prev.filter(c => c.id !== id));
-    addToast('info', 'Cargaison supprimée');
-  };
-
-  const handleSendToRefinery = (item: RawCargoItem) => {
-    setPrefillRawCargo(item);
-    setActiveTab('refinery');
-  };
-
-  // =========================================================================
-  // ACTIONS: REFINERY
-  // =========================================================================
-  const handleStartRefineryJob = (jobData: Omit<RefineryJob, 'id' | 'startedAt' | 'completesAt' | 'status'>) => {
-    const startedAt = new Date().toISOString();
-    const completesAt = new Date(Date.now() + jobData.durationMinutes * 60 * 1000).toISOString();
-
-    const newJob: RefineryJob = {
-      ...jobData,
-      id: `job-${Date.now()}`,
-      startedAt,
-      completesAt,
-      status: 'in_progress'
-    };
-
-    setRefineryJobs(prev => [newJob, ...prev]);
-
-    // If prefill cargo was used, we can optionally deduce or clean up raw cargo
-    if (prefillRawCargo) {
-      setRawCargo(prev => prev.filter(c => c.id !== prefillRawCargo.id));
-      setPrefillRawCargo(null);
-    }
-
-    addToast('success', 'Raffinage Lancé', `${newJob.inputRawSCU} SCU envoyés à ${newJob.refineryStationName}.`);
-  };
-
-  const handleFastForwardJob = (jobId: string) => {
-    setRefineryJobs(prev => prev.map(j => {
-      if (j.id === jobId) {
-        return {
-          ...j,
-          completesAt: new Date(Date.now() - 1000).toISOString(),
-          status: 'completed'
-        };
-      }
-      return j;
-    }));
-    addToast('info', 'Raffinage accéléré', 'Le minerai est désormais prêt à être collecté.');
-  };
-
-  const handleCollectJob = (jobId: string) => {
-    const job = refineryJobs.find(j => j.id === jobId);
-    if (!job) return;
-
-    // Mark job collected
-    setRefineryJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'collected' } : j));
-
-    // Add refined SCU to stock
-    setRefinedStock(prev => {
-      const existing = prev.find(s =>
-        s.mineralId === job.mineralId &&
-        s.ownerType === job.targetStockType &&
-        (job.targetStockType === 'personal' || s.clientName === job.clientName)
-      );
-
-      if (existing) {
-        return prev.map(s => s.id === existing.id ? {
-          ...s,
-          quantitySCU: Number((s.quantitySCU + job.outputEstimatedSCU).toFixed(3)),
-          lastUpdated: new Date().toISOString()
-        } : s);
-      } else {
-        const newItem: RefinedStockItem = {
-          id: `stock-${Date.now()}`,
-          mineralId: job.mineralId,
-          mineralName: job.mineralName,
-          quantitySCU: job.outputEstimatedSCU,
-          ownerType: job.targetStockType,
-          clientName: job.clientName,
-          lastUpdated: new Date().toISOString(),
-          notes: `Issu du raffinage à ${job.refineryStationName}`
-        };
-        return [newItem, ...prev];
-      }
-    });
-
-    addToast('success', 'Minerais Collectés', `+${job.outputEstimatedSCU} SCU de ${job.mineralName} transférés dans ${job.targetStockType === 'client' ? `le dépôt de ${job.clientName}` : 'votre stock personnel'}.`);
-  };
-
-  const handleDeleteRefineryJob = (jobId: string) => {
-    setRefineryJobs(prev => prev.filter(j => j.id !== jobId));
-    addToast('info', 'Ordre de raffinage supprimé');
-  };
 
   // =========================================================================
   // ACTIONS: REFINED INVENTORY
@@ -529,16 +415,17 @@ export function App() {
   // Nav Tabs configuration
   const navTabs = [
     { id: 'dashboard', label: 'Tableau de Bord', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'mining', label: 'Minage Brut', icon: <Pickaxe className="w-4 h-4" />, badge: rawCargo.length > 0 ? String(rawCargo.length) : undefined },
-    { id: 'refinery', label: 'Raffinerie', icon: <Flame className="w-4 h-4" />, badge: refineryJobs.filter(j => j.status === 'in_progress').length > 0 ? String(refineryJobs.filter(j => j.status === 'in_progress').length) : undefined },
-    { id: 'inventory', label: 'Stock Minerais', icon: <Boxes className="w-4 h-4" /> },
-    { id: 'blueprints', label: 'Blueprints', icon: <Scroll className="w-4 h-4" /> },
+    { id: 'inventory', label: 'Stock Minerais', icon: <Boxes className="w-4 h-4" />, badge: refinedStock.length > 0 ? String(refinedStock.length) : undefined },
+    { id: 'blueprints', label: 'Blueprints & Craft', icon: <Scroll className="w-4 h-4" /> },
     { id: 'orders', label: 'Commandes', icon: <ClipboardList className="w-4 h-4" />, badge: orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length > 0 ? String(orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length) : undefined },
     { id: 'importExport', label: 'Import / Export', icon: <FileSpreadsheet className="w-4 h-4" /> }
   ];
 
-  const totalRawHeaderSCU = rawCargo.reduce((a, c) => a + c.quantitySCU, 0);
   const totalRefinedHeaderSCU = refinedStock.reduce((a, s) => a + s.quantitySCU, 0);
+  const totalStockValueAUEC = refinedStock.reduce((acc, s) => {
+    const min = STAR_CITIZEN_MINERALS.find(m => m.id === s.mineralId || m.name.toLowerCase() === s.mineralName.toLowerCase());
+    return acc + Math.round(s.quantitySCU * 100 * (min?.basePriceAUEC || 15));
+  }, 0);
 
   return (
     <div className="min-h-screen bg-[#070a10] text-slate-100 sc-grid-bg flex flex-col font-sans">
@@ -560,7 +447,7 @@ export function App() {
               >
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sc-cyan via-cyan-600 to-slate-900 p-0.5 shadow-neon-cyan transition-transform group-hover:scale-105">
                   <div className="w-full h-full bg-[#0c121e] rounded-[6px] flex items-center justify-center text-sc-cyan group-hover:bg-sc-cyan group-hover:text-slate-950 transition-colors">
-                    <Pickaxe className="w-4 h-4" />
+                    <Boxes className="w-4 h-4" />
                   </div>
                 </div>
                 <div>
@@ -576,25 +463,25 @@ export function App() {
                     </span>
                   </div>
                   <span className="text-[9px] font-mono tracking-widest text-slate-400 uppercase block mt-0.5">
-                    MINAGE • RAFFINAGE • BLUEPRINTS • COMMANDES
+                    MINERAIS • BLUEPRINTS • COMMANDES CLIENTS
                   </span>
                 </div>
               </div>
 
               {/* CENTER: Telemetry Status Badges (Hidden on small screens) */}
               <div className="hidden md:flex items-center gap-2">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sc-card/80 border border-slate-800 text-[11px] font-mono shadow-inner" title="Minerai brut en soute">
-                  <Pickaxe className="w-3.5 h-3.5 text-sc-cyan" />
-                  <span className="text-slate-400">Soute:</span>
-                  <strong className="text-slate-100">{totalRawHeaderSCU.toFixed(1)}</strong>
-                  <span className="text-[9px] text-slate-500">SCU</span>
-                </div>
-
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sc-card/80 border border-slate-800 text-[11px] font-mono shadow-inner" title="Minerais raffinés disponibles">
                   <Boxes className="w-3.5 h-3.5 text-emerald-400" />
                   <span className="text-slate-400">Stock:</span>
                   <strong className="text-emerald-300">{totalRefinedHeaderSCU.toFixed(1)}</strong>
                   <span className="text-[9px] text-slate-500">SCU</span>
+                </div>
+
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sc-card/80 border border-slate-800 text-[11px] font-mono shadow-inner" title="Valeur estimée du stock total">
+                  <Coins className="w-3.5 h-3.5 text-sc-cyan" />
+                  <span className="text-slate-400">Valeur:</span>
+                  <strong className="text-cyan-300">~{totalStockValueAUEC.toLocaleString('fr-FR')}</strong>
+                  <span className="text-[9px] text-slate-500">aUEC</span>
                 </div>
 
                 {orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length > 0 && (
@@ -714,39 +601,14 @@ export function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {activeTab === 'dashboard' && (
           <DashboardView
-            rawCargo={rawCargo}
             refinedStock={refinedStock}
-            refineryJobs={refineryJobs}
             orders={orders}
             blueprints={allBlueprints}
             onNavigateTab={(tab) => {
               audio.playClick();
               setActiveTab(tab);
             }}
-            onOpenRawModal={() => setIsAddRawModalOpen(true)}
-            onOpenRefineryModal={() => setIsRefineryModalOpen(true)}
             onOpenOrderModal={() => setIsCreateOrderModalOpen(true)}
-          />
-        )}
-
-        {activeTab === 'mining' && (
-          <MiningCargoView
-            rawCargo={rawCargo}
-            onAddCargo={handleAddRawCargo}
-            onDeleteCargo={handleDeleteRawCargo}
-            onSendToRefinery={handleSendToRefinery}
-          />
-        )}
-
-        {activeTab === 'refinery' && (
-          <RefineryView
-            jobs={refineryJobs}
-            onStartJob={handleStartRefineryJob}
-            onCollectJob={handleCollectJob}
-            onFastForwardJob={handleFastForwardJob}
-            onDeleteJob={handleDeleteRefineryJob}
-            prefillCargo={prefillRawCargo}
-            onClearPrefillCargo={() => setPrefillRawCargo(null)}
           />
         )}
 
@@ -799,18 +661,6 @@ export function App() {
       </main>
 
       {/* Floating Modals triggered from Header / Global */}
-      <AddRawCargoModal
-        isOpen={isAddRawModalOpen}
-        onClose={() => setIsAddRawModalOpen(false)}
-        onAddCargo={handleAddRawCargo}
-      />
-
-      <RefineryCalculatorModal
-        isOpen={isRefineryModalOpen}
-        onClose={() => setIsRefineryModalOpen(false)}
-        onStartJob={handleStartRefineryJob}
-      />
-
       <CreateOrderModal
         isOpen={isCreateOrderModalOpen}
         onClose={() => setIsCreateOrderModalOpen(false)}
