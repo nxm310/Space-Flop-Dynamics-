@@ -265,6 +265,42 @@ export class StorageService {
     return Array.from(new Set(all)).sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   }
 
+  // Get all known organizations/factions ever entered
+  static getAllKnownOrganizations(): string[] {
+    const fromClients: string[] = [];
+    this.getClients().forEach(c => {
+      if (c.organization) fromClients.push(c.organization.trim());
+      if (Array.isArray(c.organizationsHistory)) {
+        c.organizationsHistory.forEach(org => org && fromClients.push(org.trim()));
+      }
+    });
+
+    const fromOrders = this.getOrders()
+      .map(o => o.clientOrg?.trim())
+      .filter(Boolean) as string[];
+
+    const all = [...fromClients, ...fromOrders].filter(Boolean);
+    return Array.from(new Set(all)).sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  }
+
+  // Get all known contacts (Discord / Spectrum tags) ever entered
+  static getAllKnownContacts(): string[] {
+    const fromClients: string[] = [];
+    this.getClients().forEach(c => {
+      if (c.contact) fromClients.push(c.contact.trim());
+      if (Array.isArray(c.contactsHistory)) {
+        c.contactsHistory.forEach(cont => cont && fromClients.push(cont.trim()));
+      }
+    });
+
+    const fromOrders = this.getOrders()
+      .map(o => o.clientContact?.trim())
+      .filter(Boolean) as string[];
+
+    const all = [...fromClients, ...fromOrders].filter(Boolean);
+    return Array.from(new Set(all)).sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  }
+
   // Get orders associated with a client name
   static getClientOrders(clientName: string): CustomerOrder[] {
     const lower = clientName.toLowerCase().trim();

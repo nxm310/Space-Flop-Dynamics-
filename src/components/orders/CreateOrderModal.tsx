@@ -48,6 +48,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   // Clients database directory for auto-complete & quick selection
   const [savedClients, setSavedClients] = useState<ClientProfile[]>(() => StorageService.getClients());
   const [allKnownNames, setAllKnownNames] = useState<string[]>(() => StorageService.getAllKnownClientNames());
+  const [allKnownOrgs, setAllKnownOrgs] = useState<string[]>(() => StorageService.getAllKnownOrganizations());
+  const [allKnownContacts, setAllKnownContacts] = useState<string[]>(() => StorageService.getAllKnownContacts());
 
   // Selected Order Items
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -60,6 +62,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     if (isOpen) {
       setSavedClients(StorageService.getClients());
       setAllKnownNames(StorageService.getAllKnownClientNames());
+      setAllKnownOrgs(StorageService.getAllKnownOrganizations());
+      setAllKnownContacts(StorageService.getAllKnownContacts());
 
       if (initialClientName) {
         const found = StorageService.getClients().find(
@@ -349,13 +353,31 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             )}
           </div>
 
-          {/* Client Inputs */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-mono tracking-wider uppercase text-slate-400 mb-1 flex items-center gap-1">
-                <User className="w-3.5 h-3.5 text-sc-cyan" />
-                Nom du Client *
-              </label>
+          {/* Client Inputs 3-Columns */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            {/* 1. Client Name */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between gap-1">
+                <label className="text-xs font-mono tracking-wider uppercase text-slate-400 flex items-center gap-1">
+                  <User className="w-3.5 h-3.5 text-sc-cyan" />
+                  <span>Nom Client *</span>
+                </label>
+                {allKnownNames.length > 0 && (
+                  <select
+                    onChange={(e) => {
+                      handleSelectClientName(e.target.value);
+                    }}
+                    value={allKnownNames.includes(clientName) ? clientName : ''}
+                    className="px-1.5 py-0.5 bg-[#090e18] border border-sc-border hover:border-sc-cyan rounded text-[10px] font-mono text-sc-cyan focus:outline-none cursor-pointer max-w-[120px] truncate"
+                    title="Choisir parmi les clients enregistrés"
+                  >
+                    <option value="">👤 Choisir ({allKnownNames.length})...</option>
+                    {allKnownNames.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
               <input
                 type="text"
                 required
@@ -381,11 +403,32 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
               </datalist>
             </div>
 
-            <div>
-              <label className="block text-xs font-mono tracking-wider uppercase text-slate-400 mb-1 flex items-center gap-1">
-                <Building className="w-3.5 h-3.5 text-slate-400" />
-                Organisation / Faction
-              </label>
+            {/* 2. Organization / Faction */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between gap-1">
+                <label className="text-xs font-mono tracking-wider uppercase text-slate-400 flex items-center gap-1">
+                  <Building className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Organisation / Faction</span>
+                </label>
+                {allKnownOrgs.length > 0 && (
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        audio.playClick();
+                        setClientOrg(e.target.value);
+                      }
+                    }}
+                    value={allKnownOrgs.includes(clientOrg) ? clientOrg : ''}
+                    className="px-1.5 py-0.5 bg-[#090e18] border border-sc-border hover:border-cyan-400 rounded text-[10px] font-mono text-cyan-300 focus:outline-none cursor-pointer max-w-[120px] truncate"
+                    title="Choisir parmi les organisations enregistrées"
+                  >
+                    <option value="">🏛️ Choisir ({allKnownOrgs.length})...</option>
+                    {allKnownOrgs.map(org => (
+                      <option key={org} value={org}>{org}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
               <input
                 type="text"
                 list="orgs-datalist"
@@ -394,9 +437,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 onChange={(e) => setClientOrg(e.target.value)}
                 className="w-full px-3 py-1.5 bg-[#090e18] border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-sans text-xs focus:outline-none"
               />
-              {/* Datalist of known organizations */}
               <datalist id="orgs-datalist">
-                {activeClient?.organizationsHistory?.map((org, i) => (
+                {Array.from(new Set([...allKnownOrgs, ...(activeClient?.organizationsHistory || [])])).map((org, i) => (
                   <option key={i} value={org} />
                 ))}
               </datalist>
@@ -418,11 +460,32 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
               )}
             </div>
 
-            <div>
-              <label className="block text-xs font-mono tracking-wider uppercase text-slate-400 mb-1 flex items-center gap-1">
-                <Mail className="w-3.5 h-3.5 text-slate-400" />
-                Contact (Discord / Spectrum)
-              </label>
+            {/* 3. Contact (Discord / Spectrum) */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between gap-1">
+                <label className="text-xs font-mono tracking-wider uppercase text-slate-400 flex items-center gap-1">
+                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Contact Discord / Spectrum</span>
+                </label>
+                {allKnownContacts.length > 0 && (
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        audio.playClick();
+                        setClientContact(e.target.value);
+                      }
+                    }}
+                    value={allKnownContacts.includes(clientContact) ? clientContact : ''}
+                    className="px-1.5 py-0.5 bg-[#090e18] border border-sc-border hover:border-purple-400 rounded text-[10px] font-mono text-purple-300 focus:outline-none cursor-pointer max-w-[120px] truncate"
+                    title="Choisir parmi les contacts enregistrés"
+                  >
+                    <option value="">💬 Choisir ({allKnownContacts.length})...</option>
+                    {allKnownContacts.map(cont => (
+                      <option key={cont} value={cont}>{cont}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
               <input
                 type="text"
                 list="contacts-datalist"
@@ -431,9 +494,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 onChange={(e) => setClientContact(e.target.value)}
                 className="w-full px-3 py-1.5 bg-[#090e18] border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-sans text-xs focus:outline-none"
               />
-              {/* Datalist of known contacts */}
               <datalist id="contacts-datalist">
-                {activeClient?.contactsHistory?.map((cont, i) => (
+                {Array.from(new Set([...allKnownContacts, ...(activeClient?.contactsHistory || [])])).map((cont, i) => (
                   <option key={i} value={cont} />
                 ))}
               </datalist>

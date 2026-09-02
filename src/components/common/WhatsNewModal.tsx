@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.10.4';
+export const CURRENT_APP_VERSION = '1.10.5';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,16 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 5 • Version 1.10.4',
+      version: 'Opération 5 • Version 1.10.5',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Épuration',
+      badge: 'Ergonomie',
       badgeColor: 'cyan',
-      title: 'Simplification du Carnet de Commandes (Suppression du Répertoire)',
+      title: 'Menus Déroulants & Mémorisation : Factions et Contacts Discord/Spectrum',
       icon: <Terminal className="w-5 h-5 text-sc-cyan" />,
       points: [
-        '📋 Épuration du Carnet de Commandes : Retrait du bouton et de la vue "Répertoire Clients" pour une interface plus sobre et directe.',
-        '✨ Autocomplétion Conservée : La mémorisation et la suggestion automatique des clients et organisations restent actives lors de la création d\'une commande.',
-        '🚀 Scanner Game.log Asynchrone : Analyse ultra-rapide et auto-activation de vos recettes sans aucun blocage.'
+        '🏛️ Menus Déroulants Organisation / Faction : Mémorisation automatique de toutes les organisations saisies avec menu de sélection rapide en 1 clic.',
+        '💬 Menus Déroulants Contact (Discord / Spectrum) : Mémorisation automatique de tous les identifiants de contact avec liste déroulante et autocomplétion.',
+        '✨ Remplissage Instantané : Un clic sur une faction ou un contact remplit immédiatement le champ lors de la création d\'une commande.',
+        '💾 Sauvegarde Permanente : Chaque nouvelle organisation ou contact saisi est enregistré pour toutes vos futures commandes.'
       ]
     },
     {
