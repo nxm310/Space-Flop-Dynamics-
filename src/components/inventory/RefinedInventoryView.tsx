@@ -15,7 +15,6 @@ import {
   FileSpreadsheet,
   Trash2,
   Pencil,
-  Coins,
   User,
   ShieldCheck,
   Table,
@@ -58,8 +57,6 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
     | 'quality_asc'
     | 'qty_desc'
     | 'qty_asc'
-    | 'value_desc'
-    | 'value_asc'
     | 'notes_asc'
     | 'notes_desc'
   >('qty_desc');
@@ -89,7 +86,7 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
   };
 
   // Helper to toggle column sort
-  const handleColumnSort = (column: 'name' | 'type' | 'quality' | 'qty' | 'value' | 'notes') => {
+  const handleColumnSort = (column: 'name' | 'type' | 'quality' | 'qty' | 'notes') => {
     audio.playClick();
     if (column === 'name') {
       setSortBy(prev => prev === 'name_asc' ? 'name_desc' : 'name_asc');
@@ -99,14 +96,12 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
       setSortBy(prev => prev === 'quality_desc' ? 'quality_asc' : 'quality_desc');
     } else if (column === 'qty') {
       setSortBy(prev => prev === 'qty_desc' ? 'qty_asc' : 'qty_desc');
-    } else if (column === 'value') {
-      setSortBy(prev => prev === 'value_desc' ? 'value_asc' : 'value_desc');
     } else if (column === 'notes') {
       setSortBy(prev => prev === 'notes_asc' ? 'notes_desc' : 'notes_asc');
     }
   };
 
-  const getSortIcon = (column: 'name' | 'type' | 'quality' | 'qty' | 'value' | 'notes') => {
+  const getSortIcon = (column: 'name' | 'type' | 'quality' | 'qty' | 'notes') => {
     const isCurrent = sortBy.startsWith(column);
     if (!isCurrent) {
       return <ArrowUpDown className="w-3 h-3 text-slate-600 opacity-40 group-hover:opacity-100 transition-opacity ml-1.5 inline" />;
@@ -157,10 +152,6 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
   const sortedStock = useMemo(() => {
     const list = [...filteredStock];
     list.sort((a, b) => {
-      const minA = STAR_CITIZEN_MINERALS.find(m => m.id === a.mineralId);
-      const minB = STAR_CITIZEN_MINERALS.find(m => m.id === b.mineralId);
-      const valA = Math.round(a.quantitySCU * 100 * (minA?.basePriceAUEC || 15));
-      const valB = Math.round(b.quantitySCU * 100 * (minB?.basePriceAUEC || 15));
       const qualA = getItemQuality(a);
       const qualB = getItemQuality(b);
       const typeA = getItemExtractionType(a);
@@ -183,10 +174,6 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
           return b.quantitySCU - a.quantitySCU;
         case 'qty_asc':
           return a.quantitySCU - b.quantitySCU;
-        case 'value_desc':
-          return valB - valA;
-        case 'value_asc':
-          return valA - valB;
         case 'notes_asc':
           return (a.notes || '').localeCompare(b.notes || '');
         case 'notes_desc':
@@ -208,16 +195,12 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
       totalSCU: number;
       lotCount: number;
       avgQuality: number;
-      totalValueAUEC: number;
-      unitPrice: number;
       isGeo: boolean;
       items: RefinedStockItem[];
     }>();
 
     filteredStock.forEach(item => {
       const min = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId);
-      const unitPrice = min?.basePriceAUEC || 15;
-      const val = Math.round(item.quantitySCU * 100 * unitPrice);
       const qual = getItemQuality(item);
 
       if (!map.has(item.mineralId)) {
@@ -229,8 +212,6 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
           totalSCU: 0,
           lotCount: 0,
           avgQuality: 0,
-          totalValueAUEC: 0,
-          unitPrice,
           isGeo: min?.isFpsMineable || item.notes?.includes('Minable Geo') || false,
           items: []
         });
@@ -239,7 +220,6 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
       const entry = map.get(item.mineralId)!;
       entry.totalSCU += item.quantitySCU;
       entry.lotCount += 1;
-      entry.totalValueAUEC += val;
       if (qual > 0) {
         entry.avgQuality = Math.round((entry.avgQuality * (entry.lotCount - 1) + qual) / entry.lotCount);
       }
@@ -263,12 +243,6 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
   const totalPersonalSCU = stock.filter(s => s.ownerType === 'personal').reduce((acc, s) => acc + s.quantitySCU, 0);
   const totalClientSCU = stock.filter(s => s.ownerType === 'client').reduce((acc, s) => acc + s.quantitySCU, 0);
   const totalLotsCount = stock.length;
-
-  const totalValueAUEC = stock.reduce((acc, s) => {
-    const mineral = STAR_CITIZEN_MINERALS.find(m => m.id === s.mineralId);
-    const rate = mineral?.basePriceAUEC || 15;
-    return acc + Math.round(s.quantitySCU * 100 * rate);
-  }, 0);
 
   const handleQuickAdjust = (item: RefinedStockItem, delta: number) => {
     audio.playClick();
@@ -295,7 +269,7 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
             Stock de Minerais & Cargaisons ({stock.length} lots)
           </h2>
           <p className="text-xs font-mono text-slate-400 mt-0.5">
-            Retranscription intégrale de vos matières premières brutes et raffinées avec qualités et cotes marchandes
+            Retranscription intégrale de vos matières premières brutes et raffinées avec qualités et traçabilité
           </p>
         </div>
 
@@ -403,10 +377,10 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
           accent="gold"
         />
         <StatCard
-          title="Valeur Marché Totale"
-          value={`${totalValueAUEC.toLocaleString('fr-FR')} aUEC`}
-          subValue="Estimation des réserves"
-          icon={<Coins className="w-5 h-5" />}
+          title="Volume Global Stock"
+          value={`${(totalPersonalSCU + totalClientSCU).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} SCU`}
+          subValue="Réserve cumulée totale"
+          icon={<Boxes className="w-5 h-5" />}
           accent="green"
         />
       </div>
@@ -496,8 +470,6 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
               <option value="quality_desc">Qualité (Plus haute ➔ Plus basse)</option>
               <option value="quality_asc">Qualité (Plus basse ➔ Plus haute)</option>
               <option value="type_asc">Type d'extraction (Geo / Vaisseau)</option>
-              <option value="value_desc">Valeur aUEC (Plus chère)</option>
-              <option value="value_asc">Valeur aUEC (Moins chère)</option>
               <option value="notes_asc">Notes & Contexte (A ➔ Z)</option>
             </select>
           </div>
@@ -613,18 +585,6 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
                     </div>
                   </th>
 
-                  {/* Value Column Header */}
-                  <th
-                    onClick={() => handleColumnSort('value')}
-                    className="py-3 px-4 font-semibold text-right cursor-pointer hover:text-sc-cyan hover:bg-slate-800/40 transition-colors group"
-                    title="Cliquer pour trier par valeur estimée aUEC"
-                  >
-                    <div className="flex items-center justify-end">
-                      <span>Valeur Estimée</span>
-                      {getSortIcon('value')}
-                    </div>
-                  </th>
-
                   {/* Notes Column Header */}
                   <th
                     onClick={() => handleColumnSort('notes')}
@@ -644,8 +604,6 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
                 {paginatedItems.length > 0 ? (
                   paginatedItems.map((item, index) => {
                     const mineral = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId);
-                    const unitPrice = mineral?.basePriceAUEC || 15;
-                    const approxValue = Math.round(item.quantitySCU * 100 * unitPrice);
                     const quality = getItemQuality(item);
                     const extType = getItemExtractionType(item);
                     const itemGlobalIndex = pageSize === -1 ? index + 1 : (currentPage - 1) * pageSize + index + 1;
@@ -713,14 +671,6 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
                           </span>
                         </td>
 
-                        {/* Approx Market Value */}
-                        <td className="py-3 px-4 text-right">
-                          <span className="font-bold text-emerald-400">
-                            ~{approxValue.toLocaleString('fr-FR')}
-                          </span>
-                          <span className="text-[10px] text-slate-500 block">aUEC</span>
-                        </td>
-
                         {/* Notes / Date */}
                         <td className="py-3 px-4">
                           <span className="text-slate-300 text-xs block max-w-xs truncate" title={item.notes}>
@@ -769,7 +719,7 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
                   })
                 ) : (
                   <tr>
-                    <td colSpan={8} className="py-10 text-center text-slate-500 font-mono">
+                    <td colSpan={7} className="py-10 text-center text-slate-500 font-mono">
                       Aucun lot de minerai ne correspond aux critères sélectionnés.
                     </td>
                   </tr>
@@ -871,11 +821,10 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
                   </div>
 
                   <div className="text-right">
-                    <span className="text-[10px] text-slate-400 block uppercase">Valeur Estimée</span>
-                    <span className="text-base font-bold text-emerald-400">
-                      ~{m.totalValueAUEC.toLocaleString('fr-FR')}
+                    <span className="text-[10px] text-slate-400 block uppercase">Répartition</span>
+                    <span className="text-xs font-bold text-slate-300 block">
+                      {m.lotCount} lot{m.lotCount > 1 ? 's' : ''}
                     </span>
-                    <span className="text-[10px] text-slate-500 block">aUEC</span>
                   </div>
                 </div>
 
@@ -921,9 +870,6 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
       {viewMode === 'cards' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {paginatedItems.map((item) => {
-            const mineral = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId);
-            const unitPrice = mineral?.basePriceAUEC || 15;
-            const approxTotalAUEC = Math.round(item.quantitySCU * 100 * unitPrice);
             const quality = getItemQuality(item);
             const extType = getItemExtractionType(item);
 
@@ -971,9 +917,10 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
                     </div>
 
                     <div className="text-right">
-                      <span className="text-[10px] text-slate-400 block uppercase">Valeur Estimée</span>
-                      <span className="text-base font-bold text-emerald-400">~{approxTotalAUEC.toLocaleString('fr-FR')}</span>
-                      <span className="text-[10px] text-slate-500 block">aUEC</span>
+                      <span className="text-[10px] text-slate-400 block uppercase">Propriétaire</span>
+                      <span className="text-xs font-bold text-slate-300 block">
+                        {item.ownerType === 'client' ? (item.clientName || 'Client') : 'Stock Personnel'}
+                      </span>
                     </div>
                   </div>
 
