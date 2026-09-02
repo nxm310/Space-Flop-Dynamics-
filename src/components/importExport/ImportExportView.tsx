@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { RefinedStockItem, AppDataBackup } from '../../types';
 import { ImportExportService, ImportResult } from '../../services/importExportService';
-import { GameLogParserService, GameLogAnalysisResult } from '../../services/gameLogParserService';
+import { GameLogParserService, GameLogAnalysisResult, ParseProgressInfo } from '../../services/gameLogParserService';
 import { StorageService } from '../../services/storageService';
 import { Badge } from '../common/Badge';
 import {
@@ -55,6 +55,7 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
   const [pastedLogText, setPastedLogText] = useState('');
   const [logAnalysisResult, setLogAnalysisResult] = useState<GameLogAnalysisResult | null>(null);
   const [isParsingLogs, setIsParsingLogs] = useState(false);
+  const [parseProgress, setParseProgress] = useState<ParseProgressInfo | null>(null);
   const [syncSuccessMessage, setSyncSuccessMessage] = useState('');
   const [logSearchQuery, setLogSearchQuery] = useState('');
   const [logStatusFilter, setLogStatusFilter] = useState<'all' | 'new' | 'already_unlocked' | 'unmatched'>('all');
@@ -72,7 +73,7 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
     setTimeout(() => setCopiedPath(false), 3000);
   };
 
-  // Process Game.log upload (Single or Multiple files)
+  // Process Game.log upload (Single or Multiple files) with non-blocking stream
   const handleLogFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -82,18 +83,29 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
     setSyncSuccessMessage('');
 
     try {
-      const filePayloads: { name: string; content: string }[] = [];
+      const fileWrappers: { name: string; getText: () => Promise<string> }[] = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const text = await file.text();
-        filePayloads.push({
+        fileWrappers.push({
           name: file.name,
-          content: text
+          getText: () => file.text()
         });
       }
 
-      const result = GameLogParserService.parseLogFiles(filePayloads);
+      setParseProgress({
+        currentFileIndex: 1,
+        totalFiles: fileWrappers.length,
+        currentFileName: fileWrappers[0].name,
+        linesScanned: 0,
+        blueprintsCount: 0,
+        percent: 0
+      });
+
+      const result = await GameLogParserService.parseLogFilesAsync(fileWrappers, (p) => {
+        setParseProgress(p);
+      });
+
       setLogAnalysisResult(result);
 
       if (result.blueprintsFound.length > 0 || result.rawLogLinesWithKeywords.length > 0) {
@@ -106,12 +118,13 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
       audio.playAlert();
     } finally {
       setIsParsingLogs(false);
+      setParseProgress(null);
       if (logFileInputRef.current) logFileInputRef.current.value = '';
     }
   };
 
   // Process Game.log from Direct Text Paste
-  const handleAnalyzePastedText = () => {
+  const handleAnalyzePastedText = async () => {
     if (!pastedLogText.trim()) return;
 
     audio.playClick();
@@ -119,12 +132,24 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
     setSyncSuccessMessage('');
 
     try {
-      const result = GameLogParserService.parseLogFiles([
+      setParseProgress({
+        currentFileIndex: 1,
+        totalFiles: 1,
+        currentFileName: 'Texte collé',
+        linesScanned: 0,
+        blueprintsCount: 0,
+        percent: 0
+      });
+
+      const result = await GameLogParserService.parseLogFilesAsync([
         {
           name: 'Texte collé',
-          content: pastedLogText
+          getText: async () => pastedLogText
         }
-      ]);
+      ], (p) => {
+        setParseProgress(p);
+      });
+
       setLogAnalysisResult(result);
 
       if (result.blueprintsFound.length > 0 || result.rawLogLinesWithKeywords.length > 0) {
@@ -137,6 +162,7 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
       audio.playAlert();
     } finally {
       setIsParsingLogs(false);
+      setParseProgress(null);
     }
   };
 
@@ -296,14 +322,14 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="cyan" size="sm">Nouveau • StarEngine Scanner</Badge>
-                <span className="text-[10px] font-mono text-slate-400">100% Local & Sécurisé</span>
+                <Badge variant="cyan" size="sm">Nouveau • StarEngine Fast Stream</Badge>
+                <span className="text-[10px] font-mono text-slate-400">100% Asynchrone & Non-Bloquant</span>
               </div>
               <h3 className="text-lg sm:text-xl font-bold font-sans text-slate-100 uppercase mt-0.5">
                 Analyseur & Importateur Game.log (Blueprints Débloqués)
               </h3>
               <p className="text-xs font-mono text-slate-400">
-                Glissez votre fichier <code className="text-sc-cyan font-bold">Game.log</code> ou collez vos lignes de journal pour extraire et auto-activer vos recettes d'artisanat
+                Glissez votre fichier <code className="text-sc-cyan font-bold">Game.log</code> ou vos archives <code className="text-purple-300 font-bold">\logbackups\</code> pour extraire et auto-activer vos recettes
               </p>
             </div>
           </div>
@@ -360,8 +386,12 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
         {/* MODE A: DRAG & DROP FILE ZONE */}
         {logInputMode === 'file' && (
           <div
-            onClick={() => logFileInputRef.current?.click()}
-            className="border-2 border-dashed border-sc-cyan/50 hover:border-sc-cyan bg-sc-panel/80 hover:bg-[#0b1424] rounded-xl p-6 sm:p-8 text-center cursor-pointer transition-all duration-200 group"
+            onClick={() => !isParsingLogs && logFileInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-xl p-6 sm:p-8 text-center transition-all duration-200 ${
+              isParsingLogs
+                ? 'border-sc-cyan bg-[#08101e] cursor-wait'
+                : 'border-sc-cyan/50 hover:border-sc-cyan bg-sc-panel/80 hover:bg-[#0b1424] cursor-pointer group'
+            }`}
           >
             <input
               ref={logFileInputRef}
@@ -372,15 +402,29 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
               className="hidden"
             />
 
-            {isParsingLogs ? (
-              <div className="flex flex-col items-center justify-center space-y-3">
+            {isParsingLogs && parseProgress ? (
+              <div className="flex flex-col items-center justify-center space-y-3 py-2">
                 <RefreshCw className="w-10 h-10 text-sc-cyan animate-spin" />
-                <p className="text-sm font-bold font-sans text-slate-100">
-                  Analyse des fichiers logs en cours...
-                </p>
-                <p className="text-xs font-mono text-slate-400">
-                  Balayage des lignes d'événements & correspondances avec le catalogue
-                </p>
+                <div className="space-y-1">
+                  <p className="text-sm font-bold font-sans text-slate-100 uppercase tracking-wide">
+                    Analyse Asynchrone : Fichier {parseProgress.currentFileIndex} / {parseProgress.totalFiles}
+                  </p>
+                  <p className="text-xs font-mono text-slate-300">
+                    Fichier en cours : <span className="text-sc-cyan font-bold">{parseProgress.currentFileName}</span>
+                  </p>
+                  <p className="text-[11px] font-mono text-slate-400">
+                    {parseProgress.linesScanned.toLocaleString('fr-FR')} lignes analysées • {parseProgress.blueprintsCount} recette(s) détectée(s)
+                  </p>
+                </div>
+
+                {/* Live Progress Bar */}
+                <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-full h-3 overflow-hidden p-0.5">
+                  <div
+                    className="bg-gradient-to-r from-sc-cyan to-emerald-400 h-full rounded-full transition-all duration-150"
+                    style={{ width: `${parseProgress.percent}%` }}
+                  />
+                </div>
+                <span className="text-xs font-mono text-slate-300 font-bold">{parseProgress.percent}%</span>
               </div>
             ) : (
               <div className="space-y-2">
@@ -388,10 +432,10 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
                   <Upload className="w-6 h-6 text-sc-cyan" />
                 </div>
                 <p className="text-base font-bold text-slate-100 font-sans">
-                  Cliquez ou glissez-déposez votre <span className="text-sc-cyan">Game.log</span> ici
+                  Cliquez ou glissez-déposez vos fichiers <span className="text-sc-cyan">.log</span> ici
                 </p>
                 <p className="text-xs font-mono text-slate-400 max-w-xl mx-auto">
-                  Astuce : Vous pouvez sélectionner <strong className="text-slate-200">tous les fichiers</strong> dans <code className="text-purple-300 font-bold">\StarCitizen\LIVE\logbackups\</code> pour importer l'historique complet de toutes vos sessions passées !
+                  Astuce : Vous pouvez sélectionner <strong className="text-slate-200">tous les fichiers</strong> dans <code className="text-purple-300 font-bold">\StarCitizen\LIVE\logbackups\</code> d'un seul coup (même 50+ fichiers) grâce à notre moteur asynchrone non-bloquant !
                 </p>
               </div>
             )}
@@ -415,7 +459,7 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
               className="px-5 py-2.5 rounded-xl bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-neon-cyan transition-all disabled:opacity-40"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Analyser le Texte Collé</span>
+              <span>{isParsingLogs ? 'Analyse en cours...' : 'Analyser le Texte Collé'}</span>
             </button>
           </div>
         )}
