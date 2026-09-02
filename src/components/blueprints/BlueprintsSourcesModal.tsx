@@ -37,20 +37,6 @@ export const BlueprintsSourcesModal: React.FC<BlueprintsSourcesModalProps> = ({
       description: 'La base de données communautaire de référence pour toutes les recettes de fabrication (ingrédients, temps de craft, fabricateurs de vaisseaux).'
     },
     {
-      name: 'SC Unpacked (GitHub scunpacked-data)',
-      url: 'https://github.com/StarCitizenTools/scunpacked-data',
-      tag: 'Datamining Brut (JSON)',
-      tagColor: 'bg-sc-cyan/20 text-sc-cyan border-sc-cyan/40',
-      description: 'Dépôt public contenant l\'extraction brute en JSON de toutes les entités du jeu (items, armes, vaisseaux, composants, matières).'
-    },
-    {
-      name: 'SPViewer.info',
-      url: 'https://spviewer.info',
-      tag: 'Ingénierie & Métrologie',
-      tagColor: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-      description: 'Données détaillées sur les composants, l\'engineering 4.0, la résistance thermique et les matériaux composites.'
-    },
-    {
       name: 'Erkul Games (erkul.games)',
       url: 'https://erkul.games',
       tag: 'Composants & DPS',

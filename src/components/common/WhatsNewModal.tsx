@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.11.0';
+export const CURRENT_APP_VERSION = '1.11.1';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 6 • Version 1.11.0',
+      version: 'Opération 6 • Version 1.11.1',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Majeure',
-      badgeColor: 'purple',
-      title: 'Nouvel Onglet "Blueprints Clients" & Gestion Dédiée des Recettes',
-      icon: <Terminal className="w-5 h-5 text-purple-400" />,
+      badge: 'Épuration',
+      badgeColor: 'cyan',
+      title: 'Épuration des Liens & Datamining dans l\'Atelier',
+      icon: <Terminal className="w-5 h-5 text-sc-cyan" />,
       points: [
-        '👥 Nouvel Espace "Blueprints Clients" : Un onglet dédié dans l\'Atelier pour regrouper, cocher et filtrer les recettes fournies ou commandées par vos clients.',
-        '➕ Sélecteur & Liste Déroulante Dédiés : Ajoutez des blueprints clients en 1 clic via le menu déroulant ou cochez directement les cases "+ Client" sur chaque carte et tableau.',
+        '🔗 Nettoyage des Liens Externes : Retrait des références scunpacked-data et SPViewer dans la fenêtre "Sources & Datamining".',
+        '👥 Espace "Blueprints Clients" : Gestion dédiée des recettes fournies par vos clients avec listes déroulantes et cases à cocher.',
         '🏛️ Menus Déroulants Factions & Contacts : Mémorisation persistante et sélection instantanée des organisations et contacts Discord/Spectrum.',
-        '📊 Filtres Complets & Faisabilité : Bénéficiez des mêmes filtres de catégories, sous-composants, recherche et faisabilité de fabrication.'
+        '🚀 Scanner Game.log Asynchrone : Analyse ultra-rapide et auto-activation de vos recettes en temps réel.'
       ]
     },
     {
