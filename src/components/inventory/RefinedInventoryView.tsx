@@ -77,10 +77,10 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
 
   // Helper to extract extraction type from item
   const getItemExtractionType = (item: RefinedStockItem): string => {
-    if (item.notes?.includes('Minable Geo')) return 'Minable Geo';
-    if (item.notes?.includes('Minable Vaisseaux')) return 'Minable Vaisseaux';
+    if (item.notes?.includes('Gemme') || item.notes?.includes('Gemmes') || item.notes?.includes('Minable Geo') || item.notes?.includes('Minage Géo') || item.notes?.includes('Minage Geo')) return 'Gemme';
+    if (item.notes?.includes('Minable Vaisseaux') || item.notes?.includes('Minage Vaisseau')) return 'Minable Vaisseaux';
     const mineral = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId);
-    if (mineral?.isFpsMineable) return 'Minable Geo';
+    if (mineral?.group === 'Gem' || mineral?.isFpsMineable) return 'Gemme';
     if (mineral?.isShipMineable) return 'Minable Vaisseaux';
     return 'Autre';
   };
@@ -126,7 +126,7 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
       // Extraction Type filter
       if (selectedExtractionType !== 'all') {
         const extType = getItemExtractionType(item);
-        if (selectedExtractionType === 'geo' && extType !== 'Minable Geo') return false;
+        if (selectedExtractionType === 'geo' && extType !== 'Gemme') return false;
         if (selectedExtractionType === 'ship' && extType !== 'Minable Vaisseaux') return false;
       }
 
@@ -212,7 +212,7 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
           totalSCU: 0,
           lotCount: 0,
           avgQuality: 0,
-          isGeo: min?.isFpsMineable || item.notes?.includes('Minable Geo') || false,
+          isGeo: min?.group === 'Gem' || min?.isFpsMineable || item.notes?.includes('Gemme') || item.notes?.includes('Minable Geo') || false,
           items: []
         });
       }
@@ -483,7 +483,7 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
             {[
               { id: 'all', label: 'Tous' },
               { id: 'ship', label: '🚀 Minable Vaisseaux' },
-              { id: 'geo', label: '⛏️ Minable Geo / FPS' }
+              { id: 'geo', label: '💎 Gemmes' }
             ].map(type => (
               <button
                 key={type.id}
@@ -636,11 +636,11 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
                         {/* Extraction Type */}
                         <td className="py-3 px-4">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            extType === 'Minable Geo'
+                            extType === 'Gemme'
                               ? 'bg-purple-950/60 text-purple-300 border border-purple-800/60'
                               : 'bg-cyan-950/60 text-cyan-300 border border-cyan-800/60'
                           }`}>
-                            {extType}
+                            {extType === 'Gemme' ? '💎 Gemme' : extType}
                           </span>
                         </td>
 

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.11.2';
+export const CURRENT_APP_VERSION = '1.11.3';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,16 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 6 • Version 1.11.2',
+      version: 'Opération 6 • Version 1.11.3',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Correctif',
-      badgeColor: 'emerald',
-      title: 'Correction & Précision Maximale du Scanner Game.log',
-      icon: <Terminal className="w-5 h-5 text-emerald-400" />,
+      badge: 'Ergonomie',
+      badgeColor: 'cyan',
+      title: 'Catégorisation des Minages Géo en "Gemmes" lors de l\'Importation',
+      icon: <Terminal className="w-5 h-5 text-sc-cyan" />,
       points: [
-        '🎯 Élimination Totale des Faux Positifs : Les lignes de combat, dégâts, réseau et entités ne sont plus confondues avec des déblocages de recettes.',
-        '🔍 Détection Exhaustive de vos Blueprints : Intégration d\'un dictionnaire d\'alias complet pour toutes les armes (FS-9, Demeco, P8-SC, Karna, AD4B/5B, etc.), armures et composants.',
-        '✨ Création Automatique des Recettes Personnalisées : Tout blueprint détecté dans vos logs non présent dans le catalogue de base est automatiquement importé et catégorisé.',
-        '👥 Espace "Blueprints Clients" : Onglet dédié avec sélecteur déroulant et cases à cocher synchronisées.'
+        '💎 Classification "Gemme" Automatique : Toutes les lignes de fichiers de minerais (CSV/Excel) contenant "minage géo", "géo", "minable geo" ou des gemmes FPS sont automatiquement classées sous le label "Gemmes".',
+        '📊 Filtres d\'Inventaire Unifiés : Le filtre d\'extraction dans le stock de minerais propose désormais "💎 Gemmes" pour un tri instantané.',
+        '🎯 Scanner Game.log Zéro Faux Positif : Détection exacte et ultra-précise de vos blueprints réels avec dictionnaire d\'alias complet.'
       ]
     },
     {

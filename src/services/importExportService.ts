@@ -192,17 +192,44 @@ export class ImportExportService {
       }
 
       // Quality & Type parsing
-      const rawType = (row['Type'] || row['type'] || '') as string;
+      let rawType = (row['Type'] || row['type'] || row['Catégorie'] || row['Categorie'] || row['Catégorie_Minerai'] || row['Group'] || row['group'] || '') as string;
       const rawQuality = (row['Qualité'] || row['Qualite'] || row['Quality'] || row['quality'] || '') as string;
+
+      // Transform any "minage géo", "minage geo", "géo", "geo", "minable géo", "minable geo", "fps" into "Gemme"
+      if (rawType) {
+        const lowerType = rawType.toLowerCase();
+        if (
+          lowerType.includes('minage géo') ||
+          lowerType.includes('minage geo') ||
+          lowerType.includes('minable géo') ||
+          lowerType.includes('minable geo') ||
+          lowerType.includes('géo') ||
+          lowerType.includes('geo') ||
+          lowerType.includes('fps') ||
+          lowerType.includes('gem')
+        ) {
+          rawType = 'Gemme';
+        }
+      } else if (matchedMineral?.group === 'Gem' || matchedMineral?.isFpsMineable) {
+        rawType = 'Gemme';
+      }
 
       // Owner Type & Client Name
       const rawOwner = String(row['Type_Proprietaire'] || row['Propriétaire'] || row['Owner'] || row['owner'] || 'Personnel').toLowerCase();
       const isClient = rawOwner.includes('client') || rawOwner.includes('depot') || rawOwner.includes('dépôt');
       const clientName = (row['Nom_Client'] || row['Nom Client'] || row['Client'] || row['client'] || '') as string;
 
-      const rawNotes = (row['Notes'] || row['notes'] || row['Commentaire'] || Object.values(row)[4] || '') as string;
+      let cleanNotes = (row['Notes'] || row['notes'] || row['Commentaire'] || Object.values(row)[4] || '') as string;
+      if (cleanNotes && typeof cleanNotes === 'string') {
+        cleanNotes = cleanNotes
+          .replace(/minage g[ée]o/gi, 'Gemme')
+          .replace(/minable g[ée]o/gi, 'Gemme')
+          .replace(/g[ée]o\s*fps/gi, 'Gemme')
+          .trim();
+      }
+
       const notesParts = [
-        rawNotes && typeof rawNotes === 'string' ? rawNotes.trim() : '',
+        cleanNotes && typeof cleanNotes === 'string' ? cleanNotes.trim() : '',
         rawQuality ? `Qualité: ${rawQuality}` : '',
         rawType ? rawType.trim() : ''
       ].filter(Boolean);

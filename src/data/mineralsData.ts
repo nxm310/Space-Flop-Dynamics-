@@ -330,7 +330,7 @@ export const STAR_CITIZEN_MINERALS: MineralInfo[] = [
   {
     id: 'hadanite',
     name: 'Hadanite',
-    displayName: 'Hadanite (Gemme FPS)',
+    displayName: 'Hadanite (Gemme)',
     group: 'Gem',
     density: 3.1,
     basePriceAUEC: 275.0, // per unit
@@ -344,7 +344,7 @@ export const STAR_CITIZEN_MINERALS: MineralInfo[] = [
   {
     id: 'dolivine',
     name: 'Dolivine',
-    displayName: 'Dolivine (Gemme FPS)',
+    displayName: 'Dolivine (Gemme)',
     group: 'Gem',
     density: 3.3,
     basePriceAUEC: 130.0,
@@ -358,7 +358,7 @@ export const STAR_CITIZEN_MINERALS: MineralInfo[] = [
   {
     id: 'aphorite',
     name: 'Aphorite',
-    displayName: 'Aphorite (Gemme FPS)',
+    displayName: 'Aphorite (Gemme)',
     group: 'Gem',
     density: 2.8,
     basePriceAUEC: 152.0,
@@ -372,7 +372,7 @@ export const STAR_CITIZEN_MINERALS: MineralInfo[] = [
   {
     id: 'janalite',
     name: 'Janalite',
-    displayName: 'Janalite (Gemme Légendaire)',
+    displayName: 'Janalite (Gemme)',
     group: 'Gem',
     density: 4.5,
     basePriceAUEC: 14500.0,
@@ -386,7 +386,7 @@ export const STAR_CITIZEN_MINERALS: MineralInfo[] = [
   {
     id: 'beradom',
     name: 'Beradom',
-    displayName: 'Beradom (Minable Geo FPS)',
+    displayName: 'Beradom (Gemme)',
     group: 'Gem',
     density: 3.0,
     basePriceAUEC: 185.0,
@@ -395,12 +395,12 @@ export const STAR_CITIZEN_MINERALS: MineralInfo[] = [
     isShipMineable: false,
     isFpsMineable: true,
     rarity: 'Rare',
-    description: 'Minéral géologique récolté au sol et en caverne pour l\'artisanat.'
+    description: 'Gemme géologique récoltée au sol et en caverne pour l\'artisanat.'
   },
   {
     id: 'feynmaline',
     name: 'Feynmaline',
-    displayName: 'Feynmaline (Minable Geo FPS)',
+    displayName: 'Feynmaline (Gemme)',
     group: 'Gem',
     density: 2.9,
     basePriceAUEC: 165.0,
@@ -409,12 +409,12 @@ export const STAR_CITIZEN_MINERALS: MineralInfo[] = [
     isShipMineable: false,
     isFpsMineable: true,
     rarity: 'Uncommon',
-    description: 'Cristal géologique découvert lors d\'expéditions pédestres.'
+    description: 'Gemme cristalline découverte lors d\'expéditions pédestres.'
   },
   {
     id: 'glacosite',
     name: 'Glacosite',
-    displayName: 'Glacosite (Minable Geo FPS)',
+    displayName: 'Glacosite (Gemme)',
     group: 'Gem',
     density: 2.7,
     basePriceAUEC: 140.0,
@@ -423,12 +423,12 @@ export const STAR_CITIZEN_MINERALS: MineralInfo[] = [
     isShipMineable: false,
     isFpsMineable: true,
     rarity: 'Uncommon',
-    description: 'Minéral bleuté des environnements froids pour supraconducteurs.'
+    description: 'Gemme minérale bleutée des environnements froids pour supraconducteurs.'
   },
   {
     id: 'carinite',
     name: 'Carinite',
-    displayName: 'Carinite (Minable Geo FPS)',
+    displayName: 'Carinite (Gemme)',
     group: 'Gem',
     density: 3.4,
     basePriceAUEC: 210.0,
@@ -437,12 +437,12 @@ export const STAR_CITIZEN_MINERALS: MineralInfo[] = [
     isShipMineable: false,
     isFpsMineable: true,
     rarity: 'Rare',
-    description: 'Ressource minérale dense exploitée à pied.'
+    description: 'Gemme minérale dense exploitée à pied.'
   },
   {
     id: 'sadaryx',
     name: 'Sadaryx',
-    displayName: 'Sadaryx (Minable Geo FPS)',
+    displayName: 'Sadaryx (Gemme)',
     group: 'Gem',
     density: 3.2,
     basePriceAUEC: 195.0,
@@ -451,12 +451,12 @@ export const STAR_CITIZEN_MINERALS: MineralInfo[] = [
     isShipMineable: false,
     isFpsMineable: true,
     rarity: 'Rare',
-    description: 'Minéral pyro-géologique utilisé en ingénierie de précision.'
+    description: 'Gemme pyro-géologique utilisée en ingénierie de précision.'
   },
   {
     id: 'jaclium',
     name: 'Jaclium',
-    displayName: 'Jaclium (Minable Geo FPS)',
+    displayName: 'Jaclium (Gemme)',
     group: 'Gem',
     density: 3.5,
     basePriceAUEC: 230.0,
@@ -465,12 +465,12 @@ export const STAR_CITIZEN_MINERALS: MineralInfo[] = [
     isShipMineable: false,
     isFpsMineable: true,
     rarity: 'Rare',
-    description: 'Cristal lourd riche en éléments rares.'
+    description: 'Gemme cristalline lourde riche en éléments rares.'
   },
   {
     id: 'saldynium',
     name: 'Saldynium',
-    displayName: 'Saldynium (Minable Geo FPS)',
+    displayName: 'Saldynium (Gemme)',
     group: 'Gem',
     density: 3.1,
     basePriceAUEC: 175.0,
@@ -479,7 +479,7 @@ export const STAR_CITIZEN_MINERALS: MineralInfo[] = [
     isShipMineable: false,
     isFpsMineable: true,
     rarity: 'Uncommon',
-    description: 'Minéral sédimentaire de cavité planétaire.'
+    description: 'Gemme sédimentaire de cavité planétaire.'
   },
 
   // Salvage / Composites
