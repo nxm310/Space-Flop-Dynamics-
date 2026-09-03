@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { SelectMineralModal } from '../common/SelectMineralModal';
-import { Blueprint, BlueprintCategory, BlueprintIngredient } from '../../types';
+import { Blueprint, BlueprintCategory, BlueprintIngredient, MineralInfo } from '../../types';
 import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
 import { BLUEPRINT_CATEGORIES } from '../../data/blueprintsData';
 import { Scroll, Plus, Trash2, Sparkles, Search, Edit3 } from 'lucide-react';
 import { audio } from '../../services/audioService';
+
+interface EditableIngredient {
+  resourceId: string;
+  resourceName: string;
+  quantityStr: string;
+}
 
 interface CustomBlueprintModalProps {
   isOpen: boolean;
@@ -25,15 +31,15 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
   const [typeLabel, setTypeLabel] = useState('Composant Personnalisé');
   const [subtype, setSubtype] = useState('Tier 1');
   const [grade, setGrade] = useState('A');
-  const [craftTimeSeconds, setCraftTimeSeconds] = useState<number>(600);
-  const [marketEstimatedAUEC, setMarketEstimatedAUEC] = useState<number>(15000);
+  const [craftTimeStr, setCraftTimeStr] = useState('600');
+  const [marketEstimatedAUECStr, setMarketEstimatedAUECStr] = useState('15000');
   const [description, setDescription] = useState('');
   const [selectedIngredientModalIndex, setSelectedIngredientModalIndex] = useState<number | null>(null);
 
-  // Ingredients list
-  const [ingredients, setIngredients] = useState<BlueprintIngredient[]>([
-    { resourceId: 'quantainium', resourceName: 'Quantainium', quantitySCU: 1.0 },
-    { resourceId: 'titanium', resourceName: 'Titanium', quantitySCU: 2.0 }
+  // Editable ingredients list with unconstrained string quantities
+  const [ingredients, setIngredients] = useState<EditableIngredient[]>([
+    { resourceId: 'quantainium', resourceName: 'Quantainium', quantityStr: '1' },
+    { resourceId: 'titanium', resourceName: 'Titane', quantityStr: '2' }
   ]);
 
   // Synchronize state when opening modal
@@ -45,24 +51,35 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
         setTypeLabel(blueprintToEdit.typeLabel || 'Composant');
         setSubtype(blueprintToEdit.subtype || '');
         setGrade(blueprintToEdit.grade || '');
-        setCraftTimeSeconds(blueprintToEdit.craftTimeSeconds || 600);
-        setMarketEstimatedAUEC(blueprintToEdit.marketEstimatedAUEC || 15000);
+        setCraftTimeStr(String(blueprintToEdit.craftTimeSeconds || 600));
+        setMarketEstimatedAUECStr(String(blueprintToEdit.marketEstimatedAUEC || 15000));
         setDescription(blueprintToEdit.description || '');
-        setIngredients(blueprintToEdit.ingredients && blueprintToEdit.ingredients.length > 0 ? [...blueprintToEdit.ingredients] : [
-          { resourceId: 'quantainium', resourceName: 'Quantainium', quantitySCU: 1.0 }
-        ]);
+        setIngredients(
+          blueprintToEdit.ingredients && blueprintToEdit.ingredients.length > 0
+            ? blueprintToEdit.ingredients.map(ing => {
+                const mineral = STAR_CITIZEN_MINERALS.find(
+                  m => m.id.toLowerCase() === ing.resourceId.toLowerCase() || m.name.toLowerCase() === ing.resourceName.toLowerCase()
+                );
+                return {
+                  resourceId: mineral ? mineral.id : ing.resourceId,
+                  resourceName: mineral ? (mineral.displayName || mineral.name) : ing.resourceName,
+                  quantityStr: String(ing.quantitySCU)
+                };
+              })
+            : [{ resourceId: 'quantainium', resourceName: 'Quantainium', quantityStr: '1' }]
+        );
       } else {
         setName('');
         setCategory('vaisseau');
         setTypeLabel('Composant Personnalisé');
         setSubtype('Tier 1');
         setGrade('A');
-        setCraftTimeSeconds(600);
-        setMarketEstimatedAUEC(15000);
+        setCraftTimeStr('600');
+        setMarketEstimatedAUECStr('15000');
         setDescription('');
         setIngredients([
-          { resourceId: 'quantainium', resourceName: 'Quantainium', quantitySCU: 1.0 },
-          { resourceId: 'titanium', resourceName: 'Titanium', quantitySCU: 2.0 }
+          { resourceId: 'quantainium', resourceName: 'Quantainium', quantityStr: '1' },
+          { resourceId: 'titanium', resourceName: 'Titane', quantityStr: '2' }
         ]);
       }
     }
@@ -73,7 +90,7 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
     const newIdx = ingredients.length;
     setIngredients([
       ...ingredients,
-      { resourceId: 'copper', resourceName: 'Copper', quantitySCU: 1.0 }
+      { resourceId: 'copper', resourceName: 'Cuivre', quantityStr: '1' }
     ]);
     setSelectedIngredientModalIndex(newIdx);
   };
@@ -83,16 +100,27 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
     setIngredients(ingredients.filter((_, i) => i !== index));
   };
 
-  const handleIngredientChange = (index: number, field: keyof BlueprintIngredient, value: string | number) => {
-    const updated = [...ingredients];
-    if (field === 'resourceId') {
-      const mineral = STAR_CITIZEN_MINERALS.find(m => m.id === value);
-      updated[index].resourceId = String(value);
-      updated[index].resourceName = mineral ? mineral.name : String(value);
-    } else if (field === 'quantitySCU') {
-      updated[index].quantitySCU = Number(value);
-    }
-    setIngredients(updated);
+  const handleSelectMineralForIngredient = (index: number, selectedMin: MineralInfo) => {
+    setIngredients(prev => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        resourceId: selectedMin.id,
+        resourceName: selectedMin.displayName || selectedMin.name
+      };
+      return updated;
+    });
+  };
+
+  const handleIngredientQtyChange = (index: number, val: string) => {
+    setIngredients(prev => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        quantityStr: val
+      };
+      return updated;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -100,6 +128,25 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
     if (!name.trim() || ingredients.length === 0) return;
 
     audio.playSuccess();
+
+    // Parse ingredients with free format support (handles commas, decimals, empty inputs safely)
+    const finalIngredients: BlueprintIngredient[] = ingredients.map(ing => {
+      const normalized = ing.quantityStr.replace(',', '.').trim();
+      const parsed = parseFloat(normalized);
+      const validQty = isNaN(parsed) || parsed <= 0 ? 1 : parsed;
+      return {
+        resourceId: ing.resourceId,
+        resourceName: ing.resourceName,
+        quantitySCU: Number(validQty.toFixed(3))
+      };
+    });
+
+    const parsedCraftTime = parseInt(craftTimeStr.trim(), 10);
+    const craftTimeSeconds = isNaN(parsedCraftTime) || parsedCraftTime <= 0 ? 60 : parsedCraftTime;
+
+    const parsedAUEC = parseInt(marketEstimatedAUECStr.replace(/\s/g, '').trim(), 10);
+    const marketEstimatedAUEC = isNaN(parsedAUEC) || parsedAUEC < 0 ? 0 : parsedAUEC;
+
     const bpToSave: Blueprint = {
       id: blueprintToEdit ? blueprintToEdit.id : `custom_bp_${Date.now()}`,
       name: name.trim(),
@@ -107,10 +154,10 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
       typeLabel: typeLabel.trim() || 'Composant',
       subtype: subtype.trim() || undefined,
       grade: grade.trim() || undefined,
-      craftTimeSeconds: Number(craftTimeSeconds),
-      marketEstimatedAUEC: Number(marketEstimatedAUEC),
+      craftTimeSeconds,
+      marketEstimatedAUEC,
       description: description.trim() || undefined,
-      ingredients,
+      ingredients: finalIngredients,
       isCustom: true
     };
 
@@ -151,7 +198,7 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as BlueprintCategory)}
-              className="w-full px-3 py-2 bg-sc-panel border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-sans text-xs focus:outline-none"
+              className="w-full px-3 py-2 bg-sc-panel border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-sans text-xs focus:outline-none cursor-pointer"
             >
               {BLUEPRINT_CATEGORIES.map(cat => (
                 <option key={cat.key} value={cat.key}>{cat.label}</option>
@@ -206,11 +253,12 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
               Temps (sec)
             </label>
             <input
-              type="number"
-              min="10"
-              value={craftTimeSeconds}
-              onChange={(e) => setCraftTimeSeconds(parseInt(e.target.value) || 60)}
-              className="w-full px-3 py-2 bg-sc-panel border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-mono text-xs focus:outline-none"
+              type="text"
+              inputMode="numeric"
+              placeholder="600"
+              value={craftTimeStr}
+              onChange={(e) => setCraftTimeStr(e.target.value)}
+              className="w-full px-3 py-2 bg-sc-panel border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-mono text-xs focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
         </div>
@@ -231,66 +279,72 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
             </button>
           </div>
 
-          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-            {ingredients.map((ing, idx) => (
-              <div key={idx} className="flex items-center gap-2 p-2 bg-sc-panel rounded-xl border border-slate-800 hover:border-sc-cyan/40 transition-colors">
-                <div className="flex-1 flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      audio.playClick();
-                      setSelectedIngredientModalIndex(idx);
-                    }}
-                    className="flex-1 px-3 py-2 bg-[#090e18] hover:bg-slate-800 border border-sc-border hover:border-sc-cyan rounded-lg text-xs font-mono text-left flex items-center justify-between gap-2 group transition-all"
-                    title="Cliquer pour ouvrir le grand catalogue complet des minerais et ingrédients"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-2 h-2 rounded-full bg-sc-cyan shadow-neon-cyan shrink-0" />
-                      <span className="font-bold text-slate-100 group-hover:text-sc-cyan transition-colors truncate">
-                        {STAR_CITIZEN_MINERALS.find(m => m.id === ing.resourceId)?.displayName || ing.resourceName || 'Choisir un ingrédient...'}
-                      </span>
-                      {STAR_CITIZEN_MINERALS.find(m => m.id === ing.resourceId)?.group && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 shrink-0 hidden sm:inline">
-                          {STAR_CITIZEN_MINERALS.find(m => m.id === ing.resourceId)?.group === 'Gem' ? '💎 Gemme' : STAR_CITIZEN_MINERALS.find(m => m.id === ing.resourceId)?.group}
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+            {ingredients.map((ing, idx) => {
+              const matchedMineral = STAR_CITIZEN_MINERALS.find(
+                m => m.id.toLowerCase() === ing.resourceId.toLowerCase() || m.name.toLowerCase() === ing.resourceName.toLowerCase()
+              );
+              const isGem = matchedMineral?.group === 'Gem' || matchedMineral?.isFpsMineable;
+
+              return (
+                <div key={idx} className="flex items-center gap-2 p-2 bg-sc-panel rounded-xl border border-slate-800 hover:border-sc-cyan/40 transition-colors">
+                  <div className="flex-1 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        audio.playClick();
+                        setSelectedIngredientModalIndex(idx);
+                      }}
+                      className="flex-1 px-3 py-2 bg-[#090e18] hover:bg-slate-800 border border-sc-border hover:border-sc-cyan rounded-lg text-xs font-mono text-left flex items-center justify-between gap-2 group transition-all"
+                      title="Cliquer pour choisir un minerai dans la liste de référence"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${isGem ? 'bg-purple-400 shadow-neon-purple' : 'bg-sc-cyan shadow-neon-cyan'}`} />
+                        <span className="font-bold text-slate-100 group-hover:text-sc-cyan transition-colors truncate">
+                          {matchedMineral?.displayName || ing.resourceName || 'Choisir un minerai...'}
                         </span>
-                      )}
-                    </div>
+                        {matchedMineral?.group && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 shrink-0 hidden sm:inline">
+                            {isGem ? '💎 Gemme' : matchedMineral.group}
+                          </span>
+                        )}
+                      </div>
 
-                    <span className="text-[11px] text-sc-cyan font-bold shrink-0 flex items-center gap-1 group-hover:underline bg-sc-cyan/10 px-2 py-0.5 rounded border border-sc-cyan/30">
-                      <span>Parcourir</span>
-                      <Search className="w-3 h-3" />
-                    </span>
-                  </button>
-                </div>
+                      <span className="text-[11px] text-sc-cyan font-bold shrink-0 flex items-center gap-1 group-hover:underline bg-sc-cyan/10 px-2 py-0.5 rounded border border-sc-cyan/30">
+                        <span>Parcourir</span>
+                        <Search className="w-3 h-3" />
+                      </span>
+                    </button>
+                  </div>
 
-                <div className="w-32">
-                  <div className="relative">
+                  {/* Free-format Quantity Input without spinner arrows */}
+                  <div className="w-32 relative">
                     <input
-                      type="number"
-                      step="0.05"
-                      min="0.01"
-                      required
-                      value={ing.quantitySCU}
-                      onChange={(e) => handleIngredientChange(idx, 'quantitySCU', parseFloat(e.target.value) || 0.1)}
-                      className="w-full pl-2.5 pr-12 py-2 bg-sc-card border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:outline-none focus:border-sc-cyan"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={ing.quantityStr}
+                      onChange={(e) => handleIngredientQtyChange(idx, e.target.value)}
+                      className="w-full pl-2.5 pr-14 py-2 bg-sc-card border border-sc-border focus:border-sc-cyan rounded-lg text-xs font-mono text-slate-100 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
-                    <span className="absolute right-2.5 top-2.5 text-[10px] font-mono text-slate-500 font-bold pointer-events-none">
-                      {STAR_CITIZEN_MINERALS.find(m => m.id === ing.resourceId)?.group === 'Gem' ? 'unités' : 'SCU'}
+                    <span className="absolute right-2.5 top-2.5 text-[10px] font-mono text-slate-400 font-bold pointer-events-none select-none">
+                      {isGem ? 'unités' : 'SCU'}
                     </span>
                   </div>
+
+                  {ingredients.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveIngredient(idx)}
+                      className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 rounded transition-colors"
+                      title="Retirer cet ingrédient"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
-                {ingredients.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveIngredient(idx)}
-                    className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 rounded transition-colors"
-                    title="Retirer cet ingrédient"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -314,10 +368,12 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
               Prix Estimé (aUEC)
             </label>
             <input
-              type="number"
-              value={marketEstimatedAUEC}
-              onChange={(e) => setMarketEstimatedAUEC(parseInt(e.target.value) || 0)}
-              className="w-full px-3 py-2 bg-sc-panel border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-mono text-xs focus:outline-none"
+              type="text"
+              inputMode="numeric"
+              placeholder="15000"
+              value={marketEstimatedAUECStr}
+              onChange={(e) => setMarketEstimatedAUECStr(e.target.value)}
+              className="w-full px-3 py-2 bg-sc-panel border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-mono text-xs focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
         </div>
@@ -350,7 +406,7 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
         onClose={() => setSelectedIngredientModalIndex(null)}
         onSelectMineral={(selectedMin) => {
           if (selectedIngredientModalIndex !== null) {
-            handleIngredientChange(selectedIngredientModalIndex, 'resourceId', selectedMin.id);
+            handleSelectMineralForIngredient(selectedIngredientModalIndex, selectedMin);
             setSelectedIngredientModalIndex(null);
           }
         }}

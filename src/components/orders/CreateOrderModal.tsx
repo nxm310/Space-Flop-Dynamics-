@@ -237,6 +237,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     setClientMinerals(clientMinerals.filter((_, i) => i !== index));
   };
 
+  const [clientMineralQtyInputs, setClientMineralQtyInputs] = useState<Record<number, string>>({});
+
   const handleClientMineralChange = (index: number, mineralId: string) => {
     const min = STAR_CITIZEN_MINERALS.find(m => m.id === mineralId);
     if (!min) return;
@@ -247,11 +249,15 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     setClientMinerals(updated);
   };
 
-  const handleClientMineralQtyChange = (index: number, qty: number) => {
-    const q = Math.max(0, qty);
+  const handleClientMineralQtyChange = (index: number, val: string) => {
+    setClientMineralQtyInputs(prev => ({ ...prev, [index]: val }));
+    const parsed = parseFloat(val.replace(',', '.').trim());
+    const q = isNaN(parsed) || parsed < 0 ? 0 : parsed;
     const updated = [...clientMinerals];
-    updated[index].quantitySCU = q;
-    setClientMinerals(updated);
+    if (updated[index]) {
+      updated[index].quantitySCU = q;
+      setClientMinerals(updated);
+    }
   };
 
   // Auto-Fill Client Minerals from Order Requirements
@@ -714,14 +720,14 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
                   <div className="w-32 relative">
                     <input
-                      type="number"
-                      step="0.1"
-                      min="0.001"
-                      value={deposit.quantitySCU}
-                      onChange={(e) => handleClientMineralQtyChange(idx, parseFloat(e.target.value) || 0)}
-                      className="w-full pl-2.5 pr-14 py-2 bg-sc-card border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:border-sc-cyan [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={clientMineralQtyInputs[idx] !== undefined ? clientMineralQtyInputs[idx] : String(deposit.quantitySCU)}
+                      onChange={(e) => handleClientMineralQtyChange(idx, e.target.value)}
+                      className="w-full pl-2.5 pr-14 py-2 bg-sc-card border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:outline-none focus:border-sc-cyan [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
-                    <span className="absolute right-2.5 top-2.5 text-[10px] font-mono text-slate-400 font-bold pointer-events-none">
+                    <span className="absolute right-2.5 top-2.5 text-[10px] font-mono text-slate-400 font-bold pointer-events-none select-none">
                       {STAR_CITIZEN_MINERALS.find(m => m.id === deposit.mineralId)?.group === 'Gem' ? 'unités' : 'SCU'}
                     </span>
                   </div>

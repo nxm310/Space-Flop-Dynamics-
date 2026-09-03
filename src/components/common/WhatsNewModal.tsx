@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.13.0';
+export const CURRENT_APP_VERSION = '1.13.1';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 8 • Version 1.13.0',
+      version: 'Opération 8 • Version 1.13.1',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Majeure',
+      badge: 'Nouveau',
       badgeColor: 'emerald',
-      title: 'Import & Export JSON Individuel par Section (Minerais, Blueprints, Commandes)',
+      title: 'Saisie Libre des Quantités d\'Ingrédients & Référencement Direct',
       icon: <Terminal className="w-5 h-5 text-emerald-400" />,
       points: [
-        '💎 Section Minerais : Boutons "Export JSON" et "Import JSON" dédiés pour sauvegarder et restaurer instantanément vos stocks personnels et dépôts clients sans toucher au reste.',
-        '📜 Section Blueprints : Exportez et importez vos blueprints personnalisés, sélections de l\'Atelier et Blueprints Clients en JSON structuré.',
-        '📋 Section Commandes : Export et Import JSON de l\'intégralité de vos commandes clients et du carnet de contacts associés.',
-        '⚡ Modularité & Sécurité : Chaque module dispose de son propre fichier JSON dédié, facilement échangeable avec d\'autres joueurs.'
+        '✍️ Saisie Libre & Retour Effacé : Les champs de quantité d\'ingrédients et paramètres de craft acceptent la saisie libre sans blocage ni alerte de contraintes.',
+        '🚫 Suppression des Flèches : Les boutons fléchés d\'incrémentation / spinners ont été retirés pour une interface épurée et fluide.',
+        '💎 Référencement des Minerais : Sélection et référencement synchronisés avec la base galactique des minerais, métaux et gemmes.',
+        '⚡ Compatibilité Décimale : Prise en charge transparente des virgules (,) et des points (.) pour tous les calculs.'
       ]
     },
     {
