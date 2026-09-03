@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Modal } from './Modal';
-import { MineralInfo } from '../../types';
-import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
+import { MineralInfo, RefinedStockItem } from '../../types';
+import { StorageService } from '../../services/storageService';
+import { CreateCustomMineralModal } from './CreateCustomMineralModal';
 import {
   Search,
   Sparkles,
@@ -15,7 +16,9 @@ import {
   ChevronRight,
   Layers,
   Filter,
-  Tag
+  Tag,
+  Plus,
+  PackageCheck
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -24,6 +27,7 @@ interface SelectMineralModalProps {
   onClose: () => void;
   onSelectMineral: (mineral: MineralInfo) => void;
   currentSelectedId?: string;
+  stock?: RefinedStockItem[];
   title?: string;
   subtitle?: string;
 }
@@ -33,26 +37,46 @@ export const SelectMineralModal: React.FC<SelectMineralModalProps> = ({
   onClose,
   onSelectMineral,
   currentSelectedId,
-  title = "Selectionner un Ingredient / Minerai",
-  subtitle = "Explorez la base galactique des matieres premieres, métaux, gemmes et composites avec cours et densités"
+  stock = [],
+  title = "Sélectionner un Ingrédient / Minerai",
+  subtitle = "Base commune de toutes les matières premières, métaux, gemmes et composites avec cours galactiques"
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [selectedExtraction, setSelectedExtraction] = useState<'all' | 'ship' | 'fps' | 'salvage'>('all');
   const [selectedRarity, setSelectedRarity] = useState<string>('all');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Groups definition
   const groups: { id: string; label: string; icon: React.ReactNode }[] = [
-    { id: 'all', label: 'Toutes les matieres', icon: <Layers className="w-3.5 h-3.5" /> },
+    { id: 'all', label: 'Toutes les matières', icon: <Layers className="w-3.5 h-3.5" /> },
     { id: 'Gem', label: '💎 Gemmes', icon: <Sparkles className="w-3.5 h-3.5 text-purple-400" /> },
     { id: 'Mineral', label: '⛏️ Minerais', icon: <Boxes className="w-3.5 h-3.5 text-cyan-400" /> },
     { id: 'Metal', label: '⚙️ Métaux', icon: <Pickaxe className="w-3.5 h-3.5 text-amber-400" /> },
-    { id: 'Salvage', label: '♻️ Recuperation & Composites', icon: <ShieldAlert className="w-3.5 h-3.5 text-emerald-400" /> }
+    { id: 'Salvage', label: '♻️ Récupération & Composites', icon: <ShieldAlert className="w-3.5 h-3.5 text-emerald-400" /> }
   ];
+
+  // Load all minerals from the shared database (official + custom + stock)
+  const allMinerals = useMemo(() => {
+    return StorageService.getAllMinerals(stock);
+  }, [stock, refreshKey, isOpen]);
+
+  // Map personal stock for quick lookup
+  const personalStockMap = useMemo(() => {
+    const map = new Map<string, number>();
+    stock.filter(s => s.ownerType === 'personal').forEach(s => {
+      const k1 = s.mineralId.toLowerCase().trim();
+      const k2 = s.mineralName.toLowerCase().trim();
+      map.set(k1, (map.get(k1) || 0) + s.quantitySCU);
+      map.set(k2, (map.get(k2) || 0) + s.quantitySCU);
+    });
+    return map;
+  }, [stock]);
 
   // Filter minerals
   const filteredMinerals = useMemo(() => {
-    return STAR_CITIZEN_MINERALS.filter(m => {
+    return allMinerals.filter(m => {
       // 1. Group filter
       if (selectedGroup !== 'all') {
         if (selectedGroup === 'Gem' && (m.group === 'Gem' || m.isFpsMineable)) {
@@ -88,13 +112,21 @@ export const SelectMineralModal: React.FC<SelectMineralModalProps> = ({
 
       return true;
     });
-  }, [searchQuery, selectedGroup, selectedExtraction, selectedRarity]);
+  }, [allMinerals, searchQuery, selectedGroup, selectedExtraction, selectedRarity]);
 
   if (!isOpen) return null;
 
   const handleSelect = (mineral: MineralInfo) => {
     audio.playSuccess();
     onSelectMineral(mineral);
+    onClose();
+  };
+
+  const handleCustomMineralCreated = (mineral: MineralInfo) => {
+    setRefreshKey(prev => prev + 1);
+    audio.playSuccess();
+    onSelectMineral(mineral);
+    setIsCreateModalOpen(false);
     onClose();
   };
 
@@ -114,264 +146,305 @@ export const SelectMineralModal: React.FC<SelectMineralModalProps> = ({
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={title}
-      subtitle={subtitle}
-      maxWidth="4xl"
-    >
-      <div className="space-y-4">
-        {/* Search Bar & Stats */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Search Input */}
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              autoFocus
-              placeholder="Rechercher par nom (ex: Titane, Quantainium, Hadanite), groupe, densité ou cours aUEC..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 bg-[#090e18] border border-sc-border focus:border-sc-cyan rounded-xl text-xs font-mono text-slate-100 placeholder:text-slate-500 focus:outline-none transition-colors"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-2.5 text-xs text-slate-500 hover:text-slate-300"
-              >
-                ✕
-              </button>
-            )}
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={title}
+        subtitle={subtitle}
+        maxWidth="4xl"
+      >
+        <div className="space-y-4">
+          {/* Search Bar & Action to Create Mineral */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                autoFocus
+                placeholder="Rechercher par nom (ex: Titane, Quantainium, Hadanite), groupe, densité ou cours aUEC..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-8 py-2 bg-[#090e18] border border-sc-border focus:border-sc-cyan rounded-xl text-xs font-mono text-slate-100 placeholder:text-slate-500 focus:outline-none transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-xs text-slate-500 hover:text-slate-300"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Create Custom Mineral Button */}
+            <button
+              type="button"
+              onClick={() => {
+                audio.playClick();
+                setIsCreateModalOpen(true);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shrink-0 shadow-neon-green"
+              title="Créer un nouveau minerai ou alliage s'il n'est pas dans la liste"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Créer un minerai</span>
+            </button>
           </div>
 
-          <div className="text-xs font-mono text-slate-400 shrink-0 self-center">
-            <span>{filteredMinerals.length} / {STAR_CITIZEN_MINERALS.length} matieres repertoriees</span>
-          </div>
-        </div>
+          {/* Group / Family Tabs */}
+          <div className="flex flex-wrap items-center gap-1.5 pb-2 border-b border-slate-800/80">
+            {groups.map((grp) => {
+              const count = allMinerals.filter(m => {
+                if (grp.id === 'all') return true;
+                if (grp.id === 'Gem') return m.group === 'Gem' || m.isFpsMineable;
+                if (grp.id === 'Salvage') return m.group === 'Salvage' || m.group === 'Composite';
+                return m.group === grp.id;
+              }).length;
 
-        {/* Group / Family Tabs */}
-        <div className="flex flex-wrap items-center gap-1.5 pb-2 border-b border-slate-800/80">
-          {groups.map((grp) => {
-            const count = STAR_CITIZEN_MINERALS.filter(m => {
-              if (grp.id === 'all') return true;
-              if (grp.id === 'Gem') return m.group === 'Gem' || m.isFpsMineable;
-              if (grp.id === 'Salvage') return m.group === 'Salvage' || m.group === 'Composite';
-              return m.group === grp.id;
-            }).length;
-
-            return (
-              <button
-                key={grp.id}
-                type="button"
-                onClick={() => {
-                  audio.playClick();
-                  setSelectedGroup(grp.id);
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-all ${
-                  selectedGroup === grp.id
-                    ? 'bg-sc-cyan/20 border border-sc-cyan text-sc-cyan font-bold shadow-neon-cyan/20'
-                    : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                }`}
-              >
-                {grp.icon}
-                <span>{grp.label}</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Secondary Filter Tags (Extraction & Rarity) */}
-        <div className="flex flex-wrap items-center justify-between gap-2 bg-[#090e18]/60 p-2.5 rounded-xl border border-slate-800/60 text-xs font-mono">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-slate-500 text-[11px] uppercase flex items-center gap-1 mr-1">
-              <Filter className="w-3 h-3" />
-              <span>Methode :</span>
-            </span>
-
-            {[
-              { id: 'all', label: 'Toutes' },
-              { id: 'ship', label: '🚀 Vaisseau' },
-              { id: 'fps', label: '💎 Gemmes / Sol' },
-              { id: 'salvage', label: '♻️ Recyclage' }
-            ].map(ext => (
-              <button
-                key={ext.id}
-                type="button"
-                onClick={() => {
-                  audio.playClick();
-                  setSelectedExtraction(ext.id as any);
-                }}
-                className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
-                  selectedExtraction === ext.id
-                    ? 'bg-sc-cyan text-slate-950 font-bold'
-                    : 'text-slate-400 hover:text-slate-200 bg-slate-800/60'
-                }`}
-              >
-                {ext.label}
-              </button>
-            ))}
+              return (
+                <button
+                  key={grp.id}
+                  type="button"
+                  onClick={() => {
+                    audio.playClick();
+                    setSelectedGroup(grp.id);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-all ${
+                    selectedGroup === grp.id
+                      ? 'bg-sc-cyan/20 border border-sc-cyan text-sc-cyan font-bold shadow-neon-cyan/20'
+                      : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                  }`}
+                >
+                  {grp.icon}
+                  <span>{grp.label}</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-slate-500 text-[11px] uppercase flex items-center gap-1 mr-1">
-              <Tag className="w-3 h-3" />
-              <span>Rarete :</span>
-            </span>
+          {/* Secondary Filter Tags (Extraction & Rarity) */}
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-[#090e18]/60 p-2.5 rounded-xl border border-slate-800/60 text-xs font-mono">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-slate-500 text-[11px] uppercase flex items-center gap-1 mr-1">
+                <Filter className="w-3 h-3" />
+                <span>Méthode :</span>
+              </span>
 
-            {[
-              { id: 'all', label: 'Toutes' },
-              { id: 'Exotic', label: 'Exotique' },
-              { id: 'Very Rare', label: 'Tres Rare' },
-              { id: 'Rare', label: 'Rare' },
-              { id: 'Common', label: 'Commun' }
-            ].map(rar => (
-              <button
-                key={rar.id}
-                type="button"
-                onClick={() => {
-                  audio.playClick();
-                  setSelectedRarity(rar.id);
-                }}
-                className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
-                  selectedRarity === rar.id
-                    ? 'bg-sc-cyan text-slate-950 font-bold'
-                    : 'text-slate-400 hover:text-slate-200 bg-slate-800/60'
-                }`}
-              >
-                {rar.label}
-              </button>
-            ))}
+              {[
+                { id: 'all', label: 'Toutes' },
+                { id: 'ship', label: '🚀 Vaisseau' },
+                { id: 'fps', label: '💎 Gemmes / Sol' },
+                { id: 'salvage', label: '♻️ Recyclage' }
+              ].map(ext => (
+                <button
+                  key={ext.id}
+                  type="button"
+                  onClick={() => {
+                    audio.playClick();
+                    setSelectedExtraction(ext.id as any);
+                  }}
+                  className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
+                    selectedExtraction === ext.id
+                      ? 'bg-sc-cyan text-slate-950 font-bold'
+                      : 'text-slate-400 hover:text-slate-200 bg-slate-800/60'
+                  }`}
+                >
+                  {ext.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-slate-500 text-[11px] uppercase flex items-center gap-1 mr-1">
+                <Tag className="w-3 h-3" />
+                <span>Rareté :</span>
+              </span>
+
+              {[
+                { id: 'all', label: 'Toutes' },
+                { id: 'Exotic', label: 'Exotique' },
+                { id: 'Very Rare', label: 'Très Rare' },
+                { id: 'Rare', label: 'Rare' },
+                { id: 'Common', label: 'Commun' }
+              ].map(rar => (
+                <button
+                  key={rar.id}
+                  type="button"
+                  onClick={() => {
+                    audio.playClick();
+                    setSelectedRarity(rar.id);
+                  }}
+                  className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
+                    selectedRarity === rar.id
+                      ? 'bg-sc-cyan text-slate-950 font-bold'
+                      : 'text-slate-400 hover:text-slate-200 bg-slate-800/60'
+                  }`}
+                >
+                  {rar.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Minerals Detailed Cards Grid */}
-        <div className="max-h-[52vh] overflow-y-auto pr-1 custom-scrollbar">
-          {filteredMinerals.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {filteredMinerals.map((min) => {
-                const isSelected = currentSelectedId === min.id;
-                const isGem = min.group === 'Gem' || min.isFpsMineable;
-                const isSalvage = min.group === 'Salvage' || min.group === 'Composite';
+          {/* Minerals Detailed Cards Grid */}
+          <div className="max-h-[52vh] overflow-y-auto pr-1 custom-scrollbar">
+            {filteredMinerals.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {filteredMinerals.map((min) => {
+                  const isSelected = currentSelectedId === min.id;
+                  const isGem = min.group === 'Gem' || min.isFpsMineable;
+                  const isSalvage = min.group === 'Salvage' || min.group === 'Composite';
+                  const inPersonalStock = personalStockMap.get(min.id.toLowerCase().trim()) || personalStockMap.get(min.name.toLowerCase().trim()) || 0;
 
-                return (
-                  <div
-                    key={min.id}
-                    onClick={() => handleSelect(min)}
-                    className={`p-3.5 rounded-xl border transition-all duration-150 cursor-pointer flex flex-col justify-between gap-3 group select-none ${
-                      isSelected
-                        ? 'bg-sc-cyan/15 border-sc-cyan shadow-neon-cyan/20'
-                        : isGem
-                        ? 'bg-sc-card hover:bg-purple-950/30 border-sc-border hover:border-purple-500/60 hover:shadow-lg'
-                        : 'bg-sc-card hover:bg-slate-800/60 border-sc-border hover:border-sc-cyan/50 hover:shadow-lg'
-                    }`}
-                  >
-                    <div>
-                      {/* Top Badges */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
-                            isGem
-                              ? 'bg-purple-950 text-purple-300 border border-purple-800'
-                              : isSalvage
-                              ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                              : 'bg-cyan-950 text-cyan-300 border border-cyan-800'
-                          }`}>
-                            {isGem ? '💎 Gemme' : min.group}
-                          </span>
-                          {getRarityBadge(min.rarity)}
+                  return (
+                    <div
+                      key={min.id}
+                      onClick={() => handleSelect(min)}
+                      className={`p-3.5 rounded-xl border transition-all duration-150 cursor-pointer flex flex-col justify-between gap-3 group select-none ${
+                        isSelected
+                          ? 'bg-sc-cyan/15 border-sc-cyan shadow-neon-cyan/20 ring-1 ring-sc-cyan'
+                          : isGem
+                          ? 'bg-sc-card hover:bg-purple-950/30 border-sc-border hover:border-purple-500/60 hover:shadow-lg'
+                          : 'bg-sc-card hover:bg-slate-800/60 border-sc-border hover:border-sc-cyan/50 hover:shadow-lg'
+                      }`}
+                    >
+                      <div>
+                        {/* Top Badges */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                              isGem
+                                ? 'bg-purple-950 text-purple-300 border border-purple-800'
+                                : isSalvage
+                                ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                                : 'bg-cyan-950 text-cyan-300 border border-cyan-800'
+                            }`}>
+                              {isGem ? '💎 Gemme' : min.group}
+                            </span>
+                            {getRarityBadge(min.rarity)}
+
+                            {inPersonalStock > 0 && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-0.5">
+                                <PackageCheck className="w-2.5 h-2.5" />
+                                <span>Stock: {inPersonalStock.toFixed(1)} {isGem ? 'unités' : 'SCU'}</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {isSelected && (
+                            <span className="w-4 h-4 rounded-full bg-sc-cyan text-slate-950 flex items-center justify-center shrink-0">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                            </span>
+                          )}
                         </div>
 
-                        {isSelected && (
-                          <span className="w-4 h-4 rounded-full bg-sc-cyan text-slate-950 flex items-center justify-center">
-                            <Check className="w-3 h-3 stroke-[3]" />
+                        {/* Mineral Name */}
+                        <div className="mt-2">
+                          <h4 className="text-base font-bold font-sans text-slate-100 group-hover:text-sc-cyan transition-colors">
+                            {min.displayName || min.name}
+                          </h4>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            Identifiant : {min.name}
                           </span>
+                        </div>
+
+                        {/* Description */}
+                        {min.description && (
+                          <p className="text-[11px] font-mono text-slate-400 line-clamp-2 mt-1.5 leading-relaxed">
+                            {min.description}
+                          </p>
                         )}
+
+                        {/* Metrics Block */}
+                        <div className="mt-3 p-2 rounded-lg bg-[#090e18] border border-slate-800/80 grid grid-cols-2 gap-2 text-xs font-mono">
+                          <div>
+                            <span className="text-[10px] text-slate-500 block uppercase flex items-center gap-1">
+                              <Coins className="w-3 h-3 text-amber-400" />
+                              <span>Cours moyen :</span>
+                            </span>
+                            <span className="text-amber-300 font-bold">
+                              ~{min.basePriceAUEC} <span className="text-[9px] text-slate-400">{isGem ? 'aUEC/u' : 'aUEC/cSCU'}</span>
+                            </span>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] text-slate-500 block uppercase flex items-center gap-1">
+                              <Scale className="w-3 h-3 text-cyan-400" />
+                              <span>Densité :</span>
+                            </span>
+                            <span className="text-cyan-300 font-bold">
+                              {min.density} <span className="text-[9px] text-slate-400">g/cm³</span>
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Mineral Name */}
-                      <div className="mt-2">
-                        <h4 className="text-base font-bold font-sans text-slate-100 group-hover:text-sc-cyan transition-colors">
-                          {min.displayName || min.name}
-                        </h4>
-                        <span className="text-[10px] font-mono text-slate-400">
-                          Identifiant : {min.name}
+                      {/* Footer / Select Button */}
+                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs font-mono">
+                        <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                          {min.isShipMineable && <Rocket className="w-3 h-3 text-cyan-400" />}
+                          {min.isFpsMineable && <Pickaxe className="w-3 h-3 text-purple-400" />}
+                          <span>{min.isShipMineable ? 'Vaisseau' : min.isFpsMineable ? 'Sol / FPS' : 'Recyclage'}</span>
+                        </span>
+
+                        <span className="text-sc-cyan font-bold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform text-[11px]">
+                          <span>Sélectionner</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
                         </span>
                       </div>
-
-                      {/* Description */}
-                      {min.description && (
-                        <p className="text-[11px] font-mono text-slate-400 line-clamp-2 mt-1.5 leading-relaxed">
-                          {min.description}
-                        </p>
-                      )}
-
-                      {/* Metrics Block */}
-                      <div className="mt-3 p-2 rounded-lg bg-[#090e18] border border-slate-800/80 grid grid-cols-2 gap-2 text-xs font-mono">
-                        <div>
-                          <span className="text-[10px] text-slate-500 block uppercase flex items-center gap-1">
-                            <Coins className="w-3 h-3 text-amber-400" />
-                            <span>Cours moyen :</span>
-                          </span>
-                          <span className="text-amber-300 font-bold">
-                            ~{min.basePriceAUEC} <span className="text-[9px] text-slate-400">aUEC/cSCU</span>
-                          </span>
-                        </div>
-
-                        <div>
-                          <span className="text-[10px] text-slate-500 block uppercase flex items-center gap-1">
-                            <Scale className="w-3 h-3 text-cyan-400" />
-                            <span>Densité :</span>
-                          </span>
-                          <span className="text-cyan-300 font-bold">
-                            {min.density} <span className="text-[9px] text-slate-400">g/cm³</span>
-                          </span>
-                        </div>
-                      </div>
                     </div>
-
-                    {/* Footer / Select Button */}
-                    <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs font-mono">
-                      <span className="text-[10px] text-slate-500 flex items-center gap-1">
-                        {min.isShipMineable && <Rocket className="w-3 h-3 text-cyan-400" />}
-                        {min.isFpsMineable && <Pickaxe className="w-3 h-3 text-purple-400" />}
-                        <span>{min.isShipMineable ? 'Vaisseau' : min.isFpsMineable ? 'Sol / FPS' : 'Recyclage'}</span>
-                      </span>
-
-                      <span className="text-sc-cyan font-bold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform text-[11px]">
-                        <span>Choisir</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-12 bg-sc-card/40 rounded-xl border border-dashed border-slate-800 space-y-2">
-              <Boxes className="w-8 h-8 text-slate-600 mx-auto" />
-              <p className="text-xs font-mono text-slate-400">
-                Aucune matiere premiere correspondant a vos filtres.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedGroup('all');
-                  setSelectedExtraction('all');
-                  setSelectedRarity('all');
-                }}
-                className="px-3 py-1 rounded bg-slate-800 text-xs font-mono text-sc-cyan hover:bg-slate-700"
-              >
-                Reinitialiser les filtres
-              </button>
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-sc-card/40 rounded-xl border border-dashed border-slate-800 space-y-3">
+                <Boxes className="w-8 h-8 text-slate-600 mx-auto" />
+                <p className="text-xs font-mono text-slate-400">
+                  Aucune matière première ne correspond à votre recherche "{searchQuery}".
+                </p>
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audio.playClick();
+                      setIsCreateModalOpen(true);
+                    }}
+                    className="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-neon-green"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Créer "{searchQuery || 'Nouveau minerai'}"</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSelectedGroup('all');
+                      setSelectedExtraction('all');
+                      setSelectedRarity('all');
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 text-xs font-mono text-slate-300 hover:bg-slate-700"
+                  >
+                    Réinitialiser
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </Modal>
+      </Modal>
+
+      {/* Modal pour Créer un Nouveau Minerai Personnalisé sous le même format */}
+      <CreateCustomMineralModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onMineralCreated={handleCustomMineralCreated}
+        initialName={searchQuery.trim()}
+      />
+    </>
   );
 };

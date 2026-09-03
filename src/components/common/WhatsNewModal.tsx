@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.13.2';
+export const CURRENT_APP_VERSION = '1.14.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 8 • Version 1.13.2',
+      version: 'Opération 9 • Version 1.14.0',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Nouveau',
+      badge: 'Majeure',
       badgeColor: 'emerald',
-      title: 'Ingrédients de Blueprint : Source Exclusive sur Mon Stock Personnel',
+      title: 'Base de Données Minerais Commune & Création Personnalisée de Minerais',
       icon: <Terminal className="w-5 h-5 text-emerald-400" />,
       points: [
-        '💎 Source Exclusive Stock Personnel : Lors de la création ou modification d\'un blueprint, les ingrédients disponibles proviennent strictement de votre propre stock de minerais validé.',
-        '📦 Pop-up dédié "Mon Stock Personnel" : Affiche uniquement vos minerais possédés, avec votre volume total en stock (SCU ou unités de gemmes), le nombre de lots et les qualités maximales.',
-        '🔍 Recherche & Sélection Instantanée : Filtrez rapidement dans vos minerais personnels et référencez-les directement dans vos recettes de craft.',
-        '✍️ Saisie Libre & Sans Flèches : Quantités ajustables sans contraintes de format avec support direct du retour effacé.'
+        '🌐 Base de Données Commune : Tous les minerais, métaux, gemmes, composites et matières sont désormais synchronisés et partagés entre toutes les sections (Stock, Blueprints, Commandes, Raffinerie).',
+        '📜 Accès Intégral en Création de Blueprint : Accédez à la totalité des minerais de la base galactique avec indication de vos stocks disponibles en temps réel.',
+        '✨ Création de Nouveaux Minerais : Bouton "[+ Créer un minerai]" pour ajouter instantanément vos propres matières sous le même format officiel (groupe, rareté, densité, cours aUEC, type d\'extraction).',
+        '⚡ Enregistrement Permanent : Tout minerai créé est sauvegardé dans la base commune et utilisable immédiatement dans l\'ensemble de l\'application.'
       ]
     },
     {

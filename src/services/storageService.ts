@@ -6,14 +6,17 @@ import {
   CustomerOrder,
   ClientProfile,
   AppSettings,
-  AppDataBackup
+  AppDataBackup,
+  MineralInfo
 } from '../types';
 import { STAR_CITIZEN_BLUEPRINTS } from '../data/blueprintsData';
+import { STAR_CITIZEN_MINERALS } from '../data/mineralsData';
 
 const STORAGE_KEYS = {
   RAW_CARGO: 'sc_raw_cargo_v4',
   REFINED_STOCK: 'sc_refined_stock_v4',
   REFINERY_JOBS: 'sc_refinery_jobs_v4',
+  CUSTOM_MINERALS: 'sc_custom_minerals_v4',
   CUSTOM_BLUEPRINTS: 'sc_custom_blueprints_v4',
   UNLOCKED_BLUEPRINTS: 'sc_unlocked_blueprints_v4',
   CLIENT_UNLOCKED_BLUEPRINTS: 'sc_client_unlocked_blueprints_v4',
@@ -90,6 +93,99 @@ export class StorageService {
 
   static saveRefineryJobs(items: RefineryJob[]) {
     localStorage.setItem(STORAGE_KEYS.REFINERY_JOBS, JSON.stringify(items));
+  }
+
+  // Custom Minerals & Shared Mineral Database
+  static getCustomMinerals(): MineralInfo[] {
+    this.init();
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CUSTOM_MINERALS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static saveCustomMinerals(items: MineralInfo[]) {
+    localStorage.setItem(STORAGE_KEYS.CUSTOM_MINERALS, JSON.stringify(items));
+  }
+
+  static saveOrUpdateCustomMineral(mineral: MineralInfo) {
+    const list = this.getCustomMinerals();
+    const index = list.findIndex(m => m.id.toLowerCase() === mineral.id.toLowerCase() || m.name.toLowerCase() === mineral.name.toLowerCase());
+    if (index >= 0) {
+      list[index] = mineral;
+    } else {
+      list.push(mineral);
+    }
+    this.saveCustomMinerals(list);
+  }
+
+  static deleteCustomMineral(mineralId: string) {
+    const list = this.getCustomMinerals().filter(m => m.id !== mineralId);
+    this.saveCustomMinerals(list);
+  }
+
+  /**
+   * Returns the complete unified mineral database:
+   * 1. Official Star Citizen catalog (STAR_CITIZEN_MINERALS)
+   * 2. User-created custom minerals (localStorage)
+   * 3. Any additional minerals present in current stock/inventory
+   */
+  static getAllMinerals(stock?: RefinedStockItem[]): MineralInfo[] {
+    const customList = this.getCustomMinerals();
+    const baseMap = new Map<string, MineralInfo>();
+
+    // 1. Base catalog
+    STAR_CITIZEN_MINERALS.forEach(m => {
+      baseMap.set(m.id.toLowerCase().trim(), m);
+      baseMap.set(m.name.toLowerCase().trim(), m);
+    });
+
+    // 2. Custom minerals overrides & additions
+    customList.forEach(m => {
+      baseMap.set(m.id.toLowerCase().trim(), m);
+      baseMap.set(m.name.toLowerCase().trim(), m);
+    });
+
+    // 3. Minerals present in stock
+    if (stock && stock.length > 0) {
+      stock.forEach(item => {
+        const idKey = item.mineralId.toLowerCase().trim();
+        const nameKey = item.mineralName.toLowerCase().trim();
+        if (!baseMap.has(idKey) && !baseMap.has(nameKey)) {
+          const isGem = Boolean(
+            item.notes?.toLowerCase().includes('gem') ||
+            item.notes?.toLowerCase().includes('minable geo') ||
+            item.notes?.toLowerCase().includes('minage géo') ||
+            item.notes?.toLowerCase().includes('minage geo')
+          );
+
+          const inferred: MineralInfo = {
+            id: item.mineralId,
+            name: item.mineralName,
+            displayName: item.mineralName,
+            group: isGem ? 'Gem' : 'Mineral',
+            density: 2.5,
+            basePriceAUEC: isGem ? 250 : 35,
+            rawPriceAUEC: isGem ? 120 : 17,
+            isMineable: true,
+            isShipMineable: !isGem,
+            isFpsMineable: isGem,
+            rarity: 'Rare'
+          };
+          baseMap.set(idKey, inferred);
+        }
+      });
+    }
+
+    // Deduplicate by unique id
+    const unique = new Map<string, MineralInfo>();
+    baseMap.forEach(min => {
+      unique.set(min.id, min);
+    });
+
+    return Array.from(unique.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
   }
 
   // Custom Blueprints
