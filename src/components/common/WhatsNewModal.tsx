@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.14.1';
+export const CURRENT_APP_VERSION = '1.15.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,16 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 9 • Version 1.14.1',
+      version: 'Opération 10 • Version 1.15.0',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Nouveau',
+      badge: 'Majeure',
       badgeColor: 'emerald',
-      title: 'Temps de Fabrication en Minutes dans la Création de Blueprint',
+      title: 'Intégration Complète du Catalogue Officiel Star Citizen (1 606 Blueprints)',
       icon: <Terminal className="w-5 h-5 text-emerald-400" />,
       points: [
-        '⏱️ Saisie en Minutes : Le champ de temps de fabrication lors de la création / modification d\'un blueprint se renseigne désormais directement en minutes (ex: 10 min, 15 min, 2.5 min).',
-        '🔄 Conversion Automatique : Le calcul des durées est instantanément converti et synchronisé avec le minuteur de fabrication de l\'Atelier.',
-        '✍️ Saisie Libre : Support de la saisie au clavier sans blocage de contraintes ni boutons fléchés gênants.'
+        '🚀 1 606 Blueprints Officiels Intégrés : L\'intégralité des plans de fabrication de Star Citizen 4.10-LIVE est désormais présente dans le catalogue global (armes de vaisseau, canons laser, armes FPS, armures, composants, medpens, cryptokeys).',
+        '💎 200 Minerais & Commodités en Arrière-Plan : L\'ensemble des matières premières, métaux, gemmes et gaz officiels sont connectés à tous les modules avec leurs densités réelles.',
+        '📄 Pagination & Performance Optimisée : Navigation fluide dans les 1 600+ plans grâce à la pagination dynamique (48, 96, 192 ou tous par page).',
+        '⚡ Synchronisation & Recherche Instantanée : Filtrez et trouvez immédiatement n\'importe quel plan et ses ingrédients en SCU ou en unités.'
       ]
     },
     {

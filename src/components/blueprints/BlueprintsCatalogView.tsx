@@ -81,6 +81,8 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [feasibilityFilter, setFeasibilityFilter] = useState<'all' | 'craftable' | 'missing'>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(48);
   const [selectedBlueprint, setSelectedBlueprint] = useState<Blueprint | null>(null);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [isSourcesModalOpen, setIsSourcesModalOpen] = useState(false);
@@ -223,6 +225,15 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
 
     return true;
   });
+
+  const totalPages = pageSize === 0 ? 1 : Math.max(1, Math.ceil(filteredBlueprints.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedBlueprints = React.useMemo(() => {
+    if (pageSize === 0) return filteredBlueprints;
+    const start = (safeCurrentPage - 1) * pageSize;
+    return filteredBlueprints.slice(start, start + pageSize);
+  }, [filteredBlueprints, safeCurrentPage, pageSize]);
 
   const craftableCount = filteredBlueprints.filter(checkFeasibility).length;
   const myBlueprintsTotalCount = blueprints.filter(b => unlockedIds.includes(b.id)).length;
@@ -676,7 +687,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
         viewLayout === 'grid' ? (
           /* GRID CARDS VIEW */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredBlueprints.map((bp) => {
+            {paginatedBlueprints.map((bp) => {
               const isCraftable = checkFeasibility(bp);
               const isUnlocked = unlockedIds.includes(bp.id);
               const isClientBp = clientBlueprintIds.includes(bp.id);
@@ -894,7 +905,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80">
-                {filteredBlueprints.map((bp) => {
+                {paginatedBlueprints.map((bp) => {
                   const isCraftable = checkFeasibility(bp);
                   const isUnlocked = unlockedIds.includes(bp.id);
                   const isClientBp = clientBlueprintIds.includes(bp.id);
@@ -1098,6 +1109,75 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
               <span>Explorer le Catalogue Global</span>
             </button>
           )}
+        </div>
+      )}
+
+      {/* Pagination Toolbar */}
+      {filteredBlueprints.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-xl bg-[#090e18]/90 border border-slate-800 text-xs font-mono">
+          <div className="text-slate-400">
+            Affichage <span className="text-slate-100 font-bold">{pageSize === 0 ? 1 : (safeCurrentPage - 1) * pageSize + 1}</span> à <span className="text-slate-100 font-bold">{pageSize === 0 ? filteredBlueprints.length : Math.min(safeCurrentPage * pageSize, filteredBlueprints.length)}</span> sur <span className="text-sc-cyan font-bold">{filteredBlueprints.length.toLocaleString('fr-FR')}</span> blueprints
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Page Size Selector */}
+            <div className="flex items-center gap-1.5 mr-2">
+              <span className="text-slate-500 text-[11px] uppercase">Par page :</span>
+              {[48, 96, 192, 0].map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => {
+                    audio.playClick();
+                    setPageSize(size);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-2 py-0.5 rounded text-[11px] transition-colors ${
+                    pageSize === size
+                      ? 'bg-sc-cyan text-slate-950 font-bold'
+                      : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {size === 0 ? 'Tous' : size}
+                </button>
+              ))}
+            </div>
+
+            {/* Previous & Next Controls */}
+            {pageSize > 0 && totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={safeCurrentPage <= 1}
+                  onClick={() => {
+                    audio.playClick();
+                    setCurrentPage(prev => Math.max(1, prev - 1));
+                    window.scrollTo({ top: 200, behavior: 'smooth' });
+                  }}
+                  className="px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:text-sc-cyan hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                >
+                  ◀ Précédent
+                </button>
+
+                <span className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-sc-cyan font-bold">
+                  Page {safeCurrentPage} / {totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={safeCurrentPage >= totalPages}
+                  onClick={() => {
+                    audio.playClick();
+                    setCurrentPage(prev => Math.min(totalPages, prev + 1));
+                    window.scrollTo({ top: 200, behavior: 'smooth' });
+                  }}
+                  className="px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:text-sc-cyan hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                >
+                  Suivant ▶
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
