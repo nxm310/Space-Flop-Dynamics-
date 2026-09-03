@@ -11,7 +11,8 @@ import {
   AlertCircle,
   Hammer,
   ClipboardList,
-  Layers
+  Layers,
+  Edit3
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -22,6 +23,7 @@ interface BlueprintDetailsModalProps {
   stock: RefinedStockItem[];
   onCraftNow: (blueprint: Blueprint, quantity: number) => void;
   onCreateOrder: (blueprint: Blueprint) => void;
+  onEditBlueprint?: (blueprint: Blueprint) => void;
 }
 
 export const BlueprintDetailsModal: React.FC<BlueprintDetailsModalProps> = ({
@@ -30,7 +32,8 @@ export const BlueprintDetailsModal: React.FC<BlueprintDetailsModalProps> = ({
   blueprint,
   stock,
   onCraftNow,
-  onCreateOrder
+  onCreateOrder,
+  onEditBlueprint
 }) => {
   const [craftQuantity, setCraftQuantity] = useState<number>(1);
 
@@ -250,6 +253,22 @@ export const BlueprintDetailsModal: React.FC<BlueprintDetailsModalProps> = ({
           </button>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            {onEditBlueprint && (
+              <button
+                type="button"
+                onClick={() => {
+                  audio.playClick();
+                  onEditBlueprint(blueprint);
+                  onClose();
+                }}
+                className="flex-1 sm:flex-none px-3.5 py-2 rounded-lg border border-amber-500/50 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
+                title="Modifier les caractéristiques ou les ingrédients de ce blueprint"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Modifier</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => {

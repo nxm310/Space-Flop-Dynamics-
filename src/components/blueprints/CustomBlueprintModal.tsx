@@ -1,22 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { SelectMineralModal } from '../common/SelectMineralModal';
 import { Blueprint, BlueprintCategory, BlueprintIngredient } from '../../types';
 import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
 import { BLUEPRINT_CATEGORIES } from '../../data/blueprintsData';
-import { Scroll, Plus, Trash2, Sparkles, Search } from 'lucide-react';
+import { Scroll, Plus, Trash2, Sparkles, Search, Edit3 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
 interface CustomBlueprintModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddBlueprint: (blueprint: Blueprint) => void;
+  blueprintToEdit?: Blueprint | null;
 }
 
 export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
   isOpen,
   onClose,
-  onAddBlueprint
+  onAddBlueprint,
+  blueprintToEdit
 }) => {
   const [name, setName] = useState('');
   const [category, setCategory] = useState<BlueprintCategory>('vaisseau');
@@ -33,6 +35,38 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
     { resourceId: 'quantainium', resourceName: 'Quantainium', quantitySCU: 1.0 },
     { resourceId: 'titanium', resourceName: 'Titanium', quantitySCU: 2.0 }
   ]);
+
+  // Synchronize state when opening modal
+  useEffect(() => {
+    if (isOpen) {
+      if (blueprintToEdit) {
+        setName(blueprintToEdit.name || '');
+        setCategory(blueprintToEdit.category || 'vaisseau');
+        setTypeLabel(blueprintToEdit.typeLabel || 'Composant');
+        setSubtype(blueprintToEdit.subtype || '');
+        setGrade(blueprintToEdit.grade || '');
+        setCraftTimeSeconds(blueprintToEdit.craftTimeSeconds || 600);
+        setMarketEstimatedAUEC(blueprintToEdit.marketEstimatedAUEC || 15000);
+        setDescription(blueprintToEdit.description || '');
+        setIngredients(blueprintToEdit.ingredients && blueprintToEdit.ingredients.length > 0 ? [...blueprintToEdit.ingredients] : [
+          { resourceId: 'quantainium', resourceName: 'Quantainium', quantitySCU: 1.0 }
+        ]);
+      } else {
+        setName('');
+        setCategory('vaisseau');
+        setTypeLabel('Composant Personnalisé');
+        setSubtype('Tier 1');
+        setGrade('A');
+        setCraftTimeSeconds(600);
+        setMarketEstimatedAUEC(15000);
+        setDescription('');
+        setIngredients([
+          { resourceId: 'quantainium', resourceName: 'Quantainium', quantitySCU: 1.0 },
+          { resourceId: 'titanium', resourceName: 'Titanium', quantitySCU: 2.0 }
+        ]);
+      }
+    }
+  }, [isOpen, blueprintToEdit]);
 
   const handleAddIngredient = () => {
     audio.playClick();
@@ -66,8 +100,8 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
     if (!name.trim() || ingredients.length === 0) return;
 
     audio.playSuccess();
-    const newBp: Blueprint = {
-      id: `custom_bp_${Date.now()}`,
+    const bpToSave: Blueprint = {
+      id: blueprintToEdit ? blueprintToEdit.id : `custom_bp_${Date.now()}`,
       name: name.trim(),
       category,
       typeLabel: typeLabel.trim() || 'Composant',
@@ -80,7 +114,7 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
       isCustom: true
     };
 
-    onAddBlueprint(newBp);
+    onAddBlueprint(bpToSave);
     onClose();
   };
 
@@ -88,9 +122,9 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Créer un Blueprint Personnalisé"
-      subtitle="Définissez une nouvelle recette de fabrication avec ses ingrédients et caractéristiques"
-      icon={<Scroll className="w-5 h-5 text-sc-cyan" />}
+      title={blueprintToEdit ? `Modifier le Blueprint : ${blueprintToEdit.name}` : "Créer un Blueprint Personnalisé"}
+      subtitle={blueprintToEdit ? "Ajustez les composants, le temps de fabrication et les ingrédients requis" : "Définissez une nouvelle recette de fabrication avec ses ingrédients et caractéristiques"}
+      icon={blueprintToEdit ? <Edit3 className="w-5 h-5 text-amber-400" /> : <Scroll className="w-5 h-5 text-sc-cyan" />}
       maxWidth="2xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4 font-sans">
@@ -304,8 +338,8 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
             type="submit"
             className="px-5 py-2 rounded-lg bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold border border-sc-cyan shadow-neon-cyan text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-all duration-200"
           >
-            <Sparkles className="w-4 h-4" />
-            Enregistrer le Blueprint
+            {blueprintToEdit ? <Edit3 className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+            {blueprintToEdit ? "Sauvegarder les Modifications" : "Enregistrer le Blueprint"}
           </button>
         </div>
       </form>

@@ -177,6 +177,12 @@ export function App() {
     addToast('success', 'Blueprint Enregistré', `Le plan "${bp.name}" a été ajouté à votre atelier.`);
   };
 
+  const handleUpdateBlueprint = (updatedBp: Blueprint) => {
+    StorageService.saveOrUpdateBlueprint(updatedBp);
+    setCustomBlueprints(StorageService.getCustomBlueprints());
+    addToast('success', 'Blueprint Modifié', `Le plan "${updatedBp.name}" a été mis à jour avec succès.`);
+  };
+
   const handleCraftNow = (bp: Blueprint, quantity: number) => {
     // Deduct ingredients from personal stock (or client stock if available)
     setRefinedStock(prev => {
@@ -630,6 +636,7 @@ export function App() {
             blueprints={allBlueprints}
             stock={refinedStock}
             onAddCustomBlueprint={handleAddCustomBlueprint}
+            onUpdateBlueprint={handleUpdateBlueprint}
             onCraftNow={handleCraftNow}
             onCreateOrderFromBlueprint={handleCreateOrderFromBlueprint}
             onSyncApiBlueprints={handleSyncApiBlueprints}

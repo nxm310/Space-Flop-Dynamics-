@@ -107,6 +107,17 @@ export class StorageService {
     localStorage.setItem(STORAGE_KEYS.CUSTOM_BLUEPRINTS, JSON.stringify(items));
   }
 
+  static saveOrUpdateBlueprint(bp: Blueprint) {
+    const custom = this.getCustomBlueprints();
+    const existingIdx = custom.findIndex(b => b.id === bp.id);
+    if (existingIdx >= 0) {
+      custom[existingIdx] = bp;
+    } else {
+      custom.unshift(bp);
+    }
+    this.saveCustomBlueprints(custom);
+  }
+
   // User Unlocked / Selected Blueprint IDs (Mon Atelier / Mes Blueprints)
   static getUnlockedBlueprintIds(): string[] {
     this.init();
@@ -167,24 +178,24 @@ export class StorageService {
     return { addedCount, totalCount: updated.length };
   }
 
-  // All Blueprints (Built-in + Custom with strict deduplication)
+  // All Blueprints (Built-in with Overrides + Custom with strict deduplication)
   static getAllBlueprints(): Blueprint[] {
     const custom = this.getCustomBlueprints();
-    const seenIds = new Set(STAR_CITIZEN_BLUEPRINTS.map(b => b.id.toLowerCase()));
-    const seenNames = new Set(STAR_CITIZEN_BLUEPRINTS.map(b => b.name.toLowerCase().trim()));
-    const uniqueCustom: Blueprint[] = [];
+    const customMap = new Map(custom.map(b => [b.id, b]));
 
-    custom.forEach(bp => {
-      const lowerId = bp.id.toLowerCase();
-      const lowerName = bp.name.toLowerCase().trim();
-      if (!seenIds.has(lowerId) && !seenNames.has(lowerName)) {
-        seenIds.add(lowerId);
-        seenNames.add(lowerName);
-        uniqueCustom.push(bp);
+    // Start with base blueprints, replacing any that were edited/overridden in custom
+    const baseBlueprints = STAR_CITIZEN_BLUEPRINTS.map(base => {
+      if (customMap.has(base.id)) {
+        const overridden = customMap.get(base.id)!;
+        customMap.delete(base.id);
+        return overridden;
       }
+      return base;
     });
 
-    return [...STAR_CITIZEN_BLUEPRINTS, ...uniqueCustom];
+    // Append remaining custom blueprints
+    const remainingCustom = Array.from(customMap.values());
+    return [...remainingCustom, ...baseBlueprints];
   }
 
   // Orders

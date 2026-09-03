@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.12.3';
+export const CURRENT_APP_VERSION = '1.12.4';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 7 • Version 1.12.3',
+      version: 'Opération 7 • Version 1.12.4',
       date: 'Dernière mise à jour (Actuelle)',
       badge: 'Nouveau',
       badgeColor: 'emerald',
-      title: 'Grand Pop-up Détaillé de Sélection des Minerais & Ingrédients',
+      title: 'Modification Directe des Blueprints (Tuiles & Fiches)',
       icon: <Terminal className="w-5 h-5 text-emerald-400" />,
       points: [
-        '💎 Grand Pop-up Galactique : Cliquez sur un ingrédient ou minerai fourni pour ouvrir une interface plein écran riche en détails.',
-        '📊 Fiches Détaillées par Ressource : Cours moyen galactique (~aUEC/cSCU), densité (g/cm³), rareté (Exotique, Très Rare, Commun) et méthode d\'extraction (Vaisseau, Gemmes/Sol, Recyclage).',
-        '📂 Filtres par Familles : Boutons de sélection rapide pour Gemmes (unités), Minerais (SCU), Métaux et Récupération/Composites.',
-        '🛠️ Intégré Partout : Disponible dans la création de commande client et dans la création de blueprints personnalisés.'
+        '✏️ Touche Modifier sur les Tuiles : Un bouton "Modifier" dédié est désormais présent sur chaque carte et ligne du catalogue de blueprints.',
+        '🛠️ Modification depuis la Fiche Détails : Ajustez directement les spécifications d\'un plan ouvert grâce au nouveau bouton "Modifier".',
+        '📦 Édition Complète : Modifiez le nom, la catégorie, le temps de fabrication, l\'estimation aUEC, les notes et ajustez/ajoutez/supprimez les ingrédients nécessaires.',
+        '💎 Grand Pop-up Ingrédients Intégré : Bénéficiez du catalogue visuel plein écran lors du changement de minerais requis.'
       ]
     },
     {

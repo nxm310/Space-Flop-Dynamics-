@@ -30,7 +30,8 @@ import {
   ChevronRight,
   Layers,
   Terminal,
-  Users
+  Users,
+  Edit3
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -38,6 +39,7 @@ interface BlueprintsCatalogViewProps {
   blueprints: Blueprint[];
   stock: RefinedStockItem[];
   onAddCustomBlueprint: (bp: Blueprint) => void;
+  onUpdateBlueprint: (bp: Blueprint) => void;
   onCraftNow: (bp: Blueprint, quantity: number) => void;
   onCreateOrderFromBlueprint: (bp: Blueprint) => void;
   onSyncApiBlueprints: (newBps: Blueprint[]) => void;
@@ -48,6 +50,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
   blueprints,
   stock,
   onAddCustomBlueprint,
+  onUpdateBlueprint,
   onCraftNow,
   onCreateOrderFromBlueprint,
   onSyncApiBlueprints,
@@ -56,6 +59,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
   // Sub-Tab: 'my_workshop' (Mes Blueprints) vs 'client_blueprints' (Blueprints Clients) vs 'all_catalog' (Tous les Blueprints)
   const [subTab, setSubTab] = useState<'my_workshop' | 'client_blueprints' | 'all_catalog'>('my_workshop');
   const [viewLayout, setViewLayout] = useState<'grid' | 'table'>('grid');
+  const [blueprintToEdit, setBlueprintToEdit] = useState<Blueprint | null>(null);
 
   // Unlocked / Selected Blueprint IDs by the user (Mon Atelier)
   const [unlockedIds, setUnlockedIds] = useState<string[]>(() => {
@@ -300,6 +304,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
           <button
             onClick={() => {
               audio.playClick();
+              setBlueprintToEdit(null);
               setIsCustomModalOpen(true);
             }}
             className="px-4 py-2 rounded-lg bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold border border-sc-cyan shadow-neon-cyan text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-all duration-200"
@@ -761,17 +766,40 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Bottom Bar */}
+                  {/* Bottom Bar with Edit & Details */}
                   <div className="flex items-center justify-between pt-2.5 border-t border-sc-border/60 text-xs font-mono">
                     <span className="text-emerald-400 font-bold flex items-center gap-1">
                       <Coins className="w-3.5 h-3.5" />
                       {bp.marketEstimatedAUEC ? `${bp.marketEstimatedAUEC.toLocaleString('fr-FR')} aUEC` : 'N/A'}
                     </span>
 
-                    <span className="text-sc-cyan group-hover:underline text-[11px] uppercase tracking-wider flex items-center gap-1">
-                      <span>Détails & Craft</span>
-                      <ChevronRight className="w-3 h-3" />
-                    </span>
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          audio.playClick();
+                          setBlueprintToEdit(bp);
+                          setIsCustomModalOpen(true);
+                        }}
+                        className="px-2 py-1 rounded bg-slate-800/80 hover:bg-amber-500/20 text-slate-400 hover:text-amber-300 border border-slate-700 hover:border-amber-500/40 text-[10px] font-mono flex items-center gap-1 transition-colors"
+                        title="Modifier ce blueprint (ingrédients, prix, temps...)"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>Modifier</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          audio.playClick();
+                          setSelectedBlueprint(bp);
+                        }}
+                        className="px-2 py-1 rounded bg-sc-cyan/15 hover:bg-sc-cyan/25 text-sc-cyan border border-sc-cyan/30 text-[10px] uppercase font-bold flex items-center gap-1 transition-colors"
+                      >
+                        <span>Détails</span>
+                        <ChevronRight className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -935,16 +963,32 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
                       </td>
 
                       {/* Action */}
-                      <td className="py-3 px-4 text-center">
-                        <button
-                          onClick={() => {
-                            audio.playClick();
-                            setSelectedBlueprint(bp);
-                          }}
-                          className="px-2.5 py-1 rounded bg-sc-cyan/15 hover:bg-sc-cyan text-sc-cyan hover:text-slate-950 border border-sc-cyan/40 text-[11px] font-bold uppercase transition-all"
-                        >
-                          Ouvrir
-                        </button>
+                      <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              audio.playClick();
+                              setBlueprintToEdit(bp);
+                              setIsCustomModalOpen(true);
+                            }}
+                            className="p-1.5 rounded bg-slate-800 hover:bg-amber-500/20 text-slate-400 hover:text-amber-300 border border-slate-700 hover:border-amber-500/40 transition-colors"
+                            title="Modifier ce blueprint"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              audio.playClick();
+                              setSelectedBlueprint(bp);
+                            }}
+                            className="px-2 py-1 rounded bg-sc-cyan/15 hover:bg-sc-cyan text-sc-cyan hover:text-slate-950 border border-sc-cyan/40 text-[10px] font-bold uppercase transition-all"
+                            title="Ouvrir les détails"
+                          >
+                            Ouvrir
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -995,13 +1039,28 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
         stock={stock}
         onCraftNow={onCraftNow}
         onCreateOrder={onCreateOrderFromBlueprint}
+        onEditBlueprint={(bp) => {
+          setBlueprintToEdit(bp);
+          setIsCustomModalOpen(true);
+        }}
       />
 
-      {/* Custom Blueprint Modal */}
+      {/* Custom & Edit Blueprint Modal */}
       <CustomBlueprintModal
         isOpen={isCustomModalOpen}
-        onClose={() => setIsCustomModalOpen(false)}
-        onAddBlueprint={onAddCustomBlueprint}
+        onClose={() => {
+          setIsCustomModalOpen(false);
+          setBlueprintToEdit(null);
+        }}
+        onAddBlueprint={(bp) => {
+          if (blueprintToEdit) {
+            onUpdateBlueprint(bp);
+          } else {
+            onAddCustomBlueprint(bp);
+          }
+          setBlueprintToEdit(null);
+        }}
+        blueprintToEdit={blueprintToEdit}
       />
 
       {/* Sources & Datamining Guide Modal */}
