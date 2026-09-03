@@ -1131,6 +1131,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
           setBlueprintToEdit(null);
         }}
         blueprintToEdit={blueprintToEdit}
+        stock={stock}
       />
 
       {/* Sources & Datamining Guide Modal */}

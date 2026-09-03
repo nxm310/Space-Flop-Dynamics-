@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.13.1';
+export const CURRENT_APP_VERSION = '1.13.2';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 8 • Version 1.13.1',
+      version: 'Opération 8 • Version 1.13.2',
       date: 'Dernière mise à jour (Actuelle)',
       badge: 'Nouveau',
       badgeColor: 'emerald',
-      title: 'Saisie Libre des Quantités d\'Ingrédients & Référencement Direct',
+      title: 'Ingrédients de Blueprint : Source Exclusive sur Mon Stock Personnel',
       icon: <Terminal className="w-5 h-5 text-emerald-400" />,
       points: [
-        '✍️ Saisie Libre & Retour Effacé : Les champs de quantité d\'ingrédients et paramètres de craft acceptent la saisie libre sans blocage ni alerte de contraintes.',
-        '🚫 Suppression des Flèches : Les boutons fléchés d\'incrémentation / spinners ont été retirés pour une interface épurée et fluide.',
-        '💎 Référencement des Minerais : Sélection et référencement synchronisés avec la base galactique des minerais, métaux et gemmes.',
-        '⚡ Compatibilité Décimale : Prise en charge transparente des virgules (,) et des points (.) pour tous les calculs.'
+        '💎 Source Exclusive Stock Personnel : Lors de la création ou modification d\'un blueprint, les ingrédients disponibles proviennent strictement de votre propre stock de minerais validé.',
+        '📦 Pop-up dédié "Mon Stock Personnel" : Affiche uniquement vos minerais possédés, avec votre volume total en stock (SCU ou unités de gemmes), le nombre de lots et les qualités maximales.',
+        '🔍 Recherche & Sélection Instantanée : Filtrez rapidement dans vos minerais personnels et référencez-les directement dans vos recettes de craft.',
+        '✍️ Saisie Libre & Sans Flèches : Quantités ajustables sans contraintes de format avec support direct du retour effacé.'
       ]
     },
     {
