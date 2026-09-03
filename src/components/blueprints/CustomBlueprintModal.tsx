@@ -33,7 +33,7 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
   const [typeLabel, setTypeLabel] = useState('Composant Personnalisé');
   const [subtype, setSubtype] = useState('Tier 1');
   const [grade, setGrade] = useState('A');
-  const [craftTimeStr, setCraftTimeStr] = useState('600');
+  const [craftTimeMinutesStr, setCraftTimeMinutesStr] = useState('10');
   const [marketEstimatedAUECStr, setMarketEstimatedAUECStr] = useState('15000');
   const [description, setDescription] = useState('');
   
@@ -56,7 +56,8 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
         setTypeLabel(blueprintToEdit.typeLabel || 'Composant');
         setSubtype(blueprintToEdit.subtype || '');
         setGrade(blueprintToEdit.grade || '');
-        setCraftTimeStr(String(blueprintToEdit.craftTimeSeconds || 600));
+        const initialMinutes = (blueprintToEdit.craftTimeSeconds || 600) / 60;
+        setCraftTimeMinutesStr(String(Number.isInteger(initialMinutes) ? initialMinutes : Number(initialMinutes.toFixed(2))));
         setMarketEstimatedAUECStr(String(blueprintToEdit.marketEstimatedAUEC || 15000));
         setDescription(blueprintToEdit.description || '');
         setIngredients(
@@ -79,7 +80,7 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
         setTypeLabel('Composant Personnalisé');
         setSubtype('Tier 1');
         setGrade('A');
-        setCraftTimeStr('600');
+        setCraftTimeMinutesStr('10');
         setMarketEstimatedAUECStr('15000');
         setDescription('');
         setIngredients([
@@ -148,8 +149,8 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
       };
     });
 
-    const parsedCraftTime = parseInt(craftTimeStr.trim(), 10);
-    const craftTimeSeconds = isNaN(parsedCraftTime) || parsedCraftTime <= 0 ? 60 : parsedCraftTime;
+    const parsedCraftMinutes = parseFloat(craftTimeMinutesStr.replace(',', '.').trim());
+    const craftTimeSeconds = isNaN(parsedCraftMinutes) || parsedCraftMinutes <= 0 ? 600 : Math.round(parsedCraftMinutes * 60);
 
     const parsedAUEC = parseInt(marketEstimatedAUECStr.replace(/\s/g, '').trim(), 10);
     const marketEstimatedAUEC = isNaN(parsedAUEC) || parsedAUEC < 0 ? 0 : parsedAUEC;
@@ -260,14 +261,14 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
 
             <div>
               <label className="block text-xs font-mono tracking-wider uppercase text-slate-400 mb-1.5">
-                Temps (sec)
+                Temps (min)
               </label>
               <input
                 type="text"
-                inputMode="numeric"
-                placeholder="600"
-                value={craftTimeStr}
-                onChange={(e) => setCraftTimeStr(e.target.value)}
+                inputMode="decimal"
+                placeholder="10"
+                value={craftTimeMinutesStr}
+                onChange={(e) => setCraftTimeMinutesStr(e.target.value)}
                 className="w-full px-3 py-2 bg-sc-panel border border-sc-border focus:border-sc-cyan rounded-lg text-slate-100 font-mono text-xs focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>

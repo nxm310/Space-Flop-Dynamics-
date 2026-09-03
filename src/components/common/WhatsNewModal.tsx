@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.14.0';
+export const CURRENT_APP_VERSION = '1.14.1';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,16 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 9 • Version 1.14.0',
+      version: 'Opération 9 • Version 1.14.1',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Majeure',
+      badge: 'Nouveau',
       badgeColor: 'emerald',
-      title: 'Base de Données Minerais Commune & Création Personnalisée de Minerais',
+      title: 'Temps de Fabrication en Minutes dans la Création de Blueprint',
       icon: <Terminal className="w-5 h-5 text-emerald-400" />,
       points: [
-        '🌐 Base de Données Commune : Tous les minerais, métaux, gemmes, composites et matières sont désormais synchronisés et partagés entre toutes les sections (Stock, Blueprints, Commandes, Raffinerie).',
-        '📜 Accès Intégral en Création de Blueprint : Accédez à la totalité des minerais de la base galactique avec indication de vos stocks disponibles en temps réel.',
-        '✨ Création de Nouveaux Minerais : Bouton "[+ Créer un minerai]" pour ajouter instantanément vos propres matières sous le même format officiel (groupe, rareté, densité, cours aUEC, type d\'extraction).',
-        '⚡ Enregistrement Permanent : Tout minerai créé est sauvegardé dans la base commune et utilisable immédiatement dans l\'ensemble de l\'application.'
+        '⏱️ Saisie en Minutes : Le champ de temps de fabrication lors de la création / modification d\'un blueprint se renseigne désormais directement en minutes (ex: 10 min, 15 min, 2.5 min).',
+        '🔄 Conversion Automatique : Le calcul des durées est instantanément converti et synchronisé avec le minuteur de fabrication de l\'Atelier.',
+        '✍️ Saisie Libre : Support de la saisie au clavier sans blocage de contraintes ni boutons fléchés gênants.'
       ]
     },
     {
