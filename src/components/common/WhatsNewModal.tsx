@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.12.0';
+export const CURRENT_APP_VERSION = '1.12.1';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,16 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 7 • Version 1.12.0',
+      version: 'Opération 7 • Version 1.12.1',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Majeure',
-      badgeColor: 'emerald',
-      title: 'Graphiques en Barres Minerais & Gemmes + Qualité Maximale',
-      icon: <Terminal className="w-5 h-5 text-emerald-400" />,
+      badge: 'Ergonomie',
+      badgeColor: 'cyan',
+      title: 'Filtrage Exclusif des Blueprints dans la Création de Commande',
+      icon: <Terminal className="w-5 h-5 text-sc-cyan" />,
       points: [
-        '📈 Nouveaux Graphiques en Barres : Deux histogrammes interactifs dédiés (Minerais & Métaux en SCU vs Gemmes en unités) combinant barres de qualité maximale et courbes de volume.',
-        '⭐ Affichage Qualité Maximale dans la Synthèse : Chaque carte de matière première affiche désormais instantanément la qualité maximale possédée en plus de la moyenne.',
-        '💎 Unités Gemmes Authentiques : Les quantités de gemmes sont désormais clairement affichées en "unités" (au lieu de SCU).',
-        '⚡ Sélecteur Simplifié : Remplacement de l\'ancien mode cartes par le nouvel accès direct aux "Graphiques".'
+        '🎯 Sélection Ciblée des Plans : Lors de l\'ajout d\'un article en commande, la liste déroulante ne propose désormais QUE les plans débloqués dans votre atelier ("Mes Blueprints") ou fournis par les clients ("Blueprints Clients").',
+        '🏷️ Badges d\'Origine : Identification visuelle immédiate de l\'origine de chaque plan ("Mon Atelier", "Blueprint Client", ou "Atelier & Client").',
+        '📈 Graphiques & Qualité Maximale : Histogrammes de qualité max et courbes de volume pour Minerais (SCU) et Gemmes (unités).'
       ]
     },
     {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../common/Modal';
 import { AutocompleteSelect, AutocompleteOption } from '../common/AutocompleteSelect';
 import { CustomerOrder, OrderItem, ClientMineralDeposit, Blueprint, OrderStatus, ClientProfile } from '../../types';
@@ -57,13 +57,19 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   // Client Supplied Minerals
   const [clientMinerals, setClientMinerals] = useState<ClientMineralDeposit[]>([]);
 
-  // Refresh saved clients whenever modal opens
+  // Unlocked blueprints sets (Personal workshop & Client blueprints)
+  const [unlockedPersonalIds, setUnlockedPersonalIds] = useState<Set<string>>(() => new Set(StorageService.getUnlockedBlueprintIds()));
+  const [unlockedClientIds, setUnlockedClientIds] = useState<Set<string>>(() => new Set(StorageService.getClientBlueprintIds()));
+
+  // Refresh saved clients & unlocked blueprints whenever modal opens
   useEffect(() => {
     if (isOpen) {
       setSavedClients(StorageService.getClients());
       setAllKnownNames(StorageService.getAllKnownClientNames());
       setAllKnownOrgs(StorageService.getAllKnownOrganizations());
       setAllKnownContacts(StorageService.getAllKnownContacts());
+      setUnlockedPersonalIds(new Set(StorageService.getUnlockedBlueprintIds()));
+      setUnlockedClientIds(new Set(StorageService.getClientBlueprintIds()));
 
       if (initialClientName) {
         const found = StorageService.getClients().find(
@@ -80,14 +86,34 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     }
   }, [isOpen, initialClientName]);
 
+  // Filter available blueprints: ONLY personal unlocked blueprints OR client blueprints (or prefilled)
+  const availableBlueprints = useMemo(() => {
+    const filtered = allBlueprints.filter(bp => {
+      const isPersonal = unlockedPersonalIds.has(bp.id);
+      const isClient = unlockedClientIds.has(bp.id);
+      const isPrefilled = prefillBlueprint && prefillBlueprint.id === bp.id;
+      return isPersonal || isClient || isPrefilled;
+    });
+
+    return filtered.length > 0 ? filtered : allBlueprints;
+  }, [allBlueprints, unlockedPersonalIds, unlockedClientIds, prefillBlueprint]);
+
   // Autocomplete options for blueprints
-  const blueprintOptions: AutocompleteOption[] = allBlueprints.map(bp => ({
-    id: bp.id,
-    label: bp.name,
-    subLabel: `${bp.typeLabel} • ${bp.ingredients.map(i => `${i.quantitySCU} SCU ${i.resourceName}`).join(', ')}`,
-    category: bp.category,
-    badge: bp.typeLabel
-  }));
+  const blueprintOptions: AutocompleteOption[] = useMemo(() => {
+    return availableBlueprints.map(bp => {
+      const isPersonal = unlockedPersonalIds.has(bp.id);
+      const isClient = unlockedClientIds.has(bp.id);
+      const sourceTag = isPersonal && isClient ? 'Atelier & Client' : isPersonal ? 'Mon Atelier' : isClient ? 'Blueprint Client' : 'Plan Disponible';
+
+      return {
+        id: bp.id,
+        label: bp.name,
+        subLabel: `${sourceTag} • ${bp.typeLabel} • ${bp.ingredients.map(i => `${i.quantitySCU} SCU ${i.resourceName}`).join(', ')}`,
+        category: bp.category,
+        badge: sourceTag
+      };
+    });
+  }, [availableBlueprints, unlockedPersonalIds, unlockedClientIds]);
 
   // Autocomplete options for minerals
   const mineralOptions: AutocompleteOption[] = STAR_CITIZEN_MINERALS.map(m => ({
@@ -97,7 +123,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     category: m.group
   }));
 
-  // Handle prefill blueprint
+  // Handle prefill blueprint or default selection
   useEffect(() => {
     if (prefillBlueprint) {
       const unitLabor = prefillBlueprint.marketEstimatedAUEC ? Math.round(prefillBlueprint.marketEstimatedAUEC * 0.2) : 2500;
@@ -112,8 +138,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
           requiredIngredients: prefillBlueprint.ingredients
         }
       ]);
-    } else if (orderItems.length === 0 && allBlueprints.length > 0) {
-      const firstBp = allBlueprints[0];
+    } else if (orderItems.length === 0 && availableBlueprints.length > 0) {
+      const firstBp = availableBlueprints[0];
       const unitLabor = firstBp.marketEstimatedAUEC ? Math.round(firstBp.marketEstimatedAUEC * 0.2) : 2500;
       setOrderItems([
         {
@@ -127,7 +153,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         }
       ]);
     }
-  }, [prefillBlueprint, allBlueprints]);
+  }, [prefillBlueprint, availableBlueprints]);
 
   // Find active client profile if exists
   const activeClient = savedClients.find(
@@ -152,8 +178,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   // Add Item to Order
   const handleAddItem = () => {
     audio.playClick();
-    const defaultBp = allBlueprints[0];
-    const unitLabor = defaultBp.marketEstimatedAUEC ? Math.round(defaultBp.marketEstimatedAUEC * 0.2) : 2500;
+    const defaultBp = availableBlueprints[0] || allBlueprints[0];
+    const unitLabor = defaultBp?.marketEstimatedAUEC ? Math.round(defaultBp.marketEstimatedAUEC * 0.2) : 2500;
     setOrderItems([
       ...orderItems,
       {
