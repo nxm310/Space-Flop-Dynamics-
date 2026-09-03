@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.12.2';
+export const CURRENT_APP_VERSION = '1.12.3';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 7 • Version 1.12.2',
+      version: 'Opération 7 • Version 1.12.3',
       date: 'Dernière mise à jour (Actuelle)',
       badge: 'Nouveau',
       badgeColor: 'emerald',
-      title: 'Pop-up de Recherche & Filtrage par Genre des Blueprints en Commande',
+      title: 'Grand Pop-up Détaillé de Sélection des Minerais & Ingrédients',
       icon: <Terminal className="w-5 h-5 text-emerald-400" />,
       points: [
-        '🔍 Pop-up de Sélection Rapide : Cliquez sur "Parcourir" ou sur un article commandé pour ouvrir un catalogue visuel plein écran avec recherche dynamique en direct.',
-        '📂 Filtrage par Genres & Sous-Catégories : Boutons de catégories (Armes FPS, Armures, Armes Vaisseau, Composants, Outils) et puces de sous-genres (LMG, Fusil, SMG, Quantum Drive, Bouclier...).',
-        '⭐ Onglets d\'Origine : Filtrez en un clic entre vos plans d\'atelier et les plans fournis par vos clients.',
-        '🎯 Sélection Instantanée : Un clic sur une carte choisit le blueprint et remplit automatiquement les matières premières nécessaires.'
+        '💎 Grand Pop-up Galactique : Cliquez sur un ingrédient ou minerai fourni pour ouvrir une interface plein écran riche en détails.',
+        '📊 Fiches Détaillées par Ressource : Cours moyen galactique (~aUEC/cSCU), densité (g/cm³), rareté (Exotique, Très Rare, Commun) et méthode d\'extraction (Vaisseau, Gemmes/Sol, Recyclage).',
+        '📂 Filtres par Familles : Boutons de sélection rapide pour Gemmes (unités), Minerais (SCU), Métaux et Récupération/Composites.',
+        '🛠️ Intégré Partout : Disponible dans la création de commande client et dans la création de blueprints personnalisés.'
       ]
     },
     {

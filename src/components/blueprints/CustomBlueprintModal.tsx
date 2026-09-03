@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Modal } from '../common/Modal';
-import { AutocompleteSelect, AutocompleteOption } from '../common/AutocompleteSelect';
+import { SelectMineralModal } from '../common/SelectMineralModal';
 import { Blueprint, BlueprintCategory, BlueprintIngredient } from '../../types';
 import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
 import { BLUEPRINT_CATEGORIES } from '../../data/blueprintsData';
-import { Scroll, Plus, Trash2, Sparkles } from 'lucide-react';
+import { Scroll, Plus, Trash2, Sparkles, Search } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
 interface CustomBlueprintModalProps {
@@ -26,6 +26,7 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
   const [craftTimeSeconds, setCraftTimeSeconds] = useState<number>(600);
   const [marketEstimatedAUEC, setMarketEstimatedAUEC] = useState<number>(15000);
   const [description, setDescription] = useState('');
+  const [selectedIngredientModalIndex, setSelectedIngredientModalIndex] = useState<number | null>(null);
 
   // Ingredients list
   const [ingredients, setIngredients] = useState<BlueprintIngredient[]>([
@@ -33,19 +34,14 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
     { resourceId: 'titanium', resourceName: 'Titanium', quantitySCU: 2.0 }
   ]);
 
-  const mineralOptions: AutocompleteOption[] = STAR_CITIZEN_MINERALS.map(m => ({
-    id: m.id,
-    label: m.displayName,
-    subLabel: `${m.group} • ~${m.basePriceAUEC} aUEC/cSCU`,
-    category: m.group
-  }));
-
   const handleAddIngredient = () => {
     audio.playClick();
+    const newIdx = ingredients.length;
     setIngredients([
       ...ingredients,
       { resourceId: 'copper', resourceName: 'Copper', quantitySCU: 1.0 }
     ]);
+    setSelectedIngredientModalIndex(newIdx);
   };
 
   const handleRemoveIngredient = (index: number) => {
@@ -203,15 +199,36 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
 
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
             {ingredients.map((ing, idx) => (
-              <div key={idx} className="flex items-center gap-2 p-2 bg-sc-panel rounded-lg border border-slate-800">
-                <div className="flex-1">
-                  <AutocompleteSelect
-                    options={mineralOptions}
-                    value={ing.resourceId}
-                    onChange={(val) => handleIngredientChange(idx, 'resourceId', val)}
-                    placeholder="Sélectionner minerai..."
-                  />
+              <div key={idx} className="flex items-center gap-2 p-2 bg-sc-panel rounded-xl border border-slate-800 hover:border-sc-cyan/40 transition-colors">
+                <div className="flex-1 flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audio.playClick();
+                      setSelectedIngredientModalIndex(idx);
+                    }}
+                    className="flex-1 px-3 py-2 bg-[#090e18] hover:bg-slate-800 border border-sc-border hover:border-sc-cyan rounded-lg text-xs font-mono text-left flex items-center justify-between gap-2 group transition-all"
+                    title="Cliquer pour ouvrir le grand catalogue complet des minerais et ingrédients"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-2 h-2 rounded-full bg-sc-cyan shadow-neon-cyan shrink-0" />
+                      <span className="font-bold text-slate-100 group-hover:text-sc-cyan transition-colors truncate">
+                        {STAR_CITIZEN_MINERALS.find(m => m.id === ing.resourceId)?.displayName || ing.resourceName || 'Choisir un ingrédient...'}
+                      </span>
+                      {STAR_CITIZEN_MINERALS.find(m => m.id === ing.resourceId)?.group && (
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 shrink-0 hidden sm:inline">
+                          {STAR_CITIZEN_MINERALS.find(m => m.id === ing.resourceId)?.group === 'Gem' ? '💎 Gemme' : STAR_CITIZEN_MINERALS.find(m => m.id === ing.resourceId)?.group}
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="text-[11px] text-sc-cyan font-bold shrink-0 flex items-center gap-1 group-hover:underline bg-sc-cyan/10 px-2 py-0.5 rounded border border-sc-cyan/30">
+                      <span>Parcourir</span>
+                      <Search className="w-3 h-3" />
+                    </span>
+                  </button>
                 </div>
+
                 <div className="w-32">
                   <div className="relative">
                     <input
@@ -221,9 +238,11 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
                       required
                       value={ing.quantitySCU}
                       onChange={(e) => handleIngredientChange(idx, 'quantitySCU', parseFloat(e.target.value) || 0.1)}
-                      className="w-full px-2.5 py-2 bg-sc-card border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:outline-none focus:border-sc-cyan"
+                      className="w-full pl-2.5 pr-12 py-2 bg-sc-card border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:outline-none focus:border-sc-cyan"
                     />
-                    <span className="absolute right-2 top-2 text-[10px] font-mono text-slate-500">SCU</span>
+                    <span className="absolute right-2.5 top-2.5 text-[10px] font-mono text-slate-500 font-bold pointer-events-none">
+                      {STAR_CITIZEN_MINERALS.find(m => m.id === ing.resourceId)?.group === 'Gem' ? 'unités' : 'SCU'}
+                    </span>
                   </div>
                 </div>
                 {ingredients.length > 1 && (
@@ -231,6 +250,7 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
                     type="button"
                     onClick={() => handleRemoveIngredient(idx)}
                     className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 rounded transition-colors"
+                    title="Retirer cet ingrédient"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -289,6 +309,21 @@ export const CustomBlueprintModal: React.FC<CustomBlueprintModalProps> = ({
           </button>
         </div>
       </form>
+
+      {/* Select Mineral / Ingredient Pop-up Modal */}
+      <SelectMineralModal
+        isOpen={selectedIngredientModalIndex !== null}
+        onClose={() => setSelectedIngredientModalIndex(null)}
+        onSelectMineral={(selectedMin) => {
+          if (selectedIngredientModalIndex !== null) {
+            handleIngredientChange(selectedIngredientModalIndex, 'resourceId', selectedMin.id);
+            setSelectedIngredientModalIndex(null);
+          }
+        }}
+        currentSelectedId={selectedIngredientModalIndex !== null ? ingredients[selectedIngredientModalIndex]?.resourceId : undefined}
+        title="Sélectionner l'Ingrédient / Minerai Requis"
+        subtitle="Choisissez la matière première à inclure dans votre recette de fabrication"
+      />
     </Modal>
   );
 };

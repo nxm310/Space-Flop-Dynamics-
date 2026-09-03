@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../common/Modal';
-import { AutocompleteSelect, AutocompleteOption } from '../common/AutocompleteSelect';
+import { SelectMineralModal } from '../common/SelectMineralModal';
 import { SelectBlueprintModal } from './SelectBlueprintModal';
 import { CustomerOrder, OrderItem, ClientMineralDeposit, Blueprint, OrderStatus, ClientProfile } from '../../types';
 import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
@@ -59,6 +59,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
   // Client Supplied Minerals
   const [clientMinerals, setClientMinerals] = useState<ClientMineralDeposit[]>([]);
+  const [mineralModalItemIndex, setMineralModalItemIndex] = useState<number | null>(null);
 
   // Unlocked blueprints sets (Personal workshop & Client blueprints)
   const [unlockedPersonalIds, setUnlockedPersonalIds] = useState<Set<string>>(() => new Set(StorageService.getUnlockedBlueprintIds()));
@@ -100,14 +101,6 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
     return filtered.length > 0 ? filtered : allBlueprints;
   }, [allBlueprints, unlockedPersonalIds, unlockedClientIds, prefillBlueprint]);
-
-  // Autocomplete options for minerals
-  const mineralOptions: AutocompleteOption[] = STAR_CITIZEN_MINERALS.map(m => ({
-    id: m.id,
-    label: m.displayName,
-    subLabel: `${m.group} • ~${m.basePriceAUEC} aUEC/cSCU`,
-    category: m.group
-  }));
 
   // Handle prefill blueprint or default selection
   useEffect(() => {
@@ -227,6 +220,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   const handleAddClientMineral = () => {
     audio.playClick();
     const defaultMin = STAR_CITIZEN_MINERALS[0];
+    const newIdx = clientMinerals.length;
     setClientMinerals([
       ...clientMinerals,
       {
@@ -235,6 +229,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         quantitySCU: 1
       }
     ]);
+    setMineralModalItemIndex(newIdx);
   };
 
   const handleRemoveClientMineral = (index: number) => {
@@ -687,15 +682,36 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
           {clientMinerals.length > 0 ? (
             <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
               {clientMinerals.map((deposit, idx) => (
-                <div key={idx} className="flex items-center gap-2 bg-[#090e18] p-2 rounded-lg border border-slate-800">
-                  <div className="flex-1">
-                    <AutocompleteSelect
-                      options={mineralOptions}
-                      value={deposit.mineralId}
-                      onChange={(val) => handleClientMineralChange(idx, val)}
-                      placeholder="Sélectionner le minerai fourni..."
-                    />
+                <div key={idx} className="flex items-center gap-2 bg-[#090e18] p-2 rounded-xl border border-slate-800 hover:border-amber-500/40 transition-colors">
+                  <div className="flex-1 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        audio.playClick();
+                        setMineralModalItemIndex(idx);
+                      }}
+                      className="flex-1 px-3 py-2 bg-sc-card hover:bg-slate-800 border border-sc-border hover:border-amber-400 rounded-lg text-xs font-mono text-left flex items-center justify-between gap-2 group transition-all"
+                      title="Cliquer pour ouvrir le grand catalogue complet des minerais et ingrédients"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-2 h-2 rounded-full bg-amber-400 shadow-neon-amber shrink-0" />
+                        <span className="font-bold text-slate-100 group-hover:text-amber-300 transition-colors truncate">
+                          {STAR_CITIZEN_MINERALS.find(m => m.id === deposit.mineralId)?.displayName || deposit.mineralName || 'Choisir un minerai...'}
+                        </span>
+                        {STAR_CITIZEN_MINERALS.find(m => m.id === deposit.mineralId)?.group === 'Gem' && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800 shrink-0">
+                            Gemme
+                          </span>
+                        )}
+                      </div>
+
+                      <span className="text-[11px] text-amber-300 font-bold shrink-0 flex items-center gap-1 group-hover:underline bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                        <span>Parcourir</span>
+                        <Search className="w-3 h-3" />
+                      </span>
+                    </button>
                   </div>
+
                   <div className="w-32 relative">
                     <input
                       type="number"
@@ -703,16 +719,18 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                       min="0.001"
                       value={deposit.quantitySCU}
                       onChange={(e) => handleClientMineralQtyChange(idx, parseFloat(e.target.value) || 0)}
-                      className="w-full pl-2.5 pr-12 py-2 bg-sc-card border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:border-sc-cyan [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-full pl-2.5 pr-14 py-2 bg-sc-card border border-sc-border rounded-lg text-xs font-mono text-slate-100 focus:border-sc-cyan [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                     <span className="absolute right-2.5 top-2.5 text-[10px] font-mono text-slate-400 font-bold pointer-events-none">
-                      SCU
+                      {STAR_CITIZEN_MINERALS.find(m => m.id === deposit.mineralId)?.group === 'Gem' ? 'unités' : 'SCU'}
                     </span>
                   </div>
+
                   <button
                     type="button"
                     onClick={() => handleRemoveClientMineral(idx)}
-                    className="p-1.5 text-slate-500 hover:text-rose-400 rounded"
+                    className="p-1.5 text-slate-500 hover:text-rose-400 rounded transition-colors"
+                    title="Supprimer cette ressource"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -848,6 +866,21 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         unlockedPersonalIds={unlockedPersonalIds}
         unlockedClientIds={unlockedClientIds}
         currentSelectedId={blueprintModalItemIndex !== null ? orderItems[blueprintModalItemIndex]?.blueprintId : undefined}
+      />
+
+      {/* Mineral / Ingredient Selection Pop-up Modal */}
+      <SelectMineralModal
+        isOpen={mineralModalItemIndex !== null}
+        onClose={() => setMineralModalItemIndex(null)}
+        onSelectMineral={(selectedMin) => {
+          if (mineralModalItemIndex !== null) {
+            handleClientMineralChange(mineralModalItemIndex, selectedMin.id);
+            setMineralModalItemIndex(null);
+          }
+        }}
+        currentSelectedId={mineralModalItemIndex !== null ? clientMinerals[mineralModalItemIndex]?.mineralId : undefined}
+        title="Sélectionner le Minerai / Ingrédient Fourni par le Client"
+        subtitle="Explorez les minerais, gemmes et métaux avec leurs densités et cours galactiques"
       />
     </Modal>
   );
