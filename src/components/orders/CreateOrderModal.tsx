@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../common/Modal';
 import { AutocompleteSelect, AutocompleteOption } from '../common/AutocompleteSelect';
+import { SelectBlueprintModal } from './SelectBlueprintModal';
 import { CustomerOrder, OrderItem, ClientMineralDeposit, Blueprint, OrderStatus, ClientProfile } from '../../types';
 import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
 import { StorageService } from '../../services/storageService';
@@ -15,7 +16,8 @@ import {
   Users,
   Building,
   Mail,
-  CheckCircle2
+  CheckCircle2,
+  Search
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -53,6 +55,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
   // Selected Order Items
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [blueprintModalItemIndex, setBlueprintModalItemIndex] = useState<number | null>(null);
 
   // Client Supplied Minerals
   const [clientMinerals, setClientMinerals] = useState<ClientMineralDeposit[]>([]);
@@ -97,23 +100,6 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
     return filtered.length > 0 ? filtered : allBlueprints;
   }, [allBlueprints, unlockedPersonalIds, unlockedClientIds, prefillBlueprint]);
-
-  // Autocomplete options for blueprints
-  const blueprintOptions: AutocompleteOption[] = useMemo(() => {
-    return availableBlueprints.map(bp => {
-      const isPersonal = unlockedPersonalIds.has(bp.id);
-      const isClient = unlockedClientIds.has(bp.id);
-      const sourceTag = isPersonal && isClient ? 'Atelier & Client' : isPersonal ? 'Mon Atelier' : isClient ? 'Blueprint Client' : 'Plan Disponible';
-
-      return {
-        id: bp.id,
-        label: bp.name,
-        subLabel: `${sourceTag} • ${bp.typeLabel} • ${bp.ingredients.map(i => `${i.quantitySCU} SCU ${i.resourceName}`).join(', ')}`,
-        category: bp.category,
-        badge: sourceTag
-      };
-    });
-  }, [availableBlueprints, unlockedPersonalIds, unlockedClientIds]);
 
   // Autocomplete options for minerals
   const mineralOptions: AutocompleteOption[] = STAR_CITIZEN_MINERALS.map(m => ({
@@ -180,6 +166,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     audio.playClick();
     const defaultBp = availableBlueprints[0] || allBlueprints[0];
     const unitLabor = defaultBp?.marketEstimatedAUEC ? Math.round(defaultBp.marketEstimatedAUEC * 0.2) : 2500;
+    const newIdx = orderItems.length;
     setOrderItems([
       ...orderItems,
       {
@@ -192,6 +179,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         requiredIngredients: defaultBp.ingredients
       }
     ]);
+    setBlueprintModalItemIndex(newIdx);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -578,13 +566,33 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             {orderItems.map((item, idx) => (
               <div key={idx} className="p-3 bg-sc-panel rounded-xl border border-sc-border space-y-2">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <div className="flex-1">
-                    <AutocompleteSelect
-                      options={blueprintOptions}
-                      value={item.blueprintId}
-                      onChange={(val) => handleItemChange(idx, val)}
-                      placeholder="Rechercher un blueprint / item..."
-                    />
+                  <div className="flex-1 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        audio.playClick();
+                        setBlueprintModalItemIndex(idx);
+                      }}
+                      className="flex-1 px-3 py-2 bg-[#090e18] hover:bg-slate-800/90 border border-sc-border hover:border-sc-cyan rounded-xl text-xs font-mono text-left flex items-center justify-between gap-2 group transition-all"
+                      title="Cliquer pour ouvrir la recherche et parcourir les blueprints par genre"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-2 h-2 rounded-full bg-sc-cyan shadow-neon-cyan shrink-0" />
+                        <span className="font-bold text-slate-100 group-hover:text-sc-cyan transition-colors truncate">
+                          {item.blueprintName || 'Choisir un blueprint...'}
+                        </span>
+                        {item.category && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 shrink-0 hidden sm:inline">
+                            {item.category === 'armes_fps' ? 'Arme FPS' : item.category === 'armures' ? 'Armure' : item.category === 'vaisseau' ? 'Vaisseau' : item.category === 'outils' ? 'Outil' : 'Composant'}
+                          </span>
+                        )}
+                      </div>
+
+                      <span className="text-[11px] text-sc-cyan font-bold shrink-0 flex items-center gap-1 group-hover:underline bg-sc-cyan/10 px-2 py-0.5 rounded border border-sc-cyan/30">
+                        <span>Parcourir</span>
+                        <Search className="w-3 h-3" />
+                      </span>
+                    </button>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
@@ -825,6 +833,22 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
           </button>
         </div>
       </form>
+
+      {/* Blueprint Selection Pop-up Modal with Search and Genre Filters */}
+      <SelectBlueprintModal
+        isOpen={blueprintModalItemIndex !== null}
+        onClose={() => setBlueprintModalItemIndex(null)}
+        onSelectBlueprint={(selectedBp) => {
+          if (blueprintModalItemIndex !== null) {
+            handleItemChange(blueprintModalItemIndex, selectedBp.id);
+            setBlueprintModalItemIndex(null);
+          }
+        }}
+        availableBlueprints={availableBlueprints}
+        unlockedPersonalIds={unlockedPersonalIds}
+        unlockedClientIds={unlockedClientIds}
+        currentSelectedId={blueprintModalItemIndex !== null ? orderItems[blueprintModalItemIndex]?.blueprintId : undefined}
+      />
     </Modal>
   );
 };

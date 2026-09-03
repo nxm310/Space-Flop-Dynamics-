@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.12.1';
+export const CURRENT_APP_VERSION = '1.12.2';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,16 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 7 • Version 1.12.1',
+      version: 'Opération 7 • Version 1.12.2',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Ergonomie',
-      badgeColor: 'cyan',
-      title: 'Filtrage Exclusif des Blueprints dans la Création de Commande',
-      icon: <Terminal className="w-5 h-5 text-sc-cyan" />,
+      badge: 'Nouveau',
+      badgeColor: 'emerald',
+      title: 'Pop-up de Recherche & Filtrage par Genre des Blueprints en Commande',
+      icon: <Terminal className="w-5 h-5 text-emerald-400" />,
       points: [
-        '🎯 Sélection Ciblée des Plans : Lors de l\'ajout d\'un article en commande, la liste déroulante ne propose désormais QUE les plans débloqués dans votre atelier ("Mes Blueprints") ou fournis par les clients ("Blueprints Clients").',
-        '🏷️ Badges d\'Origine : Identification visuelle immédiate de l\'origine de chaque plan ("Mon Atelier", "Blueprint Client", ou "Atelier & Client").',
-        '📈 Graphiques & Qualité Maximale : Histogrammes de qualité max et courbes de volume pour Minerais (SCU) et Gemmes (unités).'
+        '🔍 Pop-up de Sélection Rapide : Cliquez sur "Parcourir" ou sur un article commandé pour ouvrir un catalogue visuel plein écran avec recherche dynamique en direct.',
+        '📂 Filtrage par Genres & Sous-Catégories : Boutons de catégories (Armes FPS, Armures, Armes Vaisseau, Composants, Outils) et puces de sous-genres (LMG, Fusil, SMG, Quantum Drive, Bouclier...).',
+        '⭐ Onglets d\'Origine : Filtrez en un clic entre vos plans d\'atelier et les plans fournis par vos clients.',
+        '🎯 Sélection Instantanée : Un clic sur une carte choisit le blueprint et remplit automatiquement les matières premières nécessaires.'
       ]
     },
     {
