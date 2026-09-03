@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.11.1';
+export const CURRENT_APP_VERSION = '1.11.2';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 6 • Version 1.11.1',
+      version: 'Opération 6 • Version 1.11.2',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Épuration',
-      badgeColor: 'cyan',
-      title: 'Épuration des Liens & Datamining dans l\'Atelier',
-      icon: <Terminal className="w-5 h-5 text-sc-cyan" />,
+      badge: 'Correctif',
+      badgeColor: 'emerald',
+      title: 'Correction & Précision Maximale du Scanner Game.log',
+      icon: <Terminal className="w-5 h-5 text-emerald-400" />,
       points: [
-        '🔗 Nettoyage des Liens Externes : Retrait des références scunpacked-data et SPViewer dans la fenêtre "Sources & Datamining".',
-        '👥 Espace "Blueprints Clients" : Gestion dédiée des recettes fournies par vos clients avec listes déroulantes et cases à cocher.',
-        '🏛️ Menus Déroulants Factions & Contacts : Mémorisation persistante et sélection instantanée des organisations et contacts Discord/Spectrum.',
-        '🚀 Scanner Game.log Asynchrone : Analyse ultra-rapide et auto-activation de vos recettes en temps réel.'
+        '🎯 Élimination Totale des Faux Positifs : Les lignes de combat, dégâts, réseau et entités ne sont plus confondues avec des déblocages de recettes.',
+        '🔍 Détection Exhaustive de vos Blueprints : Intégration d\'un dictionnaire d\'alias complet pour toutes les armes (FS-9, Demeco, P8-SC, Karna, AD4B/5B, etc.), armures et composants.',
+        '✨ Création Automatique des Recettes Personnalisées : Tout blueprint détecté dans vos logs non présent dans le catalogue de base est automatiquement importé et catégorisé.',
+        '👥 Espace "Blueprints Clients" : Onglet dédié avec sélecteur déroulant et cases à cocher synchronisées.'
       ]
     },
     {

@@ -166,35 +166,33 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
     }
   };
 
-  // Global Auto-Activate Everything (From structured matches + raw lines sweep)
+  // Global Auto-Activate Everything (From structured matches + unindexed detected recipes)
   const handleAutoActivateEverything = () => {
     if (!logAnalysisResult) return;
     audio.playSuccess();
 
     const res = GameLogParserService.autoActivateAllFoundBlueprints(logAnalysisResult);
 
-    // Re-run parsing against newly updated storage
+    // Update state to show all items as unlocked
     const updatedFound = logAnalysisResult.blueprintsFound.map(b => {
-      if (b.matchedBlueprint) {
-        return {
-          ...b,
-          isAlreadyUnlocked: true,
-          status: 'matched_already_unlocked' as const
-        };
-      }
-      return b;
+      return {
+        ...b,
+        isAlreadyUnlocked: true,
+        status: 'matched_already_unlocked' as const
+      };
     });
 
     setLogAnalysisResult({
       ...logAnalysisResult,
       blueprintsFound: updatedFound,
       newMatchesCount: 0,
-      alreadyUnlockedCount: logAnalysisResult.matchedCount
+      alreadyUnlockedCount: logAnalysisResult.blueprintsFound.length,
+      unmatchedCustomCount: 0
     });
 
     const namesPreview = res.activatedBlueprints.map(b => b.name).join(', ');
     setSyncSuccessMessage(
-      `🎉 ${res.activatedCount > 0 ? `${res.activatedCount} nouveau(x) blueprint(s) ont été activés` : 'Tous les blueprints reconnus sont déjà actifs'} dans votre atelier ! (Total actuel : ${res.totalWorkshopCount} blueprints). ${res.activatedBlueprints.length > 0 ? `\nPlans concernés : ${namesPreview}` : ''}`
+      `🎉 ${res.activatedCount > 0 ? `${res.activatedCount} nouveau(x) blueprint(s) ont été activés` : 'Tous les blueprints détectés sont déjà actifs'} dans votre atelier ! (Total atelier : ${res.totalWorkshopCount} blueprints). ${res.activatedBlueprints.length > 0 ? `\nPlans concernés : ${namesPreview}` : ''}`
     );
   };
 
@@ -207,8 +205,26 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
       StorageService.unlockBlueprintIds([matched.id]);
       setSyncSuccessMessage(`✓ Le blueprint "${matched.name}" a été activé dans votre atelier !`);
     } else {
-      audio.playClick();
-      alert(`Aucune correspondance exacte trouvée pour "${rawText}". Vous pouvez créer ce blueprint manuellement via le bouton "Nouveau Blueprint" dans l'onglet Blueprints.`);
+      const cleanName = GameLogParserService.cleanBlueprintName(rawText);
+      const category = GameLogParserService.guessCategory(cleanName);
+      const customBp = {
+        id: `custom_bp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        key: `CUSTOM_LOG_${cleanName.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`,
+        name: cleanName,
+        category,
+        typeLabel: category === 'armes_fps' ? 'Arme FPS' : category === 'armures' ? 'Armure' : category === 'vaisseau' ? 'Composant Vaisseau' : category === 'outils' ? 'Outil' : 'Composant',
+        craftTimeSeconds: 1800,
+        description: `Blueprint extrait du journal de jeu.`,
+        ingredients: [
+          { resourceId: 'titanium', resourceName: 'Titanium', quantitySCU: 1.0 },
+          { resourceId: 'copper', resourceName: 'Copper', quantitySCU: 1.0 }
+        ]
+      };
+      const existingCustom = StorageService.getCustomBlueprints();
+      StorageService.saveCustomBlueprints([...existingCustom, customBp]);
+      StorageService.unlockBlueprintIds([customBp.id]);
+      audio.playSuccess();
+      setSyncSuccessMessage(`✓ Le blueprint "${cleanName}" a été créé et activé dans votre atelier !`);
     }
   };
 
