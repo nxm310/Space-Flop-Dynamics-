@@ -2,6 +2,70 @@
 @tailwind components;
 @tailwind utilities;
 
+:root,
+[data-theme="cyan"] {
+  --sc-cyan: #00d2ff;
+  --sc-cyan-glow: rgba(0, 210, 255, 0.35);
+  --sc-border: #1f2f4e;
+  --sc-panel: #101726;
+  --sc-card: #162035;
+  --sc-neon-shadow: 0 0 15px rgba(0, 210, 255, 0.35);
+  --sc-grid-color: rgba(0, 210, 255, 0.03);
+}
+
+[data-theme="gold"],
+[data-theme="amber"] {
+  --sc-cyan: #f5a623;
+  --sc-cyan-glow: rgba(245, 166, 35, 0.35);
+  --sc-border: #3b2810;
+  --sc-panel: #1a140b;
+  --sc-card: #241a10;
+  --sc-neon-shadow: 0 0 15px rgba(245, 166, 35, 0.35);
+  --sc-grid-color: rgba(245, 166, 35, 0.03);
+}
+
+[data-theme="green"],
+[data-theme="emerald"] {
+  --sc-cyan: #00e676;
+  --sc-cyan-glow: rgba(0, 230, 118, 0.35);
+  --sc-border: #133622;
+  --sc-panel: #0b1a11;
+  --sc-card: #10261a;
+  --sc-neon-shadow: 0 0 15px rgba(0, 230, 118, 0.35);
+  --sc-grid-color: rgba(0, 230, 118, 0.03);
+}
+
+[data-theme="red"],
+[data-theme="rose"] {
+  --sc-cyan: #ff3b5c;
+  --sc-cyan-glow: rgba(255, 59, 92, 0.35);
+  --sc-border: #3d141e;
+  --sc-panel: #1c0a0f;
+  --sc-card: #280e15;
+  --sc-neon-shadow: 0 0 15px rgba(255, 59, 92, 0.35);
+  --sc-grid-color: rgba(255, 59, 92, 0.03);
+}
+
+[data-theme="purple"] {
+  --sc-cyan: #b388ff;
+  --sc-cyan-glow: rgba(179, 136, 255, 0.35);
+  --sc-border: #311b4d;
+  --sc-panel: #160c24;
+  --sc-card: #201335;
+  --sc-neon-shadow: 0 0 15px rgba(179, 136, 255, 0.35);
+  --sc-grid-color: rgba(179, 136, 255, 0.03);
+}
+
+[data-theme="blue"] {
+  --sc-cyan: #38bdf8;
+  --sc-cyan-glow: rgba(56, 189, 248, 0.35);
+  --sc-border: #1e293b;
+  --sc-panel: #0f172a;
+  --sc-card: #1e293b;
+  --sc-neon-shadow: 0 0 15px rgba(56, 189, 248, 0.35);
+  --sc-grid-color: rgba(56, 189, 248, 0.03);
+}
+
 @layer base {
   body {
     @apply bg-[#080b11] text-slate-100 antialiased selection:bg-cyan-500/30 selection:text-cyan-300;
@@ -19,12 +83,14 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(0, 210, 255, 0.25);
+  background: var(--sc-cyan, #00d2ff);
+  opacity: 0.3;
   border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 210, 255, 0.5);
+  background: var(--sc-cyan, #00d2ff);
+  opacity: 0.6;
 }
 
 /* Futuristic Scanline Effect */
@@ -39,7 +105,7 @@
 /* Subtle Sci-Fi Grid Background */
 .sc-grid-bg {
   background-image: 
-    linear-gradient(to right, rgba(0, 210, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 210, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(to right, var(--sc-grid-color, rgba(0, 210, 255, 0.03)) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--sc-grid-color, rgba(0, 210, 255, 0.03)) 1px, transparent 1px);
   background-size: 40px 40px;
 }

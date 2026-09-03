@@ -31,6 +31,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleAccentChange = (accent: AppSettings['themeAccent']) => {
     audio.playSelect();
+    document.documentElement.setAttribute('data-theme', accent);
     onUpdateSettings({ ...settings, themeAccent: accent });
   };
 
@@ -81,13 +82,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <h4 className="text-sm font-bold text-slate-100 font-sans">Couleur d'Accent HUD</h4>
             </div>
 
-            <div className="grid grid-cols-5 gap-2 pt-1">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-1">
               {[
-                { id: 'cyan', label: 'Drake Cyan', color: 'bg-cyan-400' },
-                { id: 'gold', label: 'Anvil Gold', color: 'bg-amber-400' },
-                { id: 'green', label: 'Crusader Green', color: 'bg-emerald-400' },
-                { id: 'red', label: 'Aegis Red', color: 'bg-rose-500' },
-                { id: 'purple', label: 'Banu Purple', color: 'bg-purple-400' }
+                { id: 'cyan', label: 'Drake Cyan', color: 'bg-[#00d2ff]', hex: '#00d2ff' },
+                { id: 'gold', label: 'Anvil Gold', color: 'bg-[#f5a623]', hex: '#f5a623' },
+                { id: 'green', label: 'Crusader Emerald', color: 'bg-[#00e676]', hex: '#00e676' },
+                { id: 'red', label: 'Aegis Red', color: 'bg-[#ff3b5c]', hex: '#ff3b5c' },
+                { id: 'purple', label: 'Banu Purple', color: 'bg-[#b388ff]', hex: '#b388ff' },
+                { id: 'blue', label: 'Cobalt Blue', color: 'bg-[#38bdf8]', hex: '#38bdf8' }
               ].map(theme => (
                 <button
                   key={theme.id}
@@ -96,10 +98,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   className={`p-2 rounded-lg border text-center transition-all flex flex-col items-center gap-1.5 ${
                     settings.themeAccent === theme.id
                       ? 'border-sc-cyan bg-sc-panel shadow-neon-cyan ring-1 ring-sc-cyan'
-                      : 'border-slate-800 bg-sc-panel/50 hover:bg-sc-panel'
+                      : 'border-slate-800 bg-sc-panel/50 hover:bg-sc-panel hover:border-slate-700'
                   }`}
+                  title={`Appliquer le thème ${theme.label}`}
                 >
-                  <div className={`w-5 h-5 rounded-full ${theme.color} shadow-sm`} />
+                  <div
+                    className="w-5 h-5 rounded-full shadow-md transition-transform hover:scale-110"
+                    style={{ backgroundColor: theme.hex }}
+                  />
                   <span className="text-[10px] font-mono text-slate-300 truncate w-full text-center">
                     {theme.label.split(' ')[0]}
                   </span>

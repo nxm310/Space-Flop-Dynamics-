@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.15.0';
+export const CURRENT_APP_VERSION = '1.15.1';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,16 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 10 • Version 1.15.0',
+      version: 'Opération 11 • Version 1.15.1',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Majeure',
+      badge: 'Nouveau',
       badgeColor: 'emerald',
-      title: 'Intégration Complète du Catalogue Officiel Star Citizen (1 606 Blueprints)',
+      title: 'En-tête Épuré & Thèmes de Couleurs HUD 100% Fonctionnels',
       icon: <Terminal className="w-5 h-5 text-emerald-400" />,
       points: [
-        '🚀 1 606 Blueprints Officiels Intégrés : L\'intégralité des plans de fabrication de Star Citizen 4.10-LIVE est désormais présente dans le catalogue global (armes de vaisseau, canons laser, armes FPS, armures, composants, medpens, cryptokeys).',
-        '💎 200 Minerais & Commodités en Arrière-Plan : L\'ensemble des matières premières, métaux, gemmes et gaz officiels sont connectés à tous les modules avec leurs densités réelles.',
-        '📄 Pagination & Performance Optimisée : Navigation fluide dans les 1 600+ plans grâce à la pagination dynamique (48, 96, 192 ou tous par page).',
-        '⚡ Synchronisation & Recherche Instantanée : Filtrez et trouvez immédiatement n\'importe quel plan et ses ingrédients en SCU ou en unités.'
+        '🎮 Version du Jeu Ciblée en En-tête : Remplacement des compteurs superflus de stock/valeur dans l\'en-tête par un badge dédié affichant la version cible du jeu (4.10 LIVE).',
+        '🎨 Thèmes HUD Dynamiques & Opérationnels : Le sélecteur de couleurs d\'accent dans les Paramètres applique désormais instantanément et globalement le thème choisi (Drake Cyan, Anvil Gold, Crusader Emerald, Aegis Red, Banu Purple, Cobalt Blue).',
+        '💾 Persistance Complète : Le thème de couleur sélectionné est mémorisé et conservé automatiquement entre vos sessions.'
       ]
     },
     {

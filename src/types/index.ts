@@ -174,7 +174,7 @@ export interface ClientProfile {
 
 // App Theme & Settings
 export interface AppSettings {
-  themeAccent: 'cyan' | 'gold' | 'green' | 'red' | 'purple';
+  themeAccent: 'cyan' | 'gold' | 'green' | 'red' | 'purple' | 'blue';
   soundEnabled: boolean;
   language: 'fr' | 'en';
   autoSave: boolean;

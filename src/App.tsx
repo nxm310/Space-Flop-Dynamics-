@@ -12,7 +12,6 @@ import {
 } from './types';
 import { StorageService } from './services/storageService';
 import { STAR_CITIZEN_BLUEPRINTS } from './data/blueprintsData';
-import { STAR_CITIZEN_MINERALS } from './data/mineralsData';
 import { ToastContainer, ToastMessage } from './components/common/Toast';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { WhatsNewModal, CURRENT_APP_VERSION, STORAGE_KEY_LAST_SEEN_VERSION } from './components/common/WhatsNewModal';
@@ -39,8 +38,7 @@ import {
   Volume2,
   VolumeX,
   Plus,
-  Sparkles,
-  Coins
+  Sparkles
 } from 'lucide-react';
 
 export function App() {
@@ -71,6 +69,11 @@ export function App() {
   useEffect(() => {
     audio.setEnabled(settings.soundEnabled);
   }, [settings.soundEnabled]);
+
+  // Apply HUD Accent Theme to root document element
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', settings.themeAccent || 'cyan');
+  }, [settings.themeAccent]);
 
   // Toast Helper
   const addToast = useCallback((type: ToastMessage['type'], title: string, message?: string) => {
@@ -444,12 +447,6 @@ export function App() {
     { id: 'importExport', label: 'Import / Export', icon: <FileSpreadsheet className="w-4 h-4" /> }
   ];
 
-  const totalRefinedHeaderSCU = refinedStock.reduce((a, s) => a + s.quantitySCU, 0);
-  const totalStockValueAUEC = refinedStock.reduce((acc, s) => {
-    const min = STAR_CITIZEN_MINERALS.find(m => m.id === s.mineralId || m.name.toLowerCase() === s.mineralName.toLowerCase());
-    return acc + Math.round(s.quantitySCU * 100 * (min?.basePriceAUEC || 15));
-  }, 0);
-
   return (
     <div className="min-h-screen bg-[#070a10] text-slate-100 sc-grid-bg flex flex-col font-sans">
       {/* 2-TIER SLEEK STAR CITIZEN HUD HEADER */}
@@ -491,20 +488,12 @@ export function App() {
                 </div>
               </div>
 
-              {/* CENTER: Telemetry Status Badges (Hidden on small screens) */}
+              {/* CENTER: Target Game Version Badge */}
               <div className="hidden md:flex items-center gap-2">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sc-card/80 border border-slate-800 text-[11px] font-mono shadow-inner" title="Minerais raffinés disponibles">
-                  <Boxes className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-slate-400">Stock:</span>
-                  <strong className="text-emerald-300">{totalRefinedHeaderSCU.toFixed(1)}</strong>
-                  <span className="text-[9px] text-slate-500">SCU</span>
-                </div>
-
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sc-card/80 border border-slate-800 text-[11px] font-mono shadow-inner" title="Valeur estimée du stock total">
-                  <Coins className="w-3.5 h-3.5 text-sc-cyan" />
-                  <span className="text-slate-400">Valeur:</span>
-                  <strong className="text-cyan-300">~{totalStockValueAUEC.toLocaleString('fr-FR')}</strong>
-                  <span className="text-[9px] text-slate-500">aUEC</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-sc-card/90 border border-sc-cyan/40 text-xs font-mono shadow-inner shadow-black/60 group hover:border-sc-cyan transition-colors" title="Version du jeu Star Citizen ciblée">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-neon-green animate-pulse"></span>
+                  <span className="text-slate-400 uppercase text-[11px] tracking-wider">Version du jeu ciblée :</span>
+                  <strong className="text-sc-cyan font-bold tracking-wide">{settings.gameVersion || '4.10 LIVE'}</strong>
                 </div>
 
                 {orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length > 0 && (
