@@ -14,6 +14,8 @@ import {
   Search,
   Filter,
   FileSpreadsheet,
+  FileJson,
+  Upload,
   Trash2,
   Pencil,
   User,
@@ -34,6 +36,7 @@ interface RefinedInventoryViewProps {
   onAdjustStock: (item: Omit<RefinedStockItem, 'id' | 'lastUpdated'>, mode: 'add' | 'set' | 'deduct') => void;
   onUpdateStockItem?: (item: RefinedStockItem) => void;
   onDeleteStockItem: (id: string) => void;
+  onImportStock?: (items: RefinedStockItem[], mode: 'replace' | 'merge') => void;
   onNavigateToTab?: (tab: string) => void;
 }
 
@@ -42,8 +45,10 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
   onAdjustStock,
   onUpdateStockItem,
   onDeleteStockItem,
+  onImportStock,
   onNavigateToTab
 }) => {
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'personal' | 'client'>('personal');
   const [viewMode, setViewMode] = useState<'table' | 'consolidated' | 'charts'>('table');
   const [searchQuery, setSearchQuery] = useState('');
@@ -331,6 +336,55 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
               <span>Graphiques</span>
             </button>
           </div>
+
+          {/* Hidden JSON Input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".json,application/json"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              audio.playClick();
+              const res = await ImportExportService.importMineralsFromJSON(file);
+              if (res.success && res.data.length > 0) {
+                audio.playSuccess();
+                if (onImportStock) {
+                  onImportStock(res.data, 'merge');
+                }
+              } else {
+                audio.playAlert();
+                alert(res.errors.join('\n') || 'Erreur lors de l\'importation du fichier JSON de minerais.');
+              }
+              e.target.value = '';
+            }}
+            className="hidden"
+          />
+
+          <button
+            onClick={() => {
+              audio.playClick();
+              fileInputRef.current?.click();
+            }}
+            className="px-3 py-2 rounded-lg border border-slate-700 bg-sc-card hover:bg-slate-800 text-slate-200 text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+            title="Importer un fichier JSON de minerais"
+          >
+            <Upload className="w-4 h-4 text-sc-cyan" />
+            <span className="hidden sm:inline">Import JSON</span>
+          </button>
+
+          <button
+            onClick={() => {
+              audio.playClick();
+              ImportExportService.exportMineralsToJSON(stock);
+            }}
+            disabled={stock.length === 0}
+            className="px-3 py-2 rounded-lg border border-slate-700 bg-sc-card hover:bg-slate-800 text-slate-200 text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors disabled:opacity-40"
+            title="Exporter l'inventaire en format JSON (.json)"
+          >
+            <FileJson className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">Export JSON</span>
+          </button>
 
           <button
             onClick={() => {

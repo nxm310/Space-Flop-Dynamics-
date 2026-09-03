@@ -7,7 +7,8 @@ import {
   Blueprint,
   AppSettings,
   AppDataBackup,
-  OrderStatus
+  OrderStatus,
+  ClientProfile
 } from './types';
 import { StorageService } from './services/storageService';
 import { STAR_CITIZEN_BLUEPRINTS } from './data/blueprintsData';
@@ -247,6 +248,22 @@ export function App() {
     } else {
       addToast('info', 'Synchronisation', 'Tous les blueprints sont déjà dans votre catalogue (aucun doublon).');
     }
+  };
+
+  const handleImportBlueprintsData = (data: { customBlueprints: Blueprint[]; unlockedIds: string[]; clientBlueprintIds: string[] }) => {
+    setCustomBlueprints(StorageService.getCustomBlueprints());
+    addToast('success', 'Blueprints Importés', `${data.customBlueprints.length} blueprints et sélections mis à jour.`);
+  };
+
+  const handleImportOrdersData = (data: { orders: CustomerOrder[]; clients: ClientProfile[] }) => {
+    setOrders(prev => {
+      const orderMap = new Map(prev.map(o => [o.id, o]));
+      data.orders.forEach(o => orderMap.set(o.id, o));
+      const merged = Array.from(orderMap.values());
+      StorageService.saveOrders(merged);
+      return merged;
+    });
+    addToast('success', 'Commandes Importées', `${data.orders.length} commandes importées avec succès.`);
   };
 
   // =========================================================================
@@ -624,6 +641,7 @@ export function App() {
             onAdjustStock={handleAdjustStock}
             onUpdateStockItem={handleUpdateStockItem}
             onDeleteStockItem={handleDeleteStockItem}
+            onImportStock={handleImportStock}
             onNavigateToTab={(tab) => {
               audio.playClick();
               setActiveTab(tab);
@@ -637,6 +655,7 @@ export function App() {
             stock={refinedStock}
             onAddCustomBlueprint={handleAddCustomBlueprint}
             onUpdateBlueprint={handleUpdateBlueprint}
+            onImportBlueprintsData={handleImportBlueprintsData}
             onCraftNow={handleCraftNow}
             onCreateOrderFromBlueprint={handleCreateOrderFromBlueprint}
             onSyncApiBlueprints={handleSyncApiBlueprints}
@@ -657,6 +676,7 @@ export function App() {
             onDeleteOrder={handleDeleteOrder}
             onExecuteFabrication={handleExecuteFabrication}
             onTogglePaid={handleTogglePaid}
+            onImportOrdersData={handleImportOrdersData}
             prefillBlueprint={prefillBlueprint}
             onClearPrefillBlueprint={() => setPrefillBlueprint(null)}
           />

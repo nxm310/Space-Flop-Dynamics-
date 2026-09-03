@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import { RefinedStockItem, CustomerOrder, RawCargoItem, AppDataBackup } from '../types';
+import { RefinedStockItem, CustomerOrder, RawCargoItem, AppDataBackup, Blueprint, ClientProfile } from '../types';
 import { STAR_CITIZEN_MINERALS } from '../data/mineralsData';
 import { StorageService } from './storageService';
 
@@ -460,6 +460,220 @@ export class ImportExportService {
       return null;
     } catch {
       return null;
+    }
+  }
+
+  // =========================================================================
+  // INDIVIDUAL SECTION JSON EXPORTS & IMPORTS
+  // =========================================================================
+
+  // 1. MINERALS JSON
+  static exportMineralsToJSON(items: RefinedStockItem[], filename?: string) {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const data = {
+      section: 'minerals',
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      count: items.length,
+      refinedStock: items
+    };
+    const jsonStr = JSON.stringify(data, null, 2);
+    this.downloadFile(jsonStr, filename || `star_citizen_stock_minerais_${dateStr}.json`, 'application/json;charset=utf-8;');
+  }
+
+  static async importMineralsFromJSON(file: File): Promise<ImportResult<RefinedStockItem>> {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      let rows: any[] = [];
+
+      if (Array.isArray(parsed)) {
+        rows = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.refinedStock)) rows = parsed.refinedStock;
+        else if (Array.isArray(parsed.minerals)) rows = parsed.minerals;
+        else if (Array.isArray(parsed.data)) rows = parsed.data;
+        else if (Array.isArray(parsed.items)) rows = parsed.items;
+      }
+
+      const validItems: RefinedStockItem[] = [];
+      const errors: string[] = [];
+
+      rows.forEach((row, idx) => {
+        const mineralName = String(row.mineralName || row.name || row.displayName || row.Minerai || '').trim();
+        const mineralId = String(row.mineralId || row.id || mineralName.toLowerCase()).trim();
+        const quantity = parseFloat(String(row.quantitySCU !== undefined ? row.quantitySCU : row.quantity !== undefined ? row.quantity : row.Quantite_SCU || 0));
+
+        if (!mineralName || isNaN(quantity) || quantity <= 0) {
+          errors.push(`Ligne ${idx + 1}: Données de minerai invalides.`);
+          return;
+        }
+
+        const ownerType: 'personal' | 'client' = row.ownerType === 'client' || row.Type_Proprietaire === 'Client' ? 'client' : 'personal';
+        const clientName = row.clientName || row.Nom_Client || undefined;
+        const notes = row.notes || row.Notes || undefined;
+
+        validItems.push({
+          id: `stock-json-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 4)}`,
+          mineralId,
+          mineralName,
+          quantitySCU: Number(quantity.toFixed(3)),
+          ownerType,
+          clientName,
+          lastUpdated: row.lastUpdated || new Date().toISOString(),
+          notes
+        });
+      });
+
+      return {
+        success: validItems.length > 0,
+        data: validItems,
+        errors,
+        totalRows: rows.length
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        data: [],
+        errors: [`Erreur de lecture du fichier JSON : ${e?.message || 'Format JSON invalide'}`],
+        totalRows: 0
+      };
+    }
+  }
+
+  // 2. BLUEPRINTS JSON
+  static exportBlueprintsToJSON(
+    customBlueprints: Blueprint[],
+    unlockedIds: string[],
+    clientBlueprintIds: string[],
+    filename?: string
+  ) {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const data = {
+      section: 'blueprints',
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      counts: {
+        customBlueprints: customBlueprints.length,
+        unlockedWorkshop: unlockedIds.length,
+        clientBlueprints: clientBlueprintIds.length
+      },
+      customBlueprints,
+      unlockedIds,
+      clientBlueprintIds
+    };
+    const jsonStr = JSON.stringify(data, null, 2);
+    this.downloadFile(jsonStr, filename || `star_citizen_blueprints_${dateStr}.json`, 'application/json;charset=utf-8;');
+  }
+
+  static async importBlueprintsFromJSON(file: File): Promise<{
+    success: boolean;
+    customBlueprints: Blueprint[];
+    unlockedIds: string[];
+    clientBlueprintIds: string[];
+    errors: string[];
+    totalCount: number;
+  }> {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      let customBps: Blueprint[] = [];
+      let unlockedIds: string[] = [];
+      let clientIds: string[] = [];
+
+      if (Array.isArray(parsed)) {
+        customBps = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.customBlueprints)) customBps = parsed.customBlueprints;
+        else if (Array.isArray(parsed.blueprints)) customBps = parsed.blueprints;
+
+        if (Array.isArray(parsed.unlockedIds)) unlockedIds = parsed.unlockedIds;
+        else if (Array.isArray(parsed.unlockedBlueprintIds)) unlockedIds = parsed.unlockedBlueprintIds;
+
+        if (Array.isArray(parsed.clientBlueprintIds)) clientIds = parsed.clientBlueprintIds;
+        else if (Array.isArray(parsed.clientIds)) clientIds = parsed.clientIds;
+      }
+
+      return {
+        success: customBps.length > 0 || unlockedIds.length > 0 || clientIds.length > 0,
+        customBlueprints: customBps,
+        unlockedIds,
+        clientBlueprintIds: clientIds,
+        errors: [],
+        totalCount: customBps.length + unlockedIds.length + clientIds.length
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        customBlueprints: [],
+        unlockedIds: [],
+        clientBlueprintIds: [],
+        errors: [`Erreur de lecture du JSON de blueprints : ${e?.message || 'Format invalide'}`],
+        totalCount: 0
+      };
+    }
+  }
+
+  // 3. ORDERS JSON
+  static exportOrdersToJSON(
+    orders: CustomerOrder[],
+    clients: ClientProfile[],
+    filename?: string
+  ) {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const data = {
+      section: 'orders',
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      counts: {
+        orders: orders.length,
+        clients: clients.length
+      },
+      orders,
+      clients
+    };
+    const jsonStr = JSON.stringify(data, null, 2);
+    this.downloadFile(jsonStr, filename || `star_citizen_commandes_${dateStr}.json`, 'application/json;charset=utf-8;');
+  }
+
+  static async importOrdersFromJSON(file: File): Promise<{
+    success: boolean;
+    orders: CustomerOrder[];
+    clients: ClientProfile[];
+    errors: string[];
+    totalOrders: number;
+    totalClients: number;
+  }> {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      let orders: CustomerOrder[] = [];
+      let clients: ClientProfile[] = [];
+
+      if (Array.isArray(parsed)) {
+        orders = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.orders)) orders = parsed.orders;
+        if (Array.isArray(parsed.clients)) clients = parsed.clients;
+      }
+
+      return {
+        success: orders.length > 0 || clients.length > 0,
+        orders,
+        clients,
+        errors: [],
+        totalOrders: orders.length,
+        totalClients: clients.length
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        orders: [],
+        clients: [],
+        errors: [`Erreur de lecture du JSON de commandes : ${e?.message || 'Format invalide'}`],
+        totalOrders: 0,
+        totalClients: 0
+      };
     }
   }
 

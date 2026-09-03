@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Blueprint, BlueprintCategory, RefinedStockItem } from '../../types';
 import { BLUEPRINT_CATEGORIES, BLUEPRINT_SUBCATEGORIES } from '../../data/blueprintsData';
 import { BlueprintDetailsModal } from './BlueprintDetailsModal';
@@ -6,6 +6,7 @@ import { CustomBlueprintModal } from './CustomBlueprintModal';
 import { BlueprintsSourcesModal } from './BlueprintsSourcesModal';
 import { StarCitizenApiService } from '../../services/starCitizenApi';
 import { StorageService } from '../../services/storageService';
+import { ImportExportService } from '../../services/importExportService';
 import {
   Scroll,
   Plus,
@@ -31,7 +32,9 @@ import {
   Layers,
   Terminal,
   Users,
-  Edit3
+  Edit3,
+  FileJson,
+  Upload
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -40,6 +43,7 @@ interface BlueprintsCatalogViewProps {
   stock: RefinedStockItem[];
   onAddCustomBlueprint: (bp: Blueprint) => void;
   onUpdateBlueprint: (bp: Blueprint) => void;
+  onImportBlueprintsData?: (data: { customBlueprints: Blueprint[]; unlockedIds: string[]; clientBlueprintIds: string[] }) => void;
   onCraftNow: (bp: Blueprint, quantity: number) => void;
   onCreateOrderFromBlueprint: (bp: Blueprint) => void;
   onSyncApiBlueprints: (newBps: Blueprint[]) => void;
@@ -51,11 +55,13 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
   stock,
   onAddCustomBlueprint,
   onUpdateBlueprint,
+  onImportBlueprintsData,
   onCraftNow,
   onCreateOrderFromBlueprint,
   onSyncApiBlueprints,
   onNavigateToTab
 }) => {
+  const jsonFileInputRef = useRef<HTMLInputElement | null>(null);
   // Sub-Tab: 'my_workshop' (Mes Blueprints) vs 'client_blueprints' (Blueprints Clients) vs 'all_catalog' (Tous les Blueprints)
   const [subTab, setSubTab] = useState<'my_workshop' | 'client_blueprints' | 'all_catalog'>('my_workshop');
   const [viewLayout, setViewLayout] = useState<'grid' | 'table'>('grid');
@@ -278,6 +284,70 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
               <span className="hidden sm:inline">Importer Game.log</span>
             </button>
           )}
+
+          {/* Hidden JSON Input for Blueprints */}
+          <input
+            type="file"
+            ref={jsonFileInputRef}
+            accept=".json,application/json"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              audio.playClick();
+              const res = await ImportExportService.importBlueprintsFromJSON(file);
+              if (res.success) {
+                audio.playSuccess();
+                if (res.customBlueprints.length > 0) {
+                  res.customBlueprints.forEach(bp => {
+                    StorageService.saveOrUpdateBlueprint(bp);
+                  });
+                }
+                if (res.unlockedIds.length > 0) {
+                  updateUnlockedIds(Array.from(new Set([...unlockedIds, ...res.unlockedIds])));
+                }
+                if (res.clientBlueprintIds.length > 0) {
+                  updateClientBlueprintIds(Array.from(new Set([...clientBlueprintIds, ...res.clientBlueprintIds])));
+                }
+                if (onImportBlueprintsData) {
+                  onImportBlueprintsData({
+                    customBlueprints: StorageService.getCustomBlueprints(),
+                    unlockedIds: StorageService.getUnlockedBlueprintIds(),
+                    clientBlueprintIds: StorageService.getClientBlueprintIds()
+                  });
+                }
+              } else {
+                audio.playAlert();
+                alert(res.errors.join('\n') || 'Erreur lors de l\'importation du fichier JSON de blueprints.');
+              }
+              e.target.value = '';
+            }}
+            className="hidden"
+          />
+
+          <button
+            onClick={() => {
+              audio.playClick();
+              jsonFileInputRef.current?.click();
+            }}
+            className="px-3 py-2 rounded-lg border border-slate-700 bg-sc-card hover:bg-slate-800 text-slate-200 text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+            title="Importer un fichier JSON de blueprints (recettes, atelier, clients)"
+          >
+            <Upload className="w-4 h-4 text-sc-cyan" />
+            <span className="hidden sm:inline">Import JSON</span>
+          </button>
+
+          <button
+            onClick={() => {
+              audio.playClick();
+              const custom = StorageService.getCustomBlueprints();
+              ImportExportService.exportBlueprintsToJSON(custom, unlockedIds, clientBlueprintIds);
+            }}
+            className="px-3 py-2 rounded-lg border border-slate-700 bg-sc-card hover:bg-slate-800 text-slate-200 text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+            title="Exporter l'ensemble de vos blueprints et sélections en format JSON (.json)"
+          >
+            <FileJson className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">Export JSON</span>
+          </button>
 
           <button
             onClick={() => {

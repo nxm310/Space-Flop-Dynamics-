@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.12.4';
+export const CURRENT_APP_VERSION = '1.13.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,17 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 7 • Version 1.12.4',
+      version: 'Opération 8 • Version 1.13.0',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Nouveau',
+      badge: 'Majeure',
       badgeColor: 'emerald',
-      title: 'Modification Directe des Blueprints (Tuiles & Fiches)',
+      title: 'Import & Export JSON Individuel par Section (Minerais, Blueprints, Commandes)',
       icon: <Terminal className="w-5 h-5 text-emerald-400" />,
       points: [
-        '✏️ Touche Modifier sur les Tuiles : Un bouton "Modifier" dédié est désormais présent sur chaque carte et ligne du catalogue de blueprints.',
-        '🛠️ Modification depuis la Fiche Détails : Ajustez directement les spécifications d\'un plan ouvert grâce au nouveau bouton "Modifier".',
-        '📦 Édition Complète : Modifiez le nom, la catégorie, le temps de fabrication, l\'estimation aUEC, les notes et ajustez/ajoutez/supprimez les ingrédients nécessaires.',
-        '💎 Grand Pop-up Ingrédients Intégré : Bénéficiez du catalogue visuel plein écran lors du changement de minerais requis.'
+        '💎 Section Minerais : Boutons "Export JSON" et "Import JSON" dédiés pour sauvegarder et restaurer instantanément vos stocks personnels et dépôts clients sans toucher au reste.',
+        '📜 Section Blueprints : Exportez et importez vos blueprints personnalisés, sélections de l\'Atelier et Blueprints Clients en JSON structuré.',
+        '📋 Section Commandes : Export et Import JSON de l\'intégralité de vos commandes clients et du carnet de contacts associés.',
+        '⚡ Modularité & Sécurité : Chaque module dispose de son propre fichier JSON dédié, facilement échangeable avec d\'autres joueurs.'
       ]
     },
     {

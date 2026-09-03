@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
-import { CustomerOrder, Blueprint, RefinedStockItem, OrderStatus } from '../../types';
+import React, { useState, useRef } from 'react';
+import { CustomerOrder, Blueprint, RefinedStockItem, OrderStatus, ClientProfile } from '../../types';
 import { CreateOrderModal } from './CreateOrderModal';
 import { OrderDetailsModal } from './OrderDetailsModal';
 import { StatCard } from '../common/StatCard';
 import { OrderStatusBadge, Badge } from '../common/Badge';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { ImportExportService } from '../../services/importExportService';
+import { StorageService } from '../../services/storageService';
 import {
   ClipboardList,
   Plus,
   Search,
   Filter,
   FileSpreadsheet,
+  FileJson,
+  Upload,
   Trash2,
   Coins,
   Clock,
@@ -29,6 +32,7 @@ interface OrderBookViewProps {
   onDeleteOrder: (orderId: string) => void;
   onExecuteFabrication: (order: CustomerOrder) => void;
   onTogglePaid: (orderId: string) => void;
+  onImportOrdersData?: (data: { orders: CustomerOrder[]; clients: ClientProfile[] }) => void;
   prefillBlueprint?: Blueprint | null;
   onClearPrefillBlueprint?: () => void;
 }
@@ -42,9 +46,11 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
   onDeleteOrder,
   onExecuteFabrication,
   onTogglePaid,
+  onImportOrdersData,
   prefillBlueprint,
   onClearPrefillBlueprint
 }) => {
+  const jsonFileInputRef = useRef<HTMLInputElement | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<CustomerOrder | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -98,6 +104,62 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Hidden JSON Input for Orders */}
+          <input
+            type="file"
+            ref={jsonFileInputRef}
+            accept=".json,application/json"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              audio.playClick();
+              const res = await ImportExportService.importOrdersFromJSON(file);
+              if (res.success && res.orders.length > 0) {
+                audio.playSuccess();
+                if (res.clients && res.clients.length > 0) {
+                  const existingClients = StorageService.getClients();
+                  const clientMap = new Map(existingClients.map(c => [c.name.toLowerCase().trim(), c]));
+                  res.clients.forEach(c => clientMap.set(c.name.toLowerCase().trim(), c));
+                  StorageService.saveClients(Array.from(clientMap.values()));
+                }
+                if (onImportOrdersData) {
+                  onImportOrdersData({ orders: res.orders, clients: res.clients });
+                }
+              } else {
+                audio.playAlert();
+                alert(res.errors.join('\n') || 'Erreur lors de l\'importation du fichier JSON de commandes.');
+              }
+              e.target.value = '';
+            }}
+            className="hidden"
+          />
+
+          <button
+            onClick={() => {
+              audio.playClick();
+              jsonFileInputRef.current?.click();
+            }}
+            className="px-3 py-2 rounded-lg border border-slate-700 bg-sc-card hover:bg-slate-800 text-slate-200 text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+            title="Importer un carnet de commandes en JSON"
+          >
+            <Upload className="w-4 h-4 text-sc-cyan" />
+            <span className="hidden sm:inline">Import JSON</span>
+          </button>
+
+          <button
+            onClick={() => {
+              audio.playClick();
+              const clients = StorageService.getClients();
+              ImportExportService.exportOrdersToJSON(orders, clients);
+            }}
+            disabled={orders.length === 0}
+            className="px-3 py-2 rounded-lg border border-slate-700 bg-sc-card hover:bg-slate-800 text-slate-200 text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors disabled:opacity-40"
+            title="Exporter l'ensemble de vos commandes clients en format JSON (.json)"
+          >
+            <FileJson className="w-4 h-4 text-amber-400" />
+            <span className="hidden sm:inline">Export JSON</span>
+          </button>
+
           <button
             onClick={() => {
               audio.playClick();
