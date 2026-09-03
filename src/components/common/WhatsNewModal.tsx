@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.11.3';
+export const CURRENT_APP_VERSION = '1.12.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,16 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 6 • Version 1.11.3',
+      version: 'Opération 7 • Version 1.12.0',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Ergonomie',
-      badgeColor: 'cyan',
-      title: 'Catégorisation des Minages Géo en "Gemmes" lors de l\'Importation',
-      icon: <Terminal className="w-5 h-5 text-sc-cyan" />,
+      badge: 'Majeure',
+      badgeColor: 'emerald',
+      title: 'Graphiques en Barres Minerais & Gemmes + Qualité Maximale',
+      icon: <Terminal className="w-5 h-5 text-emerald-400" />,
       points: [
-        '💎 Classification "Gemme" Automatique : Toutes les lignes de fichiers de minerais (CSV/Excel) contenant "minage géo", "géo", "minable geo" ou des gemmes FPS sont automatiquement classées sous le label "Gemmes".',
-        '📊 Filtres d\'Inventaire Unifiés : Le filtre d\'extraction dans le stock de minerais propose désormais "💎 Gemmes" pour un tri instantané.',
-        '🎯 Scanner Game.log Zéro Faux Positif : Détection exacte et ultra-précise de vos blueprints réels avec dictionnaire d\'alias complet.'
+        '📈 Nouveaux Graphiques en Barres : Deux histogrammes interactifs dédiés (Minerais & Métaux en SCU vs Gemmes en unités) combinant barres de qualité maximale et courbes de volume.',
+        '⭐ Affichage Qualité Maximale dans la Synthèse : Chaque carte de matière première affiche désormais instantanément la qualité maximale possédée en plus de la moyenne.',
+        '💎 Unités Gemmes Authentiques : Les quantités de gemmes sont désormais clairement affichées en "unités" (au lieu de SCU).',
+        '⚡ Sélecteur Simplifié : Remplacement de l\'ancien mode cartes par le nouvel accès direct aux "Graphiques".'
       ]
     },
     {

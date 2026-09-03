@@ -3,6 +3,7 @@ import { RefinedStockItem } from '../../types';
 import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
 import { AdjustStockModal } from './AdjustStockModal';
 import { EditStockModal } from './EditStockModal';
+import { MineralsChartsView } from './MineralsChartsView';
 import { StatCard } from '../common/StatCard';
 import { Badge } from '../common/Badge';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -18,7 +19,7 @@ import {
   User,
   ShieldCheck,
   Table,
-  LayoutGrid,
+  BarChart3,
   Layers,
   ArrowUpDown,
   ArrowUp,
@@ -44,7 +45,7 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
   onNavigateToTab
 }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'personal' | 'client'>('personal');
-  const [viewMode, setViewMode] = useState<'table' | 'consolidated' | 'cards'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'consolidated' | 'charts'>('table');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('all');
   const [selectedExtractionType, setSelectedExtractionType] = useState('all');
@@ -195,6 +196,7 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
       totalSCU: number;
       lotCount: number;
       avgQuality: number;
+      maxQuality: number;
       isGeo: boolean;
       items: RefinedStockItem[];
     }>();
@@ -212,6 +214,7 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
           totalSCU: 0,
           lotCount: 0,
           avgQuality: 0,
+          maxQuality: 0,
           isGeo: min?.group === 'Gem' || min?.isFpsMineable || item.notes?.includes('Gemme') || item.notes?.includes('Minable Geo') || false,
           items: []
         });
@@ -222,6 +225,9 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
       entry.lotCount += 1;
       if (qual > 0) {
         entry.avgQuality = Math.round((entry.avgQuality * (entry.lotCount - 1) + qual) / entry.lotCount);
+        if (qual > entry.maxQuality) {
+          entry.maxQuality = qual;
+        }
       }
       entry.items.push(item);
     });
@@ -312,17 +318,17 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
             <button
               onClick={() => {
                 audio.playClick();
-                setViewMode('cards');
+                setViewMode('charts');
               }}
               className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-all ${
-                viewMode === 'cards'
+                viewMode === 'charts'
                   ? 'bg-sc-cyan text-slate-950 font-bold shadow-neon-cyan/20'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="Affichage sous forme de cartes visuelles"
+              title="Affichage des graphiques et histogrammes de stock"
             >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Cartes</span>
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Graphiques</span>
             </button>
           </div>
 
@@ -667,7 +673,7 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
                             {item.quantitySCU.toLocaleString('fr-FR', { maximumFractionDigits: 3 })}
                           </span>
                           <span className="text-slate-400 ml-1 text-xs">
-                            {extType === 'Minable Geo' && item.quantitySCU >= 1 ? 'unités' : 'SCU'}
+                            {extType === 'Gemme' || mineral?.group === 'Gem' ? 'unités' : 'SCU'}
                           </span>
                         </td>
 
@@ -828,10 +834,28 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
                   </div>
                 </div>
 
-                {m.avgQuality > 0 && (
-                  <div className="mt-2 text-[11px] font-mono text-slate-400 flex items-center justify-between bg-slate-900/40 px-2.5 py-1 rounded">
-                    <span>Qualité Moyenne du stock :</span>
-                    <strong className="text-amber-300 font-bold">Q: {m.avgQuality}</strong>
+                {/* Qualité Max & Qualité Moyenne */}
+                {(m.maxQuality > 0 || m.avgQuality > 0) && (
+                  <div className="mt-2 p-2 rounded-lg bg-slate-900/60 border border-slate-800 flex items-center justify-between text-[11px] font-mono">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-400">Qualité Max :</span>
+                      <span className={`px-1.5 py-0.2 rounded font-bold ${
+                        m.maxQuality >= 800
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                          : m.maxQuality >= 600
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                          : 'bg-slate-800 text-slate-200'
+                      }`}>
+                        Q: {m.maxQuality}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-400">Moyenne :</span>
+                      <span className="text-slate-300 font-semibold">
+                        Q: {m.avgQuality}
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -865,111 +889,16 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
       )}
 
       {/* ================================================================= */}
-      {/* MODE 3: CARDS HUD VIEW */}
+      {/* MODE 3: CHARTS VIEW (GRAPHIQUES MINERAIS ET GEMMES) */}
       {/* ================================================================= */}
-      {viewMode === 'cards' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {paginatedItems.map((item) => {
-            const quality = getItemQuality(item);
-            const extType = getItemExtractionType(item);
-
-            return (
-              <div
-                key={item.id}
-                className={`bg-sc-card border rounded-xl p-4 flex flex-col justify-between gap-4 transition-all duration-200 hover:shadow-lg ${
-                  item.ownerType === 'client'
-                    ? 'border-amber-500/40 hover:border-amber-400'
-                    : 'border-sc-border hover:border-sc-cyan/50'
-                }`}
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono text-sc-cyan tracking-wider uppercase">
-                          {extType}
-                        </span>
-                        {quality > 0 && (
-                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">
-                            Q: {quality}
-                          </span>
-                        )}
-                      </div>
-                      <h4 className="text-lg font-bold font-sans text-slate-100 mt-0.5">
-                        {item.mineralName}
-                      </h4>
-                    </div>
-
-                    <div>
-                      {item.ownerType === 'client' ? (
-                        <Badge variant="gold" size="sm">Client : {item.clientName}</Badge>
-                      ) : (
-                        <Badge variant="cyan" size="sm">Perso</Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-3.5 p-3 rounded-lg bg-[#090e18] border border-slate-800/80 flex items-center justify-between font-mono">
-                    <div>
-                      <span className="text-[10px] text-slate-400 block uppercase">Quantité</span>
-                      <span className="text-2xl font-bold text-sc-cyan">{item.quantitySCU.toLocaleString('fr-FR', { maximumFractionDigits: 3 })}</span>
-                      <span className="text-xs text-slate-400 ml-1">{extType === 'Minable Geo' ? 'unités' : 'SCU'}</span>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-[10px] text-slate-400 block uppercase">Propriétaire</span>
-                      <span className="text-xs font-bold text-slate-300 block">
-                        {item.ownerType === 'client' ? (item.clientName || 'Client') : 'Stock Personnel'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {item.notes && (
-                    <div className="mt-2.5 text-[11px] text-slate-400 font-mono italic bg-slate-900/40 p-1.5 rounded">
-                      &ldquo;{item.notes}&rdquo;
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-800">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => {
-                        audio.playClick();
-                        setEditingStockItem(item);
-                      }}
-                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-sc-cyan/20 border border-slate-700 hover:border-sc-cyan/50 text-slate-300 hover:text-sc-cyan text-xs font-mono flex items-center gap-1 transition-all"
-                      title="Modifier ce lot de minerai"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      <span>Modifier</span>
-                    </button>
-                    <button
-                      onClick={() => handleQuickAdjust(item, 1)}
-                      className="px-2 py-0.5 rounded bg-emerald-950/50 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-xs font-bold"
-                    >
-                      +1
-                    </button>
-                    <button
-                      onClick={() => handleQuickAdjust(item, -1)}
-                      className="px-2 py-0.5 rounded bg-rose-950/50 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs font-bold"
-                    >
-                      -1
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={() => setStockToDelete(item.id)}
-                    className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 rounded transition-colors"
-                    title="Supprimer ce stock"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {viewMode === 'charts' && (
+        <MineralsChartsView
+          stock={filteredStock}
+          onSelectMineral={(mineralName) => {
+            setSearchQuery(mineralName);
+            setViewMode('table');
+          }}
+        />
       )}
 
       {/* Adjust Modal */}
