@@ -318,6 +318,12 @@ export function App() {
     addToast('success', 'Commande Enregistrée', `Commande ${orderNumber} créée pour ${newOrder.clientName}.`);
   };
 
+  const handleUpdateOrder = (updatedOrder: CustomerOrder) => {
+    StorageService.saveOrUpdateOrder(updatedOrder);
+    setOrders(StorageService.getOrders());
+    addToast('success', 'Commande Modifiée', `La commande ${updatedOrder.orderNumber} a été mise à jour.`);
+  };
+
   const handleUpdateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     addToast('info', 'Statut de Commande Mis à Jour');
@@ -661,6 +667,7 @@ export function App() {
             allBlueprints={allBlueprints}
             stock={refinedStock}
             onCreateOrder={handleCreateOrder}
+            onUpdateOrder={handleUpdateOrder}
             onUpdateStatus={handleUpdateOrderStatus}
             onDeleteOrder={handleDeleteOrder}
             onExecuteFabrication={handleExecuteFabrication}

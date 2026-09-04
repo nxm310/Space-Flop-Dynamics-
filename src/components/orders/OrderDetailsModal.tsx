@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   AlertCircle,
   PackageCheck,
-  Layers
+  Layers,
+  Edit
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -25,6 +26,7 @@ interface OrderDetailsModalProps {
   onUpdateStatus: (orderId: string, status: OrderStatus) => void;
   onExecuteFabrication: (order: CustomerOrder) => void;
   onTogglePaid: (orderId: string) => void;
+  onEditOrder?: (order: CustomerOrder) => void;
 }
 
 export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
@@ -34,7 +36,8 @@ export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   stock,
   onUpdateStatus,
   onExecuteFabrication,
-  onTogglePaid
+  onTogglePaid,
+  onEditOrder
 }) => {
   if (!order) return null;
 
@@ -312,16 +315,34 @@ export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
 
         {/* Bottom Actions */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-sc-border">
-          <button
-            type="button"
-            onClick={() => {
-              audio.playClick();
-              onClose();
-            }}
-            className="w-full sm:w-auto px-4 py-2 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:text-slate-100 text-xs font-mono uppercase tracking-wider transition-colors"
-          >
-            Fermer
-          </button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => {
+                audio.playClick();
+                onClose();
+              }}
+              className="px-4 py-2 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:text-slate-100 text-xs font-mono uppercase tracking-wider transition-colors"
+            >
+              Fermer
+            </button>
+
+            {onEditOrder && (
+              <button
+                type="button"
+                onClick={() => {
+                  audio.playClick();
+                  onClose();
+                  onEditOrder(order);
+                }}
+                className="px-3.5 py-2 rounded-lg border border-sc-cyan/50 bg-sc-cyan/15 hover:bg-sc-cyan/25 text-sc-cyan text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-neon-cyan/20 transition-all"
+                title="Modifier les articles, minerais ou détails de cette commande"
+              >
+                <Edit className="w-3.5 h-3.5" />
+                <span>Modifier la commande</span>
+              </button>
+            )}
+          </div>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
             {order.status !== 'ready' && order.status !== 'completed' && (

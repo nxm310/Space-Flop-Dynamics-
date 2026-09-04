@@ -309,6 +309,17 @@ export class StorageService {
     localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(items));
   }
 
+  static saveOrUpdateOrder(order: CustomerOrder) {
+    const orders = this.getOrders();
+    const existingIdx = orders.findIndex(o => o.id === order.id);
+    if (existingIdx >= 0) {
+      orders[existingIdx] = order;
+    } else {
+      orders.unshift(order);
+    }
+    this.saveOrders(orders);
+  }
+
   // Clients Directory Database
   static getClients(): ClientProfile[] {
     this.init();

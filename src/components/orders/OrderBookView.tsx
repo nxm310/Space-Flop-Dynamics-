@@ -19,7 +19,8 @@ import {
   Coins,
   Clock,
   PackageCheck,
-  Hammer
+  Hammer,
+  Edit
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -28,6 +29,7 @@ interface OrderBookViewProps {
   allBlueprints: Blueprint[];
   stock: RefinedStockItem[];
   onCreateOrder: (order: Omit<CustomerOrder, 'id' | 'orderNumber' | 'createdAt'>) => void;
+  onUpdateOrder?: (order: CustomerOrder) => void;
   onUpdateStatus: (orderId: string, status: OrderStatus) => void;
   onDeleteOrder: (orderId: string) => void;
   onExecuteFabrication: (order: CustomerOrder) => void;
@@ -42,6 +44,7 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
   allBlueprints,
   stock,
   onCreateOrder,
+  onUpdateOrder,
   onUpdateStatus,
   onDeleteOrder,
   onExecuteFabrication,
@@ -52,6 +55,7 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
 }) => {
   const jsonFileInputRef = useRef<HTMLInputElement | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [orderToEdit, setOrderToEdit] = useState<CustomerOrder | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<CustomerOrder | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -338,7 +342,19 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
                     <span className="text-base font-bold text-emerald-400">{order.totalPriceAUEC.toLocaleString('fr-FR')} aUEC</span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        audio.playClick();
+                        setOrderToEdit(order);
+                        setIsCreateModalOpen(true);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-sc-cyan hover:bg-sc-cyan/15 rounded transition-colors"
+                      title="Modifier cette commande"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -349,7 +365,7 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
-                    <span className="text-sc-cyan group-hover:underline text-[11px] uppercase tracking-wider">
+                    <span className="text-sc-cyan group-hover:underline text-[11px] uppercase tracking-wider ml-1">
                       Détails →
                     </span>
                   </div>
@@ -372,6 +388,7 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
           <button
             onClick={() => {
               audio.playClick();
+              setOrderToEdit(null);
               setIsCreateModalOpen(true);
             }}
             className="mt-4 px-4 py-2 rounded-lg bg-sc-cyan text-slate-950 font-bold font-mono text-xs uppercase"
@@ -381,14 +398,21 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
         </div>
       )}
 
-      {/* Create Order Modal */}
+      {/* Create / Edit Order Modal */}
       <CreateOrderModal
         isOpen={isCreateModalOpen}
         onClose={() => {
           setIsCreateModalOpen(false);
+          setOrderToEdit(null);
           if (onClearPrefillBlueprint) onClearPrefillBlueprint();
         }}
         onCreateOrder={onCreateOrder}
+        onUpdateOrder={(updated) => {
+          if (onUpdateOrder) onUpdateOrder(updated);
+          setIsCreateModalOpen(false);
+          setOrderToEdit(null);
+        }}
+        orderToEdit={orderToEdit}
         allBlueprints={allBlueprints}
         prefillBlueprint={prefillBlueprint}
       />
@@ -414,6 +438,11 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
           if (selectedOrder) {
             setSelectedOrder({ ...selectedOrder, isPaid: !selectedOrder.isPaid });
           }
+        }}
+        onEditOrder={(ord) => {
+          setSelectedOrder(null);
+          setOrderToEdit(ord);
+          setIsCreateModalOpen(true);
         }}
       />
 

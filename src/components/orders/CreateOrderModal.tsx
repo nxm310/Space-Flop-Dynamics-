@@ -25,6 +25,8 @@ interface CreateOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateOrder: (order: Omit<CustomerOrder, 'id' | 'orderNumber' | 'createdAt'>) => void;
+  onUpdateOrder?: (order: CustomerOrder) => void;
+  orderToEdit?: CustomerOrder | null;
   allBlueprints: Blueprint[];
   prefillBlueprint?: Blueprint | null;
   initialClientName?: string | null;
@@ -34,6 +36,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   isOpen,
   onClose,
   onCreateOrder,
+  onUpdateOrder,
+  orderToEdit,
   allBlueprints,
   prefillBlueprint,
   initialClientName
@@ -60,12 +64,13 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   // Client Supplied Minerals
   const [clientMinerals, setClientMinerals] = useState<ClientMineralDeposit[]>([]);
   const [mineralModalItemIndex, setMineralModalItemIndex] = useState<number | null>(null);
+  const [clientMineralQtyInputs, setClientMineralQtyInputs] = useState<Record<number, string>>({});
 
   // Unlocked blueprints sets (Personal workshop & Client blueprints)
   const [unlockedPersonalIds, setUnlockedPersonalIds] = useState<Set<string>>(() => new Set(StorageService.getUnlockedBlueprintIds()));
   const [unlockedClientIds, setUnlockedClientIds] = useState<Set<string>>(() => new Set(StorageService.getClientBlueprintIds()));
 
-  // Refresh saved clients & unlocked blueprints whenever modal opens
+  // Refresh saved clients & unlocked blueprints & initialize state whenever modal opens or orderToEdit changes
   useEffect(() => {
     if (isOpen) {
       setSavedClients(StorageService.getClients());
@@ -75,7 +80,24 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
       setUnlockedPersonalIds(new Set(StorageService.getUnlockedBlueprintIds()));
       setUnlockedClientIds(new Set(StorageService.getClientBlueprintIds()));
 
-      if (initialClientName) {
+      if (orderToEdit) {
+        setClientName(orderToEdit.clientName);
+        setClientOrg(orderToEdit.clientOrg || '');
+        setClientContact(orderToEdit.clientContact || '');
+        setStatus(orderToEdit.status);
+        setDueDate(orderToEdit.dueDate ? orderToEdit.dueDate.split('T')[0] : '');
+        setNotes(orderToEdit.notes || '');
+        setAdditionalCostsAUEC(orderToEdit.additionalCostsAUEC || 0);
+        setIsPaid(orderToEdit.isPaid || false);
+        setOrderItems(orderToEdit.items || []);
+        setClientMinerals(orderToEdit.clientSuppliedMinerals || []);
+
+        const qtyInputs: Record<number, string> = {};
+        (orderToEdit.clientSuppliedMinerals || []).forEach((m, idx) => {
+          qtyInputs[idx] = String(m.quantitySCU);
+        });
+        setClientMineralQtyInputs(qtyInputs);
+      } else if (initialClientName) {
         const found = StorageService.getClients().find(
           c => c.name.toLowerCase().trim() === initialClientName.toLowerCase().trim()
         );
@@ -85,10 +107,30 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
           setClientContact(found.contact || '');
         } else {
           setClientName(initialClientName);
+          setClientOrg('');
+          setClientContact('');
         }
+        setStatus('pending_resources');
+        setDueDate('');
+        setNotes('');
+        setAdditionalCostsAUEC(0);
+        setIsPaid(false);
+        setClientMinerals([]);
+        setClientMineralQtyInputs({});
+      } else if (!prefillBlueprint) {
+        setClientName('');
+        setClientOrg('');
+        setClientContact('');
+        setStatus('pending_resources');
+        setDueDate('');
+        setNotes('');
+        setAdditionalCostsAUEC(0);
+        setIsPaid(false);
+        setClientMinerals([]);
+        setClientMineralQtyInputs({});
       }
     }
-  }, [isOpen, initialClientName]);
+  }, [isOpen, initialClientName, orderToEdit]);
 
   // Filter available blueprints: ONLY personal unlocked blueprints OR client blueprints (or prefilled)
   const availableBlueprints = useMemo(() => {
@@ -102,8 +144,10 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     return filtered.length > 0 ? filtered : allBlueprints;
   }, [allBlueprints, unlockedPersonalIds, unlockedClientIds, prefillBlueprint]);
 
-  // Handle prefill blueprint or default selection
+  // Handle prefill blueprint or default selection for new order
   useEffect(() => {
+    if (orderToEdit) return;
+
     if (prefillBlueprint) {
       const unitLabor = prefillBlueprint.marketEstimatedAUEC ? Math.round(prefillBlueprint.marketEstimatedAUEC * 0.2) : 2500;
       setOrderItems([
@@ -132,7 +176,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
         }
       ]);
     }
-  }, [prefillBlueprint, availableBlueprints]);
+  }, [prefillBlueprint, availableBlueprints, orderToEdit]);
 
   // Find active client profile if exists
   const activeClient = savedClients.find(
@@ -237,8 +281,6 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     setClientMinerals(clientMinerals.filter((_, i) => i !== index));
   };
 
-  const [clientMineralQtyInputs, setClientMineralQtyInputs] = useState<Record<number, string>>({});
-
   const handleClientMineralChange = (index: number, mineralId: string) => {
     const min = STAR_CITIZEN_MINERALS.find(m => m.id === mineralId);
     if (!min) return;
@@ -305,19 +347,36 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
       contact: clientContact.trim() || undefined
     });
 
-    onCreateOrder({
-      clientName: clientName.trim(),
-      clientOrg: clientOrg.trim() || undefined,
-      clientContact: clientContact.trim() || undefined,
-      status,
-      items: orderItems,
-      clientSuppliedMinerals: clientMinerals,
-      additionalCostsAUEC: Number(additionalCostsAUEC || 0),
-      totalPriceAUEC: Math.max(0, finalPriceAUEC),
-      dueDate: dueDate || undefined,
-      notes: notes.trim() || undefined,
-      isPaid
-    });
+    if (orderToEdit && onUpdateOrder) {
+      onUpdateOrder({
+        ...orderToEdit,
+        clientName: clientName.trim(),
+        clientOrg: clientOrg.trim() || undefined,
+        clientContact: clientContact.trim() || undefined,
+        status,
+        items: orderItems,
+        clientSuppliedMinerals: clientMinerals,
+        additionalCostsAUEC: Number(additionalCostsAUEC || 0),
+        totalPriceAUEC: Math.max(0, finalPriceAUEC),
+        dueDate: dueDate || undefined,
+        notes: notes.trim() || undefined,
+        isPaid
+      });
+    } else {
+      onCreateOrder({
+        clientName: clientName.trim(),
+        clientOrg: clientOrg.trim() || undefined,
+        clientContact: clientContact.trim() || undefined,
+        status,
+        items: orderItems,
+        clientSuppliedMinerals: clientMinerals,
+        additionalCostsAUEC: Number(additionalCostsAUEC || 0),
+        totalPriceAUEC: Math.max(0, finalPriceAUEC),
+        dueDate: dueDate || undefined,
+        notes: notes.trim() || undefined,
+        isPaid
+      });
+    }
 
     onClose();
   };
@@ -326,8 +385,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Créer une Commande Client"
-      subtitle="Enregistrez une commande et mettez à jour automatiquement la fiche & l'historique client"
+      title={orderToEdit ? `Modifier la Commande : ${orderToEdit.orderNumber}` : "Créer une Commande Client"}
+      subtitle={orderToEdit ? "Ajustez les articles, les quantités, les minerais fournis par le client, les prix ou le statut" : "Enregistrez une commande et mettez à jour automatiquement la fiche & l'historique client"}
       icon={<ClipboardList className="w-5 h-5 text-sc-cyan" />}
       maxWidth="3xl"
     >
@@ -853,7 +912,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             className="px-5 py-2 rounded-lg bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-neon-cyan transition-all"
           >
             <ClipboardList className="w-4 h-4" />
-            Enregistrer la Commande
+            {orderToEdit ? 'Enregistrer les Modifications' : 'Enregistrer la Commande'}
           </button>
         </div>
       </form>

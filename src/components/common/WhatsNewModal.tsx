@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.15.1';
+export const CURRENT_APP_VERSION = '1.16.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,16 +46,17 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 11 • Version 1.15.1',
+      version: 'Opération 12 • Version 1.16.0',
       date: 'Dernière mise à jour (Actuelle)',
-      badge: 'Nouveau',
+      badge: 'Majeure',
       badgeColor: 'emerald',
-      title: 'En-tête Épuré & Thèmes de Couleurs HUD 100% Fonctionnels',
+      title: 'Modification Complète des Commandes Validées & Historique',
       icon: <Terminal className="w-5 h-5 text-emerald-400" />,
       points: [
-        '🎮 Version du Jeu Ciblée en En-tête : Remplacement des compteurs superflus de stock/valeur dans l\'en-tête par un badge dédié affichant la version cible du jeu (4.10 LIVE).',
-        '🎨 Thèmes HUD Dynamiques & Opérationnels : Le sélecteur de couleurs d\'accent dans les Paramètres applique désormais instantanément et globalement le thème choisi (Drake Cyan, Anvil Gold, Crusader Emerald, Aegis Red, Banu Purple, Cobalt Blue).',
-        '💾 Persistance Complète : Le thème de couleur sélectionné est mémorisé et conservé automatiquement entre vos sessions.'
+        '✏️ Modification Directe des Commandes : Vous pouvez désormais éditer n\'importe quelle commande déjà validée via le bouton d\'édition rapide sur chaque carte ou depuis la fenêtre des détails.',
+        '📦 Ajustement des Articles & Ingrédients : Modifiez les articles commandés, ajoutez ou retirez des blueprints, ajustez les quantités et les frais de main d\'œuvre à tout moment.',
+        '💎 Gestion des Minerais Clients Déposés : Mettez à jour les stocks de minerais apportés par le client et recalculez automatiquement les besoins en matières.',
+        '🔄 Synchronisation & Persistance : Toutes les modifications sont instantanément recalculées et sauvegardées dans votre registre local.'
       ]
     },
     {
