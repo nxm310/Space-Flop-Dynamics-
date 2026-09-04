@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.17.0';
+export const CURRENT_APP_VERSION = '1.18.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -47,17 +47,29 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 13 • Version 1.17.0',
+      version: 'Opération 14 • Version 1.18.0',
       date: 'Dernière mise à jour (Actuelle)',
       badge: 'Majeure',
       badgeColor: 'emerald',
-      title: 'Bilan Analytique des Minerais Manquants des Commandes en Cours',
+      title: 'Minerais Manquants : Liste Épurée & Bouton dans le Stock et les Commandes',
       icon: <TrendingDown className="w-5 h-5 text-emerald-400" />,
       points: [
+        '💎 Base de Données Personnelle : Calcul des manques basé directement et strictement sur votre stock personnel de minerais et les besoins nets des commandes en cours.',
+        '📋 Format Liste Épuré & Lisible : Vue claire sous forme de liste/tableau (Minerai, Quantité Manquante SCU/cSCU, Stock Perso, Total Requis, Commandes Concernées).',
+        '🚀 Bouton Accessible Partout : Bouton "Minerais Manquants" présent à la fois dans le Stock Minerais et dans le Carnet de Commandes avec badge dynamique.',
+        '⚡ Approvisionnement Instantané : Bouton d\'ajout rapide par minerai pour enregistrer vos réceptions sans friction.'
+      ]
+    },
+    {
+      version: 'Opération 13 • Version 1.17.0',
+      date: 'Étape précédente',
+      badge: 'Majeure',
+      badgeColor: 'cyan',
+      title: 'Bilan Analytique des Minerais Manquants des Commandes en Cours',
+      icon: <Terminal className="w-5 h-5 text-cyan-400" />,
+      points: [
         '🔍 Nouvel Onglet "Minerais Manquants" : Directement intégré dans la barre de vue du Stock Minerais & Cargaison (aux côtés de Tableau, Synthèse et Graphiques).',
-        '📊 Calcul Automatique du Déficit Réel : Déduction intelligente des apports de minerais clients et comparaison instantanée face à votre stock disponible en réserve.',
-        '🎯 Détail & Commandes Impactées : Liste visuelle par minerai avec barres de progression, SCU manquants, valeur aUEC estimée et commandes associées.',
-        '⚡ Approvisionnement Rapide : Bouton d\'ajout instantané par minerai pour enregistrer vos réceptions sans quitter la vue.'
+        '📊 Calcul Automatique du Déficit Réel : Déduction intelligente des apports de minerais clients et comparaison instantanée face à votre stock disponible en réserve.'
       ]
     },
     {

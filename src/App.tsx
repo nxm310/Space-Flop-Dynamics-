@@ -674,6 +674,11 @@ export function App() {
             onExecuteFabrication={handleExecuteFabrication}
             onTogglePaid={handleTogglePaid}
             onImportOrdersData={handleImportOrdersData}
+            onAdjustStock={handleAdjustStock}
+            onNavigateToTab={(tab) => {
+              audio.playClick();
+              setActiveTab(tab);
+            }}
             prefillBlueprint={prefillBlueprint}
             onClearPrefillBlueprint={() => setPrefillBlueprint(null)}
           />

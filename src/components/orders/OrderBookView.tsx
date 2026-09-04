@@ -1,12 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { CustomerOrder, Blueprint, RefinedStockItem, OrderStatus, ClientProfile } from '../../types';
 import { CreateOrderModal } from './CreateOrderModal';
 import { OrderDetailsModal } from './OrderDetailsModal';
+import { MissingMineralsModal } from './MissingMineralsModal';
+import { AdjustStockModal } from '../inventory/AdjustStockModal';
 import { StatCard } from '../common/StatCard';
 import { OrderStatusBadge, Badge } from '../common/Badge';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { ImportExportService } from '../../services/importExportService';
 import { StorageService } from '../../services/storageService';
+import { calculateMissingMinerals } from '../../services/missingMineralsService';
 import {
   ClipboardList,
   Plus,
@@ -20,7 +23,8 @@ import {
   Clock,
   PackageCheck,
   Hammer,
-  Edit
+  Edit,
+  AlertTriangle
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -35,6 +39,8 @@ interface OrderBookViewProps {
   onExecuteFabrication: (order: CustomerOrder) => void;
   onTogglePaid: (orderId: string) => void;
   onImportOrdersData?: (data: { orders: CustomerOrder[]; clients: ClientProfile[] }) => void;
+  onAdjustStock?: (item: Omit<RefinedStockItem, 'id' | 'lastUpdated'>, mode: 'add' | 'set' | 'deduct') => void;
+  onNavigateToTab?: (tab: string) => void;
   prefillBlueprint?: Blueprint | null;
   onClearPrefillBlueprint?: () => void;
 }
@@ -50,11 +56,15 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
   onExecuteFabrication,
   onTogglePaid,
   onImportOrdersData,
+  onAdjustStock,
+  onNavigateToTab,
   prefillBlueprint,
   onClearPrefillBlueprint
 }) => {
   const jsonFileInputRef = useRef<HTMLInputElement | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isMissingMineralsModalOpen, setIsMissingMineralsModalOpen] = useState(false);
+  const [adjustMineralId, setAdjustMineralId] = useState<string | undefined>(undefined);
   const [orderToEdit, setOrderToEdit] = useState<CustomerOrder | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<CustomerOrder | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -93,6 +103,11 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
   const readyCount = orders.filter(o => o.status === 'ready').length;
   const completedTotalAUEC = orders.filter(o => o.status === 'completed').reduce((acc, o) => acc + o.totalPriceAUEC, 0);
 
+  // Missing minerals report based on personal stock
+  const missingReport = useMemo(() => {
+    return calculateMissingMinerals(orders, stock);
+  }, [orders, stock]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -108,6 +123,28 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Missing Minerals Button */}
+          <button
+            onClick={() => {
+              audio.playClick();
+              setIsMissingMineralsModalOpen(true);
+            }}
+            className={`px-3 py-2 rounded-lg border text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-all ${
+              missingReport.totalMissingTypesCount > 0
+                ? 'bg-rose-950/40 border-rose-600/70 text-rose-300 hover:bg-rose-900/50 shadow-neon-pink/10 font-bold'
+                : 'border-slate-700 bg-sc-card hover:bg-slate-800 text-slate-200'
+            }`}
+            title="Consulter la liste des minerais manquants pour l'ensemble des commandes actives"
+          >
+            <AlertTriangle className={`w-4 h-4 ${missingReport.totalMissingTypesCount > 0 ? 'text-rose-400 animate-pulse' : 'text-slate-400'}`} />
+            <span>Minerais Manquants</span>
+            {missingReport.totalMissingTypesCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-slate-950 font-bold text-[10px] ml-0.5">
+                {missingReport.totalMissingTypesCount}
+              </span>
+            )}
+          </button>
+
           {/* Hidden JSON Input for Orders */}
           <input
             type="file"
@@ -459,6 +496,38 @@ export const OrderBookView: React.FC<OrderBookViewProps> = ({
         title="Supprimer la commande ?"
         message="Êtes-vous sûr de vouloir supprimer cette commande du carnet ?"
       />
+
+      {/* Missing Minerals Modal */}
+      <MissingMineralsModal
+        isOpen={isMissingMineralsModalOpen}
+        onClose={() => setIsMissingMineralsModalOpen(false)}
+        orders={orders}
+        stock={stock}
+        onQuickAddStock={(mineralId) => {
+          setAdjustMineralId(mineralId);
+        }}
+        onSelectOrder={(orderId) => {
+          const target = orders.find(o => o.id === orderId);
+          if (target) {
+            setSelectedOrder(target);
+          }
+        }}
+        onNavigateToTab={onNavigateToTab}
+      />
+
+      {/* Quick Stock Adjust Modal when triggered from Missing Minerals list */}
+      {onAdjustStock && (
+        <AdjustStockModal
+          isOpen={adjustMineralId !== undefined}
+          onClose={() => setAdjustMineralId(undefined)}
+          onAdjustStock={(item, mode) => {
+            onAdjustStock(item, mode);
+            setAdjustMineralId(undefined);
+          }}
+          defaultMineralId={adjustMineralId}
+          defaultOwnerType="personal"
+        />
+      )}
     </div>
   );
 };

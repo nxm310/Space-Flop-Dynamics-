@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { RefinedStockItem, CustomerOrder, OrderStatus } from '../../types';
+import { RefinedStockItem, CustomerOrder } from '../../types';
 import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
 import { AdjustStockModal } from './AdjustStockModal';
 import { EditStockModal } from './EditStockModal';
 import { MineralsChartsView } from './MineralsChartsView';
+import { MissingMineralsListView } from '../common/MissingMineralsListView';
+import { calculateMissingMinerals } from '../../services/missingMineralsService';
 import { StatCard } from '../common/StatCard';
 import { Badge } from '../common/Badge';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -28,12 +30,7 @@ import {
   ArrowDown,
   ChevronLeft,
   ChevronRight,
-  AlertTriangle,
-  CheckCircle2,
-  ArrowRight,
-  ClipboardList,
-  Coins,
-  TrendingDown
+  AlertTriangle
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
@@ -82,149 +79,10 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
   const [selectedMineralForModal, setSelectedMineralForModal] = useState('quantainium');
   const [stockToDelete, setStockToDelete] = useState<string | null>(null);
 
-  // Active in-progress orders (pending, draft, refining, in_production, ready)
-  const activeOrders = useMemo(() => {
-    return (orders || []).filter(o => o.status !== 'completed' && o.status !== 'cancelled');
-  }, [orders]);
-
-  // Compute Missing Minerals Summary across all active orders
-  const missingMineralsData = useMemo(() => {
-    interface AffectedOrderInfo {
-      orderId: string;
-      orderNumber: string;
-      clientName: string;
-      status: OrderStatus;
-      dueDate?: string;
-      requiredSCU: number;
-      clientSuppliedSCU: number;
-      personalNeededSCU: number;
-    }
-
-    interface MineralDemand {
-      mineralId: string;
-      mineralName: string;
-      group: string;
-      rarity: string;
-      density: number;
-      basePriceAUEC: number;
-      isMineable: boolean;
-      isShipMineable: boolean;
-      isFpsMineable: boolean;
-      totalRequiredSCU: number;
-      totalClientSuppliedSCU: number;
-      personalNeededSCU: number;
-      personalAvailableSCU: number;
-      missingSCU: number;
-      missingPercentage: number;
-      affectedOrders: AffectedOrderInfo[];
-    }
-
-    const demandMap = new Map<string, MineralDemand>();
-
-    activeOrders.forEach(order => {
-      // 1. Calculate required ingredients in this order
-      const orderReqMap: Record<string, { name: string; qty: number }> = {};
-      order.items.forEach(item => {
-        item.requiredIngredients.forEach(ing => {
-          const key = ing.resourceId;
-          const qty = ing.quantitySCU * item.quantity;
-          if (!orderReqMap[key]) {
-            orderReqMap[key] = { name: ing.resourceName, qty: 0 };
-          }
-          orderReqMap[key].qty += qty;
-        });
-      });
-
-      // 2. Client supplied deposits for this order
-      const clientSuppliedMap: Record<string, number> = {};
-      order.clientSuppliedMinerals.forEach(dep => {
-        clientSuppliedMap[dep.mineralId] = (clientSuppliedMap[dep.mineralId] || 0) + dep.quantitySCU;
-      });
-
-      // 3. For each resource in this order, add to demandMap
-      Object.keys(orderReqMap).forEach(resId => {
-        const req = orderReqMap[resId];
-        const supplied = clientSuppliedMap[resId] || 0;
-        const personalNeeded = Math.max(0, req.qty - supplied);
-
-        if (!demandMap.has(resId)) {
-          const mineralInfo = STAR_CITIZEN_MINERALS.find(m => m.id === resId || m.name.toLowerCase() === req.name.toLowerCase());
-          demandMap.set(resId, {
-            mineralId: resId,
-            mineralName: mineralInfo?.displayName || req.name,
-            group: mineralInfo?.group || 'Mineral',
-            rarity: mineralInfo?.rarity || 'Common',
-            density: mineralInfo?.density || 2.5,
-            basePriceAUEC: mineralInfo?.basePriceAUEC || 25,
-            isMineable: Boolean(mineralInfo?.isMineable),
-            isShipMineable: Boolean(mineralInfo?.isShipMineable),
-            isFpsMineable: Boolean(mineralInfo?.isFpsMineable),
-            totalRequiredSCU: 0,
-            totalClientSuppliedSCU: 0,
-            personalNeededSCU: 0,
-            personalAvailableSCU: 0,
-            missingSCU: 0,
-            missingPercentage: 0,
-            affectedOrders: []
-          });
-        }
-
-        const demand = demandMap.get(resId)!;
-        demand.totalRequiredSCU += req.qty;
-        demand.totalClientSuppliedSCU += Math.min(req.qty, supplied);
-        demand.personalNeededSCU += personalNeeded;
-
-        if (personalNeeded > 0) {
-          demand.affectedOrders.push({
-            orderId: order.id,
-            orderNumber: order.orderNumber,
-            clientName: order.clientName,
-            status: order.status,
-            dueDate: order.dueDate,
-            requiredSCU: Number(req.qty.toFixed(3)),
-            clientSuppliedSCU: Number(supplied.toFixed(3)),
-            personalNeededSCU: Number(personalNeeded.toFixed(3))
-          });
-        }
-      });
-    });
-
-    // Compute personal stock available and missing shortage
-    const allDemands = Array.from(demandMap.values()).map(d => {
-      // Find personal stock matching this mineral
-      const personalLots = stock.filter(s => s.ownerType === 'personal' && (s.mineralId === d.mineralId || s.mineralName.toLowerCase() === d.mineralName.toLowerCase()));
-      const available = personalLots.reduce((acc, s) => acc + s.quantitySCU, 0);
-
-      const missing = Math.max(0, Number((d.personalNeededSCU - available).toFixed(3)));
-      const missingPct = d.personalNeededSCU > 0 ? Math.min(100, Math.round((missing / d.personalNeededSCU) * 100)) : 0;
-
-      return {
-        ...d,
-        totalRequiredSCU: Number(d.totalRequiredSCU.toFixed(3)),
-        totalClientSuppliedSCU: Number(d.totalClientSuppliedSCU.toFixed(3)),
-        personalNeededSCU: Number(d.personalNeededSCU.toFixed(3)),
-        personalAvailableSCU: Number(available.toFixed(3)),
-        missingSCU: missing,
-        missingPercentage: missingPct
-      };
-    });
-
-    // Only items that are in deficit (missingSCU > 0)
-    const missingOnly = allDemands.filter(d => d.missingSCU > 0).sort((a, b) => b.missingSCU - a.missingSCU);
-
-    const totalMissingSCU = missingOnly.reduce((acc, d) => acc + d.missingSCU, 0);
-    const totalEstimatedCostAUEC = missingOnly.reduce((acc, d) => acc + Math.round(d.missingSCU * 100 * d.basePriceAUEC), 0);
-    const affectedOrdersCount = new Set(missingOnly.flatMap(d => d.affectedOrders.map(o => o.orderId))).size;
-
-    return {
-      allDemands,
-      missingOnly,
-      totalMissingCount: missingOnly.length,
-      totalMissingSCU: Number(totalMissingSCU.toFixed(3)),
-      totalEstimatedCostAUEC,
-      affectedOrdersCount
-    };
-  }, [activeOrders, stock]);
+  // Missing Minerals Summary across all active orders based on personal stock
+  const missingReport = useMemo(() => {
+    return calculateMissingMinerals(orders, stock);
+  }, [orders, stock]);
 
   // Helper to extract quality number from item
   const getItemQuality = (item: RefinedStockItem): number => {
@@ -496,14 +354,21 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
               className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-all ${
                 viewMode === 'missing'
                   ? 'bg-sc-cyan text-slate-950 font-bold shadow-neon-cyan/20'
-                  : missingMineralsData.totalMissingCount > 0
+                  : missingReport.totalMissingTypesCount > 0
                   ? 'text-rose-400 hover:text-rose-200 font-semibold'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="Détail de tous les minerais manquants pour honorer les commandes en cours"
+              title="Affichage sous forme de liste des minerais manquants pour les commandes en cours"
             >
-              <AlertTriangle className={`w-3.5 h-3.5 ${missingMineralsData.totalMissingCount > 0 && viewMode !== 'missing' ? 'text-rose-400 animate-pulse' : ''}`} />
-              <span>Minerais Manquants{missingMineralsData.totalMissingCount > 0 ? ` (${missingMineralsData.totalMissingCount})` : ''}</span>
+              <AlertTriangle className={`w-3.5 h-3.5 ${missingReport.totalMissingTypesCount > 0 ? 'text-rose-400 animate-pulse' : ''}`} />
+              <span>Minerais Manquants</span>
+              {missingReport.totalMissingTypesCount > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  viewMode === 'missing' ? 'bg-slate-950 text-rose-400' : 'bg-rose-500 text-slate-950'
+                }`}>
+                  {missingReport.totalMissingTypesCount}
+                </span>
+              )}
             </button>
           </div>
 
@@ -583,39 +448,8 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
         </div>
       </div>
 
-      {/* KPI Stats HUD */}
-      {viewMode === 'missing' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Minerais en Déficit"
-            value={`${missingMineralsData.totalMissingCount} sortes`}
-            subValue={missingMineralsData.totalMissingCount > 0 ? "Matières manquantes à trouver" : "Aucun manque détecté"}
-            icon={<AlertTriangle className="w-5 h-5" />}
-            accent={missingMineralsData.totalMissingCount > 0 ? "red" : "green"}
-          />
-          <StatCard
-            title="Volume Manquant Total"
-            value={`${missingMineralsData.totalMissingSCU.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} SCU`}
-            subValue={`${Math.round(missingMineralsData.totalMissingSCU * 100).toLocaleString('fr-FR')} cSCU nécessaires`}
-            icon={<TrendingDown className="w-5 h-5 text-rose-400" />}
-            accent={missingMineralsData.totalMissingSCU > 0 ? "red" : "green"}
-          />
-          <StatCard
-            title="Commandes Impactées"
-            value={`${missingMineralsData.affectedOrdersCount} cmd`}
-            subValue={`Sur ${activeOrders.length} commande(s) active(s)`}
-            icon={<ClipboardList className="w-5 h-5" />}
-            accent={missingMineralsData.affectedOrdersCount > 0 ? "gold" : "green"}
-          />
-          <StatCard
-            title="Valeur Galactique Estimée"
-            value={`~${missingMineralsData.totalEstimatedCostAUEC.toLocaleString('fr-FR')} aUEC`}
-            subValue="Coût d'approvisionnement estimé"
-            icon={<Coins className="w-5 h-5" />}
-            accent="cyan"
-          />
-        </div>
-      ) : (
+      {/* KPI Stats HUD (Only in Table, Consolidated and Charts modes) */}
+      {viewMode !== 'missing' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Lots Référencés"
@@ -1161,212 +995,21 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
       )}
 
       {/* ================================================================= */}
-      {/* MODE 4: MISSING MINERALS & SHORTAGES FOR ACTIVE ORDERS */}
+      {/* MODE 4: MINERAIS MANQUANTS - LISTE ÉPURÉE */}
       {/* ================================================================= */}
       {viewMode === 'missing' && (
-        <div className="space-y-5">
-          {missingMineralsData.totalMissingCount > 0 ? (
-            <>
-              {/* Alert Header Banner */}
-              <div className="p-4 rounded-xl bg-gradient-to-r from-rose-950/40 via-sc-card to-rose-950/30 border border-rose-800/60 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 shrink-0">
-                    <AlertTriangle className="w-5 h-5 animate-pulse" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-rose-200 uppercase font-sans">
-                      {missingMineralsData.totalMissingCount} Minerai{missingMineralsData.totalMissingCount > 1 ? 's' : ''} en Déficit pour vos Commandes
-                    </h3>
-                    <p className="text-xs font-mono text-slate-400 mt-0.5">
-                      Les minerais ci-dessous sont nécessaires pour honorer vos commandes actives mais sont manquants dans votre stock personnel.
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    audio.playClick();
-                    if (onNavigateToTab) onNavigateToTab('orders');
-                  }}
-                  className="px-3.5 py-2 rounded-lg bg-sc-card hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-sc-cyan text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors shrink-0"
-                >
-                  <ClipboardList className="w-4 h-4 text-sc-cyan" />
-                  <span>Voir le Carnet de Commandes</span>
-                </button>
-              </div>
-
-              {/* Missing Minerals Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {missingMineralsData.missingOnly.map(d => (
-                  <div
-                    key={d.mineralId}
-                    className="bg-sc-card/90 border border-rose-900/60 hover:border-rose-500/80 rounded-xl p-4 flex flex-col justify-between gap-4 transition-all duration-200 shadow-xl"
-                  >
-                    <div>
-                      {/* Card Header */}
-                      <div className="flex items-start justify-between gap-2 border-b border-slate-800/80 pb-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30 uppercase">
-                              Déficit : -{d.missingSCU} SCU
-                            </span>
-                            <span className="text-[10px] font-mono text-slate-400 uppercase">
-                              {d.group} • {d.rarity}
-                            </span>
-                          </div>
-                          <h4 className="text-lg font-bold font-sans text-slate-100 mt-1">
-                            {d.mineralName}
-                          </h4>
-                          <span className="text-[11px] font-mono text-slate-400">
-                            Densité : {d.density} g/cm³ • Cours réf : ~{d.basePriceAUEC} aUEC/cSCU
-                          </span>
-                        </div>
-
-                        <div className="text-right">
-                          <span className="text-[10px] font-mono text-slate-500 uppercase block">Coût estimé</span>
-                          <span className="text-sm font-bold font-mono text-amber-400">
-                            ~{Math.round(d.missingSCU * 100 * d.basePriceAUEC).toLocaleString('fr-FR')} aUEC
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Stock vs Demand Gauges */}
-                      <div className="mt-3 p-3 rounded-lg bg-[#090e18] border border-slate-800 space-y-2.5 font-mono text-xs">
-                        <div className="flex justify-between items-center text-[11px]">
-                          <span className="text-slate-400">Stock Perso disponible :</span>
-                          <strong className="text-emerald-400">{d.personalAvailableSCU} SCU</strong>
-                        </div>
-                        {d.totalClientSuppliedSCU > 0 && (
-                          <div className="flex justify-between items-center text-[11px]">
-                            <span className="text-amber-400">Dépôts client associés :</span>
-                            <strong className="text-amber-300">+{d.totalClientSuppliedSCU} SCU</strong>
-                          </div>
-                        )}
-                        <div className="flex justify-between items-center text-[11px]">
-                          <span className="text-slate-400">Total requis pour commandes :</span>
-                          <strong className="text-slate-200">{d.personalNeededSCU} SCU</strong>
-                        </div>
-                        <div className="flex justify-between items-center text-xs pt-1.5 border-t border-slate-800/80">
-                          <span className="text-rose-400 font-bold uppercase">Manquant / À extraire :</span>
-                          <strong className="text-rose-400 text-sm font-bold">-{d.missingSCU} SCU</strong>
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden flex">
-                          <div
-                            className="bg-emerald-500 h-full transition-all duration-300"
-                            style={{ width: `${Math.max(0, Math.min(100, (d.personalAvailableSCU / (d.personalNeededSCU || 1)) * 100))}%` }}
-                            title={`Disponible: ${d.personalAvailableSCU} SCU`}
-                          />
-                          <div
-                            className="bg-rose-500 h-full transition-all duration-300"
-                            style={{ width: `${d.missingPercentage}%` }}
-                            title={`Manquant: ${d.missingSCU} SCU`}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Impacted Orders Breakdown */}
-                      <div className="mt-3 space-y-1.5">
-                        <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
-                          Commandes en attente ({d.affectedOrders.length}) :
-                        </span>
-                        <div className="space-y-1 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
-                          {d.affectedOrders.map((ord, idx) => (
-                            <div
-                              key={idx}
-                              onClick={() => {
-                                audio.playClick();
-                                if (onNavigateToTab) onNavigateToTab('orders');
-                              }}
-                              className="p-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-sc-cyan/40 flex items-center justify-between text-xs font-mono cursor-pointer transition-colors group"
-                              title="Cliquer pour aller à la commande"
-                            >
-                              <div className="flex items-center gap-2 truncate">
-                                <span className="font-bold text-sc-cyan group-hover:underline">
-                                  {ord.orderNumber}
-                                </span>
-                                <span className="text-slate-400 truncate">
-                                  • {ord.clientName}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <span className="text-rose-300 font-bold">
-                                  {ord.personalNeededSCU} SCU
-                                </span>
-                                <ArrowRight className="w-3 h-3 text-slate-500 group-hover:text-sc-cyan transition-colors" />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card Actions Footer */}
-                    <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          audio.playClick();
-                          setSelectedMineralForModal(d.mineralId);
-                          setIsAdjustModalOpen(true);
-                        }}
-                        className="w-full px-3.5 py-2 rounded-lg bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-neon-cyan transition-all"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Approvisionner ce minerai</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            /* Empty State: All Good, 0 Missing Minerals */
-            <div className="bg-sc-card/60 border border-emerald-500/40 rounded-2xl p-10 sm:p-14 text-center space-y-4 shadow-neon-green/20">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center mx-auto text-emerald-400 shadow-neon-green">
-                <CheckCircle2 className="w-9 h-9" />
-              </div>
-              <h3 className="text-xl sm:text-2xl font-bold font-sans text-emerald-300 uppercase tracking-wide">
-                Tous les minerais sont disponibles en stock !
-              </h3>
-              <p className="text-xs sm:text-sm font-mono text-slate-300 max-w-xl mx-auto leading-relaxed">
-                Votre réserve personnelle et les dépôts clients couvrent <strong className="text-emerald-400">100% des besoins</strong> pour la totalité des <strong className="text-slate-100">{activeOrders.length} commande(s) en cours</strong>.
-              </p>
-
-              {activeOrders.length > 0 ? (
-                <div className="pt-2 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      audio.playClick();
-                      if (onNavigateToTab) onNavigateToTab('orders');
-                    }}
-                    className="px-5 py-2.5 rounded-lg bg-sc-cyan hover:bg-cyan-400 text-slate-950 font-bold font-mono text-xs uppercase tracking-wider flex items-center gap-2 shadow-neon-cyan transition-all"
-                  >
-                    <ClipboardList className="w-4 h-4" />
-                    <span>Lancer les Fabrications ({activeOrders.length} commandes prêtes)</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="pt-2 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      audio.playClick();
-                      if (onNavigateToTab) onNavigateToTab('orders');
-                    }}
-                    className="px-5 py-2.5 rounded-lg bg-sc-card hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-sc-cyan font-mono text-xs uppercase tracking-wider flex items-center gap-2 transition-all"
-                  >
-                    <ClipboardList className="w-4 h-4 text-sc-cyan" />
-                    <span>Voir le Carnet de Commandes</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        <MissingMineralsListView
+          orders={orders}
+          stock={stock}
+          onQuickAddStock={(mineralId) => {
+            setSelectedMineralForModal(mineralId);
+            setIsAdjustModalOpen(true);
+          }}
+          onSelectOrder={() => {
+            if (onNavigateToTab) onNavigateToTab('orders');
+          }}
+          onNavigateToTab={onNavigateToTab}
+        />
       )}
 
       {/* Adjust Modal */}

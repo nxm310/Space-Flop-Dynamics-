@@ -85,8 +85,13 @@ export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     const item = requirementsSummary[key];
     item.personalNeeded = Math.max(0, item.required - item.clientSupplied);
 
-    const personalStockItem = stock.find(s => s.ownerType === 'personal' && (s.mineralId === key || s.mineralName.toLowerCase() === item.name.toLowerCase()));
-    item.personalAvailable = personalStockItem ? personalStockItem.quantitySCU : 0;
+    const personalStockTotal = stock
+      .filter(s => s.ownerType === 'personal' && (
+        s.mineralId.toLowerCase().trim() === key.toLowerCase().trim() ||
+        s.mineralName.toLowerCase().trim() === item.name.toLowerCase().trim()
+      ))
+      .reduce((sum, s) => sum + s.quantitySCU, 0);
+    item.personalAvailable = personalStockTotal;
     item.hasEnough = item.personalAvailable >= item.personalNeeded;
 
     if (!item.hasEnough) {
