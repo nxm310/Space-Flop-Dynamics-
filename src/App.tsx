@@ -633,6 +633,7 @@ export function App() {
         {activeTab === 'inventory' && (
           <RefinedInventoryView
             stock={refinedStock}
+            orders={orders}
             onAdjustStock={handleAdjustStock}
             onUpdateStockItem={handleUpdateStockItem}
             onDeleteStockItem={handleDeleteStockItem}

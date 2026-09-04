@@ -6,11 +6,12 @@ import {
   Users,
   Pencil,
   Terminal,
-  Rocket
+  Rocket,
+  TrendingDown
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.16.0';
+export const CURRENT_APP_VERSION = '1.17.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -46,12 +47,26 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 12 • Version 1.16.0',
+      version: 'Opération 13 • Version 1.17.0',
       date: 'Dernière mise à jour (Actuelle)',
       badge: 'Majeure',
       badgeColor: 'emerald',
+      title: 'Bilan Analytique des Minerais Manquants des Commandes en Cours',
+      icon: <TrendingDown className="w-5 h-5 text-emerald-400" />,
+      points: [
+        '🔍 Nouvel Onglet "Minerais Manquants" : Directement intégré dans la barre de vue du Stock Minerais & Cargaison (aux côtés de Tableau, Synthèse et Graphiques).',
+        '📊 Calcul Automatique du Déficit Réel : Déduction intelligente des apports de minerais clients et comparaison instantanée face à votre stock disponible en réserve.',
+        '🎯 Détail & Commandes Impactées : Liste visuelle par minerai avec barres de progression, SCU manquants, valeur aUEC estimée et commandes associées.',
+        '⚡ Approvisionnement Rapide : Bouton d\'ajout instantané par minerai pour enregistrer vos réceptions sans quitter la vue.'
+      ]
+    },
+    {
+      version: 'Opération 12 • Version 1.16.0',
+      date: 'Étape précédente',
+      badge: 'Majeure',
+      badgeColor: 'cyan',
       title: 'Modification Complète des Commandes Validées & Historique',
-      icon: <Terminal className="w-5 h-5 text-emerald-400" />,
+      icon: <Terminal className="w-5 h-5 text-cyan-400" />,
       points: [
         '✏️ Modification Directe des Commandes : Vous pouvez désormais éditer n\'importe quelle commande déjà validée via le bouton d\'édition rapide sur chaque carte ou depuis la fenêtre des détails.',
         '📦 Ajustement des Articles & Ingrédients : Modifiez les articles commandés, ajoutez ou retirez des blueprints, ajustez les quantités et les frais de main d\'œuvre à tout moment.',
