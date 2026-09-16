@@ -138,28 +138,6 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
     e.target.value = '';
   };
 
-  const handleSelectAllCurrent = () => {
-    audio.playClick();
-    const currentIds = filteredBlueprints.map(b => b.id);
-    if (subTab === 'client_blueprints') {
-      const merged = Array.from(new Set([...clientBlueprintIds, ...currentIds]));
-      updateClientBlueprintIds(merged);
-    } else {
-      const merged = Array.from(new Set([...unlockedIds, ...currentIds]));
-      updateUnlockedIds(merged);
-    }
-  };
-
-  const handleDeselectAllCurrent = () => {
-    audio.playClick();
-    const currentIdsSet = new Set(filteredBlueprints.map(b => b.id));
-    if (subTab === 'client_blueprints') {
-      updateClientBlueprintIds(clientBlueprintIds.filter(id => !currentIdsSet.has(id)));
-    } else {
-      updateUnlockedIds(unlockedIds.filter(id => !currentIdsSet.has(id)));
-    }
-  };
-
   const handleBatchImport = (importedList: Blueprint[]) => {
     importedList.forEach(bp => {
       onAddCustomBlueprint(bp);
@@ -504,15 +482,15 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
         </div>
       </div>
 
-      {/* Category Pills Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+      {/* Category Pills Bar (Responsive flex-wrap without horizontal scroll) */}
+      <div className="flex items-center gap-2 flex-wrap pb-1">
         <button
           onClick={() => {
             audio.playClick();
             setSelectedCategory('all');
             setSelectedSubCategory('all');
           }}
-          className={`px-3.5 py-2 rounded-xl text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 ${
+          className={`px-3.5 py-2 rounded-xl text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-all ${
             selectedCategory === 'all'
               ? 'bg-sc-cyan text-slate-950 font-bold shadow-neon-cyan'
               : 'bg-sc-card/80 border border-sc-border text-slate-400 hover:text-slate-200 hover:border-sc-cyan/40'
@@ -539,7 +517,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
                 setSelectedCategory(cat.key);
                 setSelectedSubCategory('all');
               }}
-              className={`px-3.5 py-2 rounded-xl text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-all ${
                 isSelected
                   ? 'bg-sc-cyan text-slate-950 font-bold shadow-neon-cyan'
                   : 'bg-sc-card/80 border border-sc-border text-slate-400 hover:text-slate-200 hover:border-sc-cyan/40'
@@ -552,9 +530,9 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
         })}
       </div>
 
-      {/* Sub-Category Pills Bar (When a specific category is selected) */}
+      {/* Sub-Category Pills Bar (When a specific category is selected, responsive flex-wrap) */}
       {selectedCategory !== 'all' && BLUEPRINT_SUBCATEGORIES[selectedCategory] && (
-        <div className="p-2.5 rounded-xl bg-[#090e18]/90 border border-sc-border/80 flex items-center gap-1.5 overflow-x-auto custom-scrollbar animate-in fade-in duration-150">
+        <div className="p-2.5 rounded-xl bg-[#090e18]/90 border border-sc-border/80 flex items-center gap-2 flex-wrap animate-in fade-in duration-150">
           <div className="flex items-center gap-1 text-[10px] font-mono text-sc-cyan uppercase font-bold tracking-wider px-2 shrink-0">
             <Layers className="w-3.5 h-3.5" />
             <span>Sous-composants :</span>
@@ -577,7 +555,7 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
                   audio.playClick();
                   setSelectedSubCategory(sub.key);
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap transition-all shrink-0 flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all flex items-center gap-1.5 ${
                   isSubSelected
                     ? 'bg-sc-cyan text-slate-950 font-bold shadow-neon-cyan'
                     : 'bg-sc-card/90 border border-slate-800 text-slate-300 hover:text-white hover:border-sc-cyan/40'
@@ -617,24 +595,6 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Quick Selection Buttons */}
-          <div className="flex items-center gap-1 border-r border-slate-800 pr-2 mr-1">
-            <button
-              onClick={handleSelectAllCurrent}
-              className="px-2.5 py-1 bg-[#090e18] hover:bg-slate-800 border border-slate-800 hover:border-sc-cyan/40 rounded text-[11px] font-mono text-slate-300 hover:text-sc-cyan transition-colors"
-              title={subTab === 'client_blueprints' ? 'Tout cocher comme blueprint client' : 'Tout cocher dans mon atelier'}
-            >
-              Tout Cocher
-            </button>
-            <button
-              onClick={handleDeselectAllCurrent}
-              className="px-2.5 py-1 bg-[#090e18] hover:bg-slate-800 border border-slate-800 hover:border-rose-500/40 rounded text-[11px] font-mono text-slate-400 hover:text-rose-400 transition-colors"
-              title={subTab === 'client_blueprints' ? 'Tout décocher des blueprints clients' : 'Tout décocher de mon atelier'}
-            >
-              Tout Décocher
-            </button>
-          </div>
-
           {/* Feasibility Filter Buttons */}
           <div className="flex items-center border border-slate-800 rounded-lg p-0.5 bg-[#090e18]">
             <button

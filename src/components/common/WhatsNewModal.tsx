@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.19.1';
+export const CURRENT_APP_VERSION = '1.20.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -47,12 +47,25 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 15 • Version 1.19.1',
+      version: 'Opération 16 • Version 1.20.0',
       date: 'Dernière mise à jour (Actuelle)',
       badge: 'Majeure',
       badgeColor: 'emerald',
+      title: 'Blueprints : Filtres Multi-Lignes Responsive & Interface Épurée',
+      icon: <LayoutGrid className="w-5 h-5 text-emerald-400" />,
+      points: [
+        '📐 Tri par Composants 100% Responsive : Fin du défilement horizontal ! Tous les boutons de catégories (Composants vaisseau, Armes de vaisseau, Armures, Outils...) et sous-composants se répartissent fluidement sur plusieurs lignes pour être tous visibles d\'un coup d\'œil.',
+        '🧹 Interface Épurée : Suppression définitive des touches "Tout Cocher" et "Tout Décocher" dans l\'onglet Blueprints & Craft.',
+        '⚡ Ergonomie Optimisée : Accès direct et instantané à toutes les catégories et à la barre de faisabilité (Tous, Fabricables, Manquants).'
+      ]
+    },
+    {
+      version: 'Opération 15 • Version 1.19.1',
+      date: 'Étape précédente',
+      badge: 'Majeure',
+      badgeColor: 'cyan',
       title: 'Sauvegarde & Restauration Intégrale (Blueprints, Atelier, Minerais & Clients)',
-      icon: <Rocket className="w-5 h-5 text-emerald-400" />,
+      icon: <Rocket className="w-5 h-5 text-cyan-400" />,
       points: [
         '💾 Sauvegarde 100% Complète : Exportation totale de l\'ensemble des données de l\'application (Blueprints personnalisés, Blueprints débloqués dans Mon Atelier, Blueprints clients, Minerais personnalisés, Répertoire des clients, Stocks de minerais, Commandes et Paramètres HUD).',
         '🔄 Restauration Intégrale Sécurisée : Importation et réinjection synchrone de toutes vos données sans aucune perte, avec validation et rétrocompatibilité garantie.',
