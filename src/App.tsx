@@ -255,7 +255,8 @@ export function App() {
 
   const handleImportBlueprintsData = (data: { customBlueprints: Blueprint[]; unlockedIds: string[]; clientBlueprintIds: string[] }) => {
     setCustomBlueprints(StorageService.getCustomBlueprints());
-    addToast('success', 'Blueprints Importés', `${data.customBlueprints.length} blueprints et sélections mis à jour.`);
+    const count = data.unlockedIds && data.unlockedIds.length > 0 ? data.unlockedIds.length : (data.customBlueprints || []).length;
+    addToast('success', 'Blueprints Importés', `${count} blueprints mis à jour.`);
   };
 
   const handleImportOrdersData = (data: { orders: CustomerOrder[]; clients: ClientProfile[] }) => {
@@ -471,14 +472,14 @@ export function App() {
     // Save full backup via service as well to ensure total disk sync
     StorageService.importFullBackup(backup);
 
-    const bpCount = (customBps || []).length + (unlocked || []).length;
+    const bpCount = (unlocked && unlocked.length > 0) ? unlocked.length : (customBps || []).length;
     const stockCount = (backup.refinedStock || []).length;
     const ordersCount = (backup.orders || []).length;
 
     addToast(
       'success',
       'Sauvegarde Complète Restaurée',
-      `Toutes vos données ont été restaurées : ${stockCount} stocks, ${bpCount} blueprints/recettes, ${ordersCount} commandes.`
+      `Toutes vos données ont été restaurées : ${stockCount} stocks, ${bpCount} blueprints, ${ordersCount} commandes.`
     );
   };
 

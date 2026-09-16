@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.19.0';
+export const CURRENT_APP_VERSION = '1.19.1';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -47,7 +47,7 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 15 • Version 1.19.0',
+      version: 'Opération 15 • Version 1.19.1',
       date: 'Dernière mise à jour (Actuelle)',
       badge: 'Majeure',
       badgeColor: 'emerald',
@@ -56,8 +56,8 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
       points: [
         '💾 Sauvegarde 100% Complète : Exportation totale de l\'ensemble des données de l\'application (Blueprints personnalisés, Blueprints débloqués dans Mon Atelier, Blueprints clients, Minerais personnalisés, Répertoire des clients, Stocks de minerais, Commandes et Paramètres HUD).',
         '🔄 Restauration Intégrale Sécurisée : Importation et réinjection synchrone de toutes vos données sans aucune perte, avec validation et rétrocompatibilité garantie.',
-        '📋 Interface Récapitulative Enrichie : Liste visuelle détaillée dans l\'onglet Sauvegarde & Restauration indiquant précisément tous les modules inclus dans le fichier JSON.',
-        '⚡ Compteurs & Notifications Détaillés : Notification toast affichant le nombre exact de blueprints, minerais, commandes et stocks sauvegardés ou restaurés.'
+        '🎯 Décompte Exact des Blueprints de l\'Atelier : La récapitulation affiche désormais fidèlement le nombre exact de vos blueprints actifs/débloqués dans l\'atelier (sans additionner le catalogue global de référence).',
+        '📋 Interface Récapitulative Enrichie : Liste visuelle détaillée dans l\'onglet Sauvegarde & Restauration indiquant précisément tous les modules inclus dans le fichier JSON.'
       ]
     },
     {

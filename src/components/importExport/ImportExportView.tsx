@@ -259,12 +259,15 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
     audio.playClick();
     ImportExportService.exportFullBackupJSON();
     const backup = StorageService.exportFullBackup();
-    const totalItems =
-      backup.refinedStock.length +
-      backup.customBlueprints.length +
-      (backup.unlockedBlueprintIds?.length || 0) +
-      backup.orders.length;
-    setBackupSuccessMessage(`Sauvegarde générale complète générée avec succès (${totalItems} éléments sauvegardés).`);
+    const bpCount =
+      backup.unlockedBlueprintIds && backup.unlockedBlueprintIds.length > 0
+        ? backup.unlockedBlueprintIds.length
+        : backup.customBlueprints?.length || 0;
+    const stockCount = backup.refinedStock.length;
+    const ordersCount = backup.orders.length;
+    setBackupSuccessMessage(
+      `Sauvegarde générale complète générée avec succès (${stockCount} stocks, ${bpCount} blueprints, ${ordersCount} commandes).`
+    );
     setTimeout(() => setBackupSuccessMessage(''), 4000);
   };
 
@@ -279,12 +282,14 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
         audio.playSuccess();
         onRestoreBackup(backup);
         const stockCount = backup.refinedStock?.length || 0;
-        const bpCount =
-          (backup.customBlueprints?.length || 0) +
-          (backup.unlockedBlueprintIds?.length || backup.unlockedIds?.length || 0);
+        const unlockedCount =
+          backup.unlockedBlueprintIds?.length ?? backup.unlockedIds?.length ?? 0;
+        const customCount =
+          backup.customBlueprints?.length ?? backup.blueprints?.length ?? 0;
+        const bpCount = unlockedCount > 0 ? unlockedCount : customCount;
         const ordersCount = backup.orders?.length || 0;
         setBackupSuccessMessage(
-          `Sauvegarde restaurée avec succès : ${stockCount} stocks, ${bpCount} blueprints/recettes, ${ordersCount} commandes.`
+          `Sauvegarde restaurée avec succès : ${stockCount} stocks, ${bpCount} blueprints, ${ordersCount} commandes.`
         );
         setTimeout(() => setBackupSuccessMessage(''), 5000);
       } else {
