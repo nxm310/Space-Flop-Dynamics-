@@ -425,13 +425,61 @@ export function App() {
   };
 
   const handleRestoreBackup = (backup: AppDataBackup) => {
+    // 1. Cargo, Stock & Refinery
     if (backup.rawCargo) setRawCargo(backup.rawCargo);
     if (backup.refinedStock) setRefinedStock(backup.refinedStock);
     if (backup.refineryJobs) setRefineryJobs(backup.refineryJobs);
-    if (backup.customBlueprints) setCustomBlueprints(backup.customBlueprints);
-    if (backup.orders) setOrders(backup.orders);
-    if (backup.settings) setSettings(backup.settings);
-    addToast('success', 'Restauration Terminée', 'Toutes vos données ont été restaurées.');
+
+    // 2. Custom Blueprints & Recipes
+    const customBps = backup.customBlueprints || backup.blueprints;
+    if (customBps) {
+      setCustomBlueprints(customBps);
+      StorageService.saveCustomBlueprints(customBps);
+    }
+
+    // 3. Unlocked Workshop Blueprints
+    const unlocked = backup.unlockedBlueprintIds || backup.unlockedIds;
+    if (unlocked) {
+      StorageService.saveUnlockedBlueprintIds(unlocked);
+    }
+
+    // 4. Client Blueprint IDs
+    if (backup.clientBlueprintIds) {
+      StorageService.saveClientBlueprintIds(backup.clientBlueprintIds);
+    }
+
+    // 5. Custom Minerals
+    if (backup.customMinerals) {
+      StorageService.saveCustomMinerals(backup.customMinerals);
+    }
+
+    // 6. Orders & Clients
+    if (backup.orders) {
+      setOrders(backup.orders);
+      StorageService.saveOrders(backup.orders);
+    }
+    if (backup.clients) {
+      StorageService.saveClients(backup.clients);
+    }
+
+    // 7. Settings
+    if (backup.settings) {
+      setSettings(backup.settings);
+      StorageService.saveSettings(backup.settings);
+    }
+
+    // Save full backup via service as well to ensure total disk sync
+    StorageService.importFullBackup(backup);
+
+    const bpCount = (customBps || []).length + (unlocked || []).length;
+    const stockCount = (backup.refinedStock || []).length;
+    const ordersCount = (backup.orders || []).length;
+
+    addToast(
+      'success',
+      'Sauvegarde Complète Restaurée',
+      `Toutes vos données ont été restaurées : ${stockCount} stocks, ${bpCount} blueprints/recettes, ${ordersCount} commandes.`
+    );
   };
 
   const handleClearAllData = () => {
@@ -441,7 +489,7 @@ export function App() {
     setRefineryJobs([]);
     setCustomBlueprints([]);
     setOrders([]);
-    addToast('info', 'Remise à Zéro Complète', 'Toutes les données (minerais, commandes, raffinages, cargaisons) ont été effacées.');
+    addToast('info', 'Remise à Zéro Complète', 'Toutes les données (stocks, blueprints, minerais, commandes, clients, cargaisons) ont été effacées.');
   };
 
   // Nav Tabs configuration

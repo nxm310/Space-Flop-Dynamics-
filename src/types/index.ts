@@ -185,11 +185,28 @@ export interface AppSettings {
 export interface AppDataBackup {
   version: string;
   exportedAt: string;
+  description?: string;
+  counts?: {
+    rawCargo?: number;
+    refinedStock?: number;
+    refineryJobs?: number;
+    customBlueprints?: number;
+    unlockedBlueprints?: number;
+    clientBlueprints?: number;
+    customMinerals?: number;
+    orders?: number;
+    clients?: number;
+  };
   rawCargo: RawCargoItem[];
   refinedStock: RefinedStockItem[];
   refineryJobs: RefineryJob[];
   customBlueprints: Blueprint[];
+  blueprints?: Blueprint[];              // Complete catalog or custom blueprints
+  unlockedBlueprintIds?: string[];        // Unlocked in Mon Atelier
+  unlockedIds?: string[];                 // Alias for compatibility
+  clientBlueprintIds?: string[];          // Client provided blueprint IDs
+  customMinerals?: MineralInfo[];         // User custom minerals / commodities
   orders: CustomerOrder[];
-  clients?: ClientProfile[];
+  clients?: ClientProfile[];              // Client directory
   settings: AppSettings;
 }

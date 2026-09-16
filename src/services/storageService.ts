@@ -476,18 +476,46 @@ export class StorageService {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
   }
 
-  // Full Backup Export
+  // Full Backup Export (Comprehensive bundle with all blueprints, stocks, orders, clients, settings)
   static exportFullBackup(): AppDataBackup {
+    const rawCargo = this.getRawCargo();
+    const refinedStock = this.getRefinedStock();
+    const refineryJobs = this.getRefineryJobs();
+    const customBlueprints = this.getCustomBlueprints();
+    const unlockedBlueprintIds = this.getUnlockedBlueprintIds();
+    const clientBlueprintIds = this.getClientBlueprintIds();
+    const customMinerals = this.getCustomMinerals();
+    const orders = this.getOrders();
+    const clients = this.getClients();
+    const settings = this.getSettings();
+
     return {
-      version: '1.0.0',
+      version: '1.19.0',
       exportedAt: new Date().toISOString(),
-      rawCargo: this.getRawCargo(),
-      refinedStock: this.getRefinedStock(),
-      refineryJobs: this.getRefineryJobs(),
-      customBlueprints: this.getCustomBlueprints(),
-      orders: this.getOrders(),
-      clients: this.getClients(),
-      settings: this.getSettings()
+      description: 'Sauvegarde intégrale de Star Citizen Assistant (Stocks, Minerais, Blueprints, Atelier, Commandes, Clients, Paramètres)',
+      counts: {
+        rawCargo: rawCargo.length,
+        refinedStock: refinedStock.length,
+        refineryJobs: refineryJobs.length,
+        customBlueprints: customBlueprints.length,
+        unlockedBlueprints: unlockedBlueprintIds.length,
+        clientBlueprints: clientBlueprintIds.length,
+        customMinerals: customMinerals.length,
+        orders: orders.length,
+        clients: clients.length
+      },
+      rawCargo,
+      refinedStock,
+      refineryJobs,
+      customBlueprints,
+      blueprints: customBlueprints,
+      unlockedBlueprintIds,
+      unlockedIds: unlockedBlueprintIds,
+      clientBlueprintIds,
+      customMinerals,
+      orders,
+      clients,
+      settings
     };
   }
 
@@ -495,13 +523,51 @@ export class StorageService {
   static importFullBackup(backup: AppDataBackup): boolean {
     try {
       if (!backup || typeof backup !== 'object') return false;
+
+      // 1. Cargo & Stock & Refinery
       if (Array.isArray(backup.rawCargo)) this.saveRawCargo(backup.rawCargo);
       if (Array.isArray(backup.refinedStock)) this.saveRefinedStock(backup.refinedStock);
       if (Array.isArray(backup.refineryJobs)) this.saveRefineryJobs(backup.refineryJobs);
-      if (Array.isArray(backup.customBlueprints)) this.saveCustomBlueprints(backup.customBlueprints);
+
+      // 2. Custom Blueprints & Recipes
+      const customBps = Array.isArray(backup.customBlueprints)
+        ? backup.customBlueprints
+        : Array.isArray(backup.blueprints)
+        ? backup.blueprints
+        : null;
+      if (customBps) {
+        this.saveCustomBlueprints(customBps);
+      }
+
+      // 3. Unlocked Workshop Blueprints
+      const unlockedIds = Array.isArray(backup.unlockedBlueprintIds)
+        ? backup.unlockedBlueprintIds
+        : Array.isArray(backup.unlockedIds)
+        ? backup.unlockedIds
+        : null;
+      if (unlockedIds) {
+        this.saveUnlockedBlueprintIds(unlockedIds);
+      }
+
+      // 4. Client Blueprints
+      if (Array.isArray(backup.clientBlueprintIds)) {
+        this.saveClientBlueprintIds(backup.clientBlueprintIds);
+      }
+
+      // 5. Custom Minerals
+      if (Array.isArray(backup.customMinerals)) {
+        this.saveCustomMinerals(backup.customMinerals);
+      }
+
+      // 6. Orders & Clients Directory
       if (Array.isArray(backup.orders)) this.saveOrders(backup.orders);
       if (Array.isArray(backup.clients)) this.saveClients(backup.clients);
-      if (backup.settings) this.saveSettings(backup.settings);
+
+      // 7. Settings
+      if (backup.settings && typeof backup.settings === 'object') {
+        this.saveSettings(backup.settings);
+      }
+
       return true;
     } catch {
       return false;
@@ -515,6 +581,8 @@ export class StorageService {
     this.saveRefineryJobs([]);
     this.saveCustomBlueprints([]);
     this.saveUnlockedBlueprintIds([]);
+    this.saveClientBlueprintIds([]);
+    this.saveCustomMinerals([]);
     this.saveOrders([]);
     this.saveClients([]);
   }

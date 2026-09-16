@@ -258,7 +258,13 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
   const handleBackupExportJSON = () => {
     audio.playClick();
     ImportExportService.exportFullBackupJSON();
-    setBackupSuccessMessage('Sauvegarde JSON générée et téléchargée avec succès.');
+    const backup = StorageService.exportFullBackup();
+    const totalItems =
+      backup.refinedStock.length +
+      backup.customBlueprints.length +
+      (backup.unlockedBlueprintIds?.length || 0) +
+      backup.orders.length;
+    setBackupSuccessMessage(`Sauvegarde générale complète générée avec succès (${totalItems} éléments sauvegardés).`);
     setTimeout(() => setBackupSuccessMessage(''), 4000);
   };
 
@@ -272,8 +278,15 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
       if (backup) {
         audio.playSuccess();
         onRestoreBackup(backup);
-        setBackupSuccessMessage('Toutes les données ont été restaurées depuis le fichier JSON.');
-        setTimeout(() => setBackupSuccessMessage(''), 4000);
+        const stockCount = backup.refinedStock?.length || 0;
+        const bpCount =
+          (backup.customBlueprints?.length || 0) +
+          (backup.unlockedBlueprintIds?.length || backup.unlockedIds?.length || 0);
+        const ordersCount = backup.orders?.length || 0;
+        setBackupSuccessMessage(
+          `Sauvegarde restaurée avec succès : ${stockCount} stocks, ${bpCount} blueprints/recettes, ${ordersCount} commandes.`
+        );
+        setTimeout(() => setBackupSuccessMessage(''), 5000);
       } else {
         audio.playAlert();
         alert('Le fichier JSON de sauvegarde est invalide ou corrompu.');
@@ -978,31 +991,56 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
           </div>
 
           {/* Full Application Backup & Restore Card */}
-          <div className="bg-sc-card border border-sc-border rounded-xl p-5 space-y-4">
+          <div className="bg-sc-card border-2 border-purple-500/30 rounded-xl p-5 space-y-4 shadow-lg shadow-purple-950/20">
             <div className="flex items-center gap-2.5 border-b border-slate-800 pb-3">
               <FileCode className="w-5 h-5 text-purple-400" />
               <div>
                 <h3 className="text-base font-bold font-sans text-slate-100 uppercase">
-                  Sauvegarde & Restauration Complète (JSON)
+                  Sauvegarde & Restauration Intégrale (JSON)
                 </h3>
                 <p className="text-xs font-mono text-slate-400">
-                  Sauvegardez l'intégralité de l'application (stocks, commandes, fiches clients)
+                  Sauvegarde 100% complète de toutes vos données locales
                 </p>
+              </div>
+            </div>
+
+            {/* Checklist of what's included */}
+            <div className="p-3 bg-purple-950/20 border border-purple-800/40 rounded-lg text-xs font-mono text-purple-200 space-y-1">
+              <div className="font-bold text-purple-300 uppercase text-[11px] mb-1">Éléments inclus dans la sauvegarde :</div>
+              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11px]">
+                <span className="flex items-center gap-1.5 text-slate-300">
+                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  Stock Minerais & Cargaisons
+                </span>
+                <span className="flex items-center gap-1.5 text-slate-300">
+                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  Blueprints & Atelier Débloqué
+                </span>
+                <span className="flex items-center gap-1.5 text-slate-300">
+                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  Commandes & Dépôts Clients
+                </span>
+                <span className="flex items-center gap-1.5 text-slate-300">
+                  <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  Minerais Personnalisés & Paramètres
+                </span>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={handleBackupExportJSON}
-                className="p-3 rounded-xl border border-purple-500/30 bg-purple-950/20 hover:bg-purple-950/40 text-purple-300 font-mono text-xs uppercase flex items-center justify-center gap-2 transition-colors"
+                className="p-3 rounded-xl border border-purple-500/40 bg-purple-950/30 hover:bg-purple-900/50 text-purple-200 font-mono text-xs uppercase flex items-center justify-center gap-2 transition-all shadow-sm group font-bold"
+                title="Télécharger une sauvegarde complète de toute l'application (stocks, blueprints, commandes, minerais, fiches clients, paramètres)"
               >
-                <Download className="w-4 h-4" />
-                <span>Exporter Sauvegarde JSON</span>
+                <Download className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+                <span>Exporter Tout (JSON)</span>
               </button>
 
               <button
                 onClick={() => jsonFileInputRef.current?.click()}
-                className="p-3 rounded-xl border border-slate-700 bg-sc-panel hover:bg-slate-800 text-slate-300 font-mono text-xs uppercase flex items-center justify-center gap-2 transition-colors"
+                className="p-3 rounded-xl border border-slate-700 bg-sc-panel hover:bg-slate-800 text-slate-200 font-mono text-xs uppercase flex items-center justify-center gap-2 transition-colors group font-bold"
+                title="Restaurer l'intégralité de vos données depuis un fichier JSON de sauvegarde"
               >
                 <input
                   ref={jsonFileInputRef}
@@ -1011,8 +1049,8 @@ export const ImportExportView: React.FC<ImportExportViewProps> = ({
                   onChange={handleBackupImportJSON}
                   className="hidden"
                 />
-                <Upload className="w-4 h-4" />
-                <span>Restaurer JSON</span>
+                <Upload className="w-4 h-4 text-sc-cyan group-hover:scale-110 transition-transform" />
+                <span>Restaurer Tout (JSON)</span>
               </button>
             </div>
           </div>

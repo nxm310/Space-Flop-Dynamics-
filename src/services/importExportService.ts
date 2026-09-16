@@ -434,26 +434,32 @@ export class ImportExportService {
   // =========================================================================
 
   static exportFullBackupJSON() {
-    const backup = {
-      version: '1.0.0',
-      exportedAt: new Date().toISOString(),
-      rawCargo: StorageService.getRawCargo(),
-      refinedStock: StorageService.getRefinedStock(),
-      refineryJobs: StorageService.getRefineryJobs(),
-      customBlueprints: StorageService.getCustomBlueprints(),
-      orders: StorageService.getOrders(),
-      settings: StorageService.getSettings()
-    };
+    const backup = StorageService.exportFullBackup();
     const jsonStr = JSON.stringify(backup, null, 2);
     const dateStr = new Date().toISOString().split('T')[0];
-    this.downloadFile(jsonStr, `star_citizen_backup_${dateStr}.json`, 'application/json;charset=utf-8;');
+    this.downloadFile(jsonStr, `star_citizen_backup_complete_${dateStr}.json`, 'application/json;charset=utf-8;');
   }
 
   static async importFullBackupJSON(file: File): Promise<AppDataBackup | null> {
     try {
       const text = await file.text();
       const backup = JSON.parse(text) as AppDataBackup;
-      if (backup && (backup.refinedStock || backup.rawCargo || backup.orders || backup.refineryJobs)) {
+      if (
+        backup &&
+        typeof backup === 'object' &&
+        (backup.refinedStock ||
+          backup.rawCargo ||
+          backup.orders ||
+          backup.refineryJobs ||
+          backup.customBlueprints ||
+          backup.blueprints ||
+          backup.unlockedBlueprintIds ||
+          backup.unlockedIds ||
+          backup.clientBlueprintIds ||
+          backup.customMinerals ||
+          backup.clients ||
+          backup.settings)
+      ) {
         StorageService.importFullBackup(backup);
         return backup;
       }

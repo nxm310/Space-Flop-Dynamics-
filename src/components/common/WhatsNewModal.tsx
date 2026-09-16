@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.18.0';
+export const CURRENT_APP_VERSION = '1.19.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -47,12 +47,26 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 14 • Version 1.18.0',
+      version: 'Opération 15 • Version 1.19.0',
       date: 'Dernière mise à jour (Actuelle)',
       badge: 'Majeure',
       badgeColor: 'emerald',
+      title: 'Sauvegarde & Restauration Intégrale (Blueprints, Atelier, Minerais & Clients)',
+      icon: <Rocket className="w-5 h-5 text-emerald-400" />,
+      points: [
+        '💾 Sauvegarde 100% Complète : Exportation totale de l\'ensemble des données de l\'application (Blueprints personnalisés, Blueprints débloqués dans Mon Atelier, Blueprints clients, Minerais personnalisés, Répertoire des clients, Stocks de minerais, Commandes et Paramètres HUD).',
+        '🔄 Restauration Intégrale Sécurisée : Importation et réinjection synchrone de toutes vos données sans aucune perte, avec validation et rétrocompatibilité garantie.',
+        '📋 Interface Récapitulative Enrichie : Liste visuelle détaillée dans l\'onglet Sauvegarde & Restauration indiquant précisément tous les modules inclus dans le fichier JSON.',
+        '⚡ Compteurs & Notifications Détaillés : Notification toast affichant le nombre exact de blueprints, minerais, commandes et stocks sauvegardés ou restaurés.'
+      ]
+    },
+    {
+      version: 'Opération 14 • Version 1.18.0',
+      date: 'Étape précédente',
+      badge: 'Majeure',
+      badgeColor: 'cyan',
       title: 'Minerais Manquants : Liste Épurée & Bouton dans le Stock et les Commandes',
-      icon: <TrendingDown className="w-5 h-5 text-emerald-400" />,
+      icon: <TrendingDown className="w-5 h-5 text-cyan-400" />,
       points: [
         '💎 Base de Données Personnelle : Calcul des manques basé directement et strictement sur votre stock personnel de minerais et les besoins nets des commandes en cours.',
         '📋 Format Liste Épuré & Lisible : Vue claire sous forme de liste/tableau (Minerai, Quantité Manquante SCU/cSCU, Stock Perso, Total Requis, Commandes Concernées).',
