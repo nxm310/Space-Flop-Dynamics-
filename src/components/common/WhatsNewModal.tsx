@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.21.0';
+export const CURRENT_APP_VERSION = '1.22.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -47,12 +47,24 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 17 • Version 1.21.0',
+      version: 'Opération 18 • Version 1.22.0',
       date: 'Dernière mise à jour (Actuelle)',
       badge: 'Majeure',
       badgeColor: 'emerald',
-      title: 'Décompte Gemmes en cSCU & Filtrage Qualité ≥ 500 pour le Craft',
+      title: 'Badge Dynamique du Nombre de Blueprints & Craft dans la Navigation',
       icon: <Sparkles className="w-5 h-5 text-emerald-400" />,
+      points: [
+        '📜 Décompte en Temps Réel dans le Bouton : À l\'instar des boutons "Stock Minerais" et "Commandes", le bouton de navigation "Blueprints & Craft" affiche désormais un badge avec le nombre exact de vos blueprints actifs / débloqués dans votre Atelier.',
+        '🔄 Synchronisation Immédiate : Le badge se met à jour instantanément lors de l\'ajout de blueprints, du déblocage depuis le catalogue, ou de la restauration d\'une sauvegarde.'
+      ]
+    },
+    {
+      version: 'Opération 17 • Version 1.21.0',
+      date: 'Étape précédente',
+      badge: 'Majeure',
+      badgeColor: 'cyan',
+      title: 'Décompte Gemmes en cSCU & Filtrage Qualité ≥ 500 pour le Craft',
+      icon: <Sparkles className="w-5 h-5 text-cyan-400" />,
       points: [
         '💎 Décompte Exact des Gemmes en cSCU : Les minerais gemmes (Aphorite, Hadanite, Dolivine, Janalite, etc.) sont désormais comptabilisés et affichés en cSCU (1 unité = 1 cSCU = 0.01 SCU) avec valorisation aUEC et volumes réels.',
         '🎯 Filtrage Strict Qualité ≥ 500 pour le Craft : Le KPI "Stock Personnel (Craft)", les recettes de fabrication de l\'Atelier Blueprints et le calcul des "Minerais Manquants" prennent désormais uniquement en compte les minerais de qualité supérieure ou égale à 500.',

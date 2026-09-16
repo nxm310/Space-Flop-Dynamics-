@@ -42,6 +42,8 @@ import { audio } from '../../services/audioService';
 interface BlueprintsCatalogViewProps {
   blueprints: Blueprint[];
   stock: RefinedStockItem[];
+  unlockedIds?: string[];
+  onUnlockedIdsChange?: (ids: string[]) => void;
   onAddCustomBlueprint: (bp: Blueprint) => void;
   onUpdateBlueprint: (bp: Blueprint) => void;
   onImportBlueprintsData?: (data: { customBlueprints: Blueprint[]; unlockedIds: string[]; clientBlueprintIds: string[] }) => void;
@@ -54,6 +56,8 @@ interface BlueprintsCatalogViewProps {
 export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
   blueprints,
   stock,
+  unlockedIds: propUnlockedIds,
+  onUnlockedIdsChange,
   onAddCustomBlueprint,
   onUpdateBlueprint,
   onImportBlueprintsData,
@@ -70,8 +74,14 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
 
   // Unlocked / Selected Blueprint IDs by the user (Mon Atelier)
   const [unlockedIds, setUnlockedIds] = useState<string[]>(() => {
-    return StorageService.getUnlockedBlueprintIds();
+    return propUnlockedIds || StorageService.getUnlockedBlueprintIds();
   });
+
+  React.useEffect(() => {
+    if (propUnlockedIds) {
+      setUnlockedIds(propUnlockedIds);
+    }
+  }, [propUnlockedIds]);
 
   // Client Blueprint IDs (Fournis par les clients)
   const [clientBlueprintIds, setClientBlueprintIds] = useState<string[]>(() => {
@@ -93,6 +103,9 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
   const updateUnlockedIds = (newIds: string[]) => {
     setUnlockedIds(newIds);
     StorageService.saveUnlockedBlueprintIds(newIds);
+    if (onUnlockedIdsChange) {
+      onUnlockedIdsChange(newIds);
+    }
   };
 
   const toggleUnlockBlueprint = (id: string, e?: React.MouseEvent) => {

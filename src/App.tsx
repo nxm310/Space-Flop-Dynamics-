@@ -50,6 +50,7 @@ export function App() {
   const [refinedStock, setRefinedStock] = useState<RefinedStockItem[]>(() => StorageService.getRefinedStock());
   const [refineryJobs, setRefineryJobs] = useState<RefineryJob[]>(() => StorageService.getRefineryJobs());
   const [customBlueprints, setCustomBlueprints] = useState<Blueprint[]>(() => StorageService.getCustomBlueprints());
+  const [unlockedBlueprintIds, setUnlockedBlueprintIds] = useState<string[]>(() => StorageService.getUnlockedBlueprintIds());
   const [orders, setOrders] = useState<CustomerOrder[]>(() => StorageService.getOrders());
   const [settings, setSettings] = useState<AppSettings>(() => StorageService.getSettings());
 
@@ -255,7 +256,9 @@ export function App() {
 
   const handleImportBlueprintsData = (data: { customBlueprints: Blueprint[]; unlockedIds: string[]; clientBlueprintIds: string[] }) => {
     setCustomBlueprints(StorageService.getCustomBlueprints());
-    const count = data.unlockedIds && data.unlockedIds.length > 0 ? data.unlockedIds.length : (data.customBlueprints || []).length;
+    const unlocked = data.unlockedIds && data.unlockedIds.length > 0 ? data.unlockedIds : StorageService.getUnlockedBlueprintIds();
+    setUnlockedBlueprintIds(unlocked);
+    const count = unlocked.length > 0 ? unlocked.length : (data.customBlueprints || []).length;
     addToast('success', 'Blueprints Importés', `${count} blueprints mis à jour.`);
   };
 
@@ -442,6 +445,7 @@ export function App() {
     const unlocked = backup.unlockedBlueprintIds || backup.unlockedIds;
     if (unlocked) {
       StorageService.saveUnlockedBlueprintIds(unlocked);
+      setUnlockedBlueprintIds(unlocked);
     }
 
     // 4. Client Blueprint IDs
@@ -489,15 +493,21 @@ export function App() {
     setRefinedStock([]);
     setRefineryJobs([]);
     setCustomBlueprints([]);
+    setUnlockedBlueprintIds([]);
     setOrders([]);
     addToast('info', 'Remise à Zéro Complète', 'Toutes les données (stocks, blueprints, minerais, commandes, clients, cargaisons) ont été effacées.');
   };
+
+  // Workshop blueprints count for nav badge
+  const workshopBlueprintsCount = unlockedBlueprintIds.length > 0
+    ? unlockedBlueprintIds.length
+    : (customBlueprints.length > 0 ? customBlueprints.length : 0);
 
   // Nav Tabs configuration
   const navTabs = [
     { id: 'dashboard', label: 'Tableau de Bord', icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: 'inventory', label: 'Stock Minerais', icon: <Boxes className="w-4 h-4" />, badge: refinedStock.length > 0 ? String(refinedStock.length) : undefined },
-    { id: 'blueprints', label: 'Blueprints & Craft', icon: <Scroll className="w-4 h-4" /> },
+    { id: 'blueprints', label: 'Blueprints & Craft', icon: <Scroll className="w-4 h-4" />, badge: workshopBlueprintsCount > 0 ? String(workshopBlueprintsCount) : undefined },
     { id: 'orders', label: 'Commandes', icon: <ClipboardList className="w-4 h-4" />, badge: orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length > 0 ? String(orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length) : undefined },
     { id: 'importExport', label: 'Import / Export', icon: <FileSpreadsheet className="w-4 h-4" /> }
   ];
@@ -698,6 +708,8 @@ export function App() {
           <BlueprintsCatalogView
             blueprints={allBlueprints}
             stock={refinedStock}
+            unlockedIds={unlockedBlueprintIds}
+            onUnlockedIdsChange={setUnlockedBlueprintIds}
             onAddCustomBlueprint={handleAddCustomBlueprint}
             onUpdateBlueprint={handleUpdateBlueprint}
             onImportBlueprintsData={handleImportBlueprintsData}
