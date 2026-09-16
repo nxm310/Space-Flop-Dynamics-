@@ -1,5 +1,6 @@
 import { CustomerOrder, RefinedStockItem, MineralInfo, OrderStatus } from '../types';
 import { StorageService } from './storageService';
+import { isStockItemCraftEligible } from './mineralUtils';
 
 export interface AffectedOrderInfo {
   orderId: string;
@@ -51,8 +52,8 @@ export function calculateMissingMinerals(
     mineralMap.set(m.name.toLowerCase().trim(), m);
   });
 
-  // 3. Stock personnel de l'utilisateur (base de données de référence du joueur)
-  const personalStockItems = (stock || []).filter(s => s.ownerType === 'personal');
+  // 3. Stock personnel de l'utilisateur (filtré strictement par Qualité >= 500 éligible au craft)
+  const personalStockItems = (stock || []).filter(isStockItemCraftEligible);
 
   // Fonction de recherche & sommation du stock personnel pour un minerai donné
   const getPersonalStockFor = (resId: string, resName: string): number => {

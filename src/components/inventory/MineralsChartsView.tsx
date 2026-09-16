@@ -1,6 +1,10 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { RefinedStockItem } from '../../types';
 import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
+import {
+  isGemMineral,
+  extractQuality
+} from '../../services/mineralUtils';
 import {
   BarChart3,
   TrendingUp,
@@ -25,7 +29,7 @@ interface ResourceStat {
   avgQuality: number;
   maxQuality: number;
   minQuality: number;
-  unit: 'SCU' | 'unités';
+  unit: 'SCU' | 'cSCU';
   isGem: boolean;
 }
 
@@ -36,30 +40,16 @@ export const MineralsChartsView: React.FC<MineralsChartsViewProps> = ({
   const [chartSortBy, setChartSortBy] = useState<'qty_desc' | 'quality_desc' | 'name_asc'>('qty_desc');
   const [hoveredResource, setHoveredResource] = useState<ResourceStat | null>(null);
 
-  // Helper to extract quality from an item
-  const getItemQuality = (item: RefinedStockItem): number => {
-    if (!item.notes) return 0;
-    const match = item.notes.match(/Qualit[eé]:?\s*(\d+)/i);
-    return match ? parseInt(match[1], 10) : 0;
-  };
-
-  // Helper to check if item is a gem
-  const isGemItem = (item: RefinedStockItem): boolean => {
-    if (item.notes?.includes('Gemme') || item.notes?.includes('Gemmes') || item.notes?.includes('Minable Geo') || item.notes?.includes('Minage Géo') || item.notes?.includes('Minage Geo')) return true;
-    const min = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId);
-    return min?.group === 'Gem' || min?.isFpsMineable === true;
-  };
-
   // Group and compute statistics for minerals vs gems
   const { mineralsStats, gemsStats } = useMemo(() => {
     const minMap = new Map<string, ResourceStat>();
     const gemMap = new Map<string, ResourceStat>();
 
     stock.forEach(item => {
-      const isGem = isGemItem(item);
-      const targetMap = isGem ? gemMap : minMap;
       const minInfo = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId);
-      const qual = getItemQuality(item);
+      const isGem = isGemMineral(item.mineralId || item.mineralName, item.notes, minInfo?.group, minInfo?.isFpsMineable);
+      const targetMap = isGem ? gemMap : minMap;
+      const qual = extractQuality(item) ?? 0;
 
       if (!targetMap.has(item.mineralId)) {
         targetMap.set(item.mineralId, {
@@ -71,13 +61,14 @@ export const MineralsChartsView: React.FC<MineralsChartsViewProps> = ({
           avgQuality: 0,
           maxQuality: qual > 0 ? qual : 0,
           minQuality: qual > 0 ? qual : 9999,
-          unit: isGem ? 'unités' : 'SCU',
+          unit: isGem ? 'cSCU' : 'SCU',
           isGem
         });
       }
 
       const entry = targetMap.get(item.mineralId)!;
-      entry.totalQuantity += item.quantitySCU;
+      // For gems, totalQuantity is in cSCU (1 SCU = 100 cSCU)
+      entry.totalQuantity += isGem ? Math.round(item.quantitySCU * 100) : item.quantitySCU;
       entry.lotCount += 1;
 
       if (qual > 0) {
@@ -477,14 +468,14 @@ export const MineralsChartsView: React.FC<MineralsChartsViewProps> = ({
           <Award className="w-8 h-8 text-amber-400/40" />
         </div>
 
-        {/* Total Gems Units */}
+        {/* Total Gems cSCU */}
         <div className="p-3.5 bg-sc-card/80 border border-purple-900/40 rounded-xl flex items-center justify-between font-mono">
           <div>
             <span className="text-[10px] text-purple-300 block uppercase tracking-wider">Gemmes en Stock</span>
             <span className="text-xl font-bold text-purple-400">
-              {totalGemsUnits.toLocaleString('fr-FR')} unites
+              {totalGemsUnits.toLocaleString('fr-FR')} cSCU
             </span>
-            <span className="text-[10px] text-purple-300/60 block">{gemsStats.length} varietes de gemmes</span>
+            <span className="text-[10px] text-purple-300/60 block">{gemsStats.length} variétés de gemmes</span>
           </div>
           <Sparkles className="w-8 h-8 text-purple-400/40" />
         </div>
@@ -492,7 +483,7 @@ export const MineralsChartsView: React.FC<MineralsChartsViewProps> = ({
         {/* Best Gem Quality */}
         <div className="p-3.5 bg-sc-card/80 border border-purple-900/40 rounded-xl flex items-center justify-between font-mono">
           <div>
-            <span className="text-[10px] text-purple-300 block uppercase tracking-wider">Qualite Max Gemme</span>
+            <span className="text-[10px] text-purple-300 block uppercase tracking-wider">Qualité Max Gemme</span>
             <span className="text-xl font-bold text-amber-300">
               {bestGem && bestGem.maxQuality > 0 ? `Q: ${bestGem.maxQuality}` : '—'}
             </span>
@@ -506,8 +497,8 @@ export const MineralsChartsView: React.FC<MineralsChartsViewProps> = ({
 
       {/* GRAPH 1: MINERAIS & METAUX */}
       {renderDualChart(
-        'Graphique 1 • Minerais & Metaux (Minage Vaisseaux)',
-        'Qualite maximale (barres bleues) et volume total (courbe orange en SCU)',
+        'Graphique 1 • Minerais & Métaux (Minage Vaisseaux)',
+        'Qualité maximale (barres bleues) et volume total (courbe orange en SCU)',
         mineralsStats,
         'cyan',
         'SCU'
@@ -515,11 +506,11 @@ export const MineralsChartsView: React.FC<MineralsChartsViewProps> = ({
 
       {/* GRAPH 2: GEMMES */}
       {renderDualChart(
-        'Graphique 2 • Gemmes (Minage FPS & Recolte)',
-        'Qualite maximale (barres violettes) et quantite totale (courbe rose en unites)',
+        'Graphique 2 • Gemmes (Minage FPS & Récolte)',
+        'Qualité maximale (barres violettes) et quantité totale (courbe rose en cSCU)',
         gemsStats,
         'purple',
-        'unites'
+        'cSCU'
       )}
     </div>
   );

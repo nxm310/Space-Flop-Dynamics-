@@ -7,6 +7,7 @@ import { BlueprintsSourcesModal } from './BlueprintsSourcesModal';
 import { StarCitizenApiService } from '../../services/starCitizenApi';
 import { StorageService } from '../../services/storageService';
 import { ImportExportService } from '../../services/importExportService';
+import { isStockItemCraftEligible } from '../../services/mineralUtils';
 import {
   Scroll,
   Plus,
@@ -148,10 +149,13 @@ export const BlueprintsCatalogView: React.FC<BlueprintsCatalogViewProps> = ({
     updateUnlockedIds([...unlockedIds]);
   };
 
-  // Helper to check feasibility of a blueprint
+  // Helper to check feasibility of a blueprint (only personal stock with Quality >= 500)
   const checkFeasibility = (bp: Blueprint) => {
     return bp.ingredients.every(ing => {
-      const stockItems = stock.filter(s => s.mineralId === ing.resourceId || s.mineralName.toLowerCase() === ing.resourceName.toLowerCase());
+      const stockItems = stock.filter(s =>
+        (s.mineralId === ing.resourceId || s.mineralName.toLowerCase() === ing.resourceName.toLowerCase()) &&
+        isStockItemCraftEligible(s)
+      );
       const totalAvailable = stockItems.reduce((acc, s) => acc + s.quantitySCU, 0);
       return totalAvailable >= ing.quantitySCU;
     });

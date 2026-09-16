@@ -5,6 +5,7 @@ import {
   Blueprint
 } from '../../types';
 import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
+import { isGemMineral, isStockItemCraftEligible, formatMineralQuantity } from '../../services/mineralUtils';
 import { StatCard } from '../common/StatCard';
 import { OrderStatusBadge } from '../common/Badge';
 import {
@@ -38,7 +39,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   // Calculations
   const totalRefinedSCU = refinedStock.reduce((acc, s) => acc + s.quantitySCU, 0);
-  const personalStockSCU = refinedStock.filter(s => s.ownerType === 'personal').reduce((acc, s) => acc + s.quantitySCU, 0);
+  const personalCraftStockSCU = refinedStock.filter(s => isStockItemCraftEligible(s)).reduce((acc, s) => acc + s.quantitySCU, 0);
+  const personalCraftLotsCount = refinedStock.filter(s => isStockItemCraftEligible(s)).length;
   const clientStockSCU = refinedStock.filter(s => s.ownerType === 'client').reduce((acc, s) => acc + s.quantitySCU, 0);
 
   const totalStockValueAUEC = refinedStock.reduce((acc, s) => {
@@ -53,20 +55,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Consolidated top minerals
   const topConsolidatedMinerals = React.useMemo(() => {
-    const map = new Map<string, { mineralName: string; totalQty: number; lotCount: number; valueAUEC: number }>();
+    const map = new Map<string, { mineralId: string; mineralName: string; totalQty: number; lotCount: number; valueAUEC: number; isGem: boolean }>();
     refinedStock.forEach(item => {
       const min = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId || m.name.toLowerCase() === item.mineralName.toLowerCase());
+      const isGem = isGemMineral(item.mineralId || item.mineralName, item.notes, min?.group, min?.isFpsMineable);
       const itemVal = Math.round(item.quantitySCU * 100 * (min?.basePriceAUEC || 15));
 
       if (!map.has(item.mineralName)) {
-        map.set(item.mineralName, { mineralName: item.mineralName, totalQty: 0, lotCount: 0, valueAUEC: 0 });
+        map.set(item.mineralName, { mineralId: item.mineralId, mineralName: item.mineralName, totalQty: 0, lotCount: 0, valueAUEC: 0, isGem });
       }
       const e = map.get(item.mineralName)!;
       e.totalQty += item.quantitySCU;
       e.lotCount += 1;
       e.valueAUEC += itemVal;
     });
-    return Array.from(map.values()).sort((a, b) => b.totalQty - a.totalQty).slice(0, 6);
+    return Array.from(map.values()).sort((a, b) => b.valueAUEC - a.valueAUEC || b.totalQty - a.totalQty).slice(0, 6);
   }, [refinedStock]);
 
   const maxStockQuantity = topConsolidatedMinerals.length > 0 ? topConsolidatedMinerals[0].totalQty : 1;
@@ -143,8 +146,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         <StatCard
           title="Stock Personnel (Craft)"
-          value={`${personalStockSCU.toFixed(1)} SCU`}
-          subValue="Disponible pour fabrication"
+          value={`${personalCraftStockSCU.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} SCU`}
+          subValue={`Qualité ≥ 500 (${personalCraftLotsCount} lot${personalCraftLotsCount > 1 ? 's' : ''})`}
           icon={<ShieldCheck className="w-5 h-5" />}
           accent="cyan"
           onClick={() => onNavigateTab('inventory')}
@@ -196,6 +199,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="space-y-3 font-mono">
                 {topConsolidatedMinerals.map(item => {
                   const pct = Math.min(100, Math.max(8, (item.totalQty / maxStockQuantity) * 100));
+                  const formatted = formatMineralQuantity(item.totalQty, item.isGem);
 
                   return (
                     <div key={item.mineralName} className="space-y-1">
@@ -203,10 +207,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <span className="text-slate-200 font-semibold flex items-center gap-1.5">
                           <span>{item.mineralName}</span>
                           <span className="text-[10px] text-slate-500 font-normal">({item.lotCount} lot{item.lotCount > 1 ? 's' : ''})</span>
+                          {item.isGem && (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-950/80 border border-purple-500/40 text-purple-300 font-mono">
+                              Gemme
+                            </span>
+                          )}
                         </span>
                         <div className="flex items-center gap-3">
                           <span className="text-slate-400 text-[11px]">~{item.valueAUEC.toLocaleString('fr-FR')} aUEC</span>
-                          <span className="text-sc-cyan font-bold">{item.totalQty.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} SCU</span>
+                          <span className="text-sc-cyan font-bold" title={`${formatted.primary} • ${formatted.secondary}`}>
+                            {formatted.primary}
+                          </span>
                         </div>
                       </div>
                       <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
@@ -227,7 +238,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             )}
 
             <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono">
-              <span className="text-slate-400">Stock Perso : <strong className="text-sc-cyan">{personalStockSCU.toFixed(1)} SCU</strong></span>
+              <span className="text-slate-400">Stock Perso (Craft ≥ 500) : <strong className="text-sc-cyan">{personalCraftStockSCU.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} SCU</strong></span>
               <span className="text-slate-400">Dépôts Clients : <strong className="text-amber-400">{clientStockSCU.toFixed(1)} SCU</strong></span>
             </div>
           </div>

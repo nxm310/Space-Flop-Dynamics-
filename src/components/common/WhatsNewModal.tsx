@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
-export const CURRENT_APP_VERSION = '1.20.0';
+export const CURRENT_APP_VERSION = '1.21.0';
 export const STORAGE_KEY_LAST_SEEN_VERSION = 'sc_last_seen_changelog_version';
 
 interface WhatsNewModalProps {
@@ -47,12 +47,26 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
 
   const updates = [
     {
-      version: 'Opération 16 • Version 1.20.0',
+      version: 'Opération 17 • Version 1.21.0',
       date: 'Dernière mise à jour (Actuelle)',
       badge: 'Majeure',
       badgeColor: 'emerald',
+      title: 'Décompte Gemmes en cSCU & Filtrage Qualité ≥ 500 pour le Craft',
+      icon: <Sparkles className="w-5 h-5 text-emerald-400" />,
+      points: [
+        '💎 Décompte Exact des Gemmes en cSCU : Les minerais gemmes (Aphorite, Hadanite, Dolivine, Janalite, etc.) sont désormais comptabilisés et affichés en cSCU (1 unité = 1 cSCU = 0.01 SCU) avec valorisation aUEC et volumes réels.',
+        '🎯 Filtrage Strict Qualité ≥ 500 pour le Craft : Le KPI "Stock Personnel (Craft)", les recettes de fabrication de l\'Atelier Blueprints et le calcul des "Minerais Manquants" prennent désormais uniquement en compte les minerais de qualité supérieure ou égale à 500.',
+        '🏷️ Badges & Filtre Dédié dans le Stock : Nouveau filtre rapide par qualité ([Tous], [✓ Craft (≥ 500)], [⚠️ Vente (< 500)]) et badges explicites sur chaque lot de minerai.',
+        '📊 Graphiques & Tableaux Synchronisés : Histogrammes, courbes de volume et synthèse d\'inventaire affichent clairement les unités adaptées (cSCU pour gemmes, SCU pour minerais de vaisseaux).'
+      ]
+    },
+    {
+      version: 'Opération 16 • Version 1.20.0',
+      date: 'Étape précédente',
+      badge: 'Majeure',
+      badgeColor: 'cyan',
       title: 'Blueprints : Filtres Multi-Lignes Responsive & Interface Épurée',
-      icon: <LayoutGrid className="w-5 h-5 text-emerald-400" />,
+      icon: <LayoutGrid className="w-5 h-5 text-cyan-400" />,
       points: [
         '📐 Tri par Composants 100% Responsive : Fin du défilement horizontal ! Tous les boutons de catégories (Composants vaisseau, Armes de vaisseau, Armures, Outils...) et sous-composants se répartissent fluidement sur plusieurs lignes pour être tous visibles d\'un coup d\'œil.',
         '🧹 Interface Épurée : Suppression définitive des touches "Tout Cocher" et "Tout Décocher" dans l\'onglet Blueprints & Craft.',

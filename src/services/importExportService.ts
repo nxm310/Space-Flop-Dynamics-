@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { RefinedStockItem, CustomerOrder, RawCargoItem, AppDataBackup, Blueprint, ClientProfile } from '../types';
 import { STAR_CITIZEN_MINERALS } from '../data/mineralsData';
 import { StorageService } from './storageService';
+import { isGemMineral } from './mineralUtils';
 
 export interface ImportResult<T> {
   success: boolean;
@@ -18,21 +19,22 @@ export class ImportExportService {
 
   static exportMineralsToCSV(items: RefinedStockItem[], filename = 'star_citizen_minerais.csv') {
     const data = items.map(item => {
-      const mineralInfo = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId);
-      const unitValue = mineralInfo?.basePriceAUEC || 0;
+      const mineral = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId);
+      const isGem = isGemMineral(item.mineralId || item.mineralName, item.notes, mineral?.group, mineral?.isFpsMineable);
+      const unitValue = mineral ? mineral.basePriceAUEC : 15;
       const totalValue = Math.round(item.quantitySCU * unitValue * 100); // 1 SCU = 100 cSCU
 
       return {
         'ID': item.id,
-        'Minerai': item.mineralName,
-        'Type_Proprietaire': item.ownerType === 'personal' ? 'Personnel' : 'Client',
-        'Nom_Client': item.clientName || '',
-        'Quantite_SCU': item.quantitySCU,
+        'Nom': item.mineralName,
+        'Type': isGem ? 'Gemme' : (mineral?.group || 'Mineral'),
+        'Propriétaire': item.ownerType === 'personal' ? 'Personnel' : 'Client',
+        'Nom Client': item.clientName || '',
+        'Quantité (SCU)': item.quantitySCU,
         'Quantite_cSCU': Math.round(item.quantitySCU * 100),
-        'Valeur_Unitaire_aUEC': unitValue,
-        'Valeur_Totale_Estimee_aUEC': totalValue,
-        'Derniere_Mise_A_Jour': item.lastUpdated,
-        'Notes': item.notes || ''
+        'Valeur aUEC': totalValue,
+        'Notes': item.notes || '',
+        'Dernière Mise à Jour': item.lastUpdated
       };
     });
 
@@ -42,21 +44,23 @@ export class ImportExportService {
 
   static exportMineralsToExcel(items: RefinedStockItem[], filename = 'star_citizen_minerais.xlsx') {
     const data = items.map(item => {
-      const mineralInfo = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId);
-      const unitValue = mineralInfo?.basePriceAUEC || 0;
+      const mineral = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId);
+      const isGem = isGemMineral(item.mineralId || item.mineralName, item.notes, mineral?.group, mineral?.isFpsMineable);
+      const unitValue = mineral ? mineral.basePriceAUEC : 15;
       const totalValue = Math.round(item.quantitySCU * unitValue * 100);
 
       return {
         'ID': item.id,
         'Minerai': item.mineralName,
+        'Catégorie': isGem ? 'Gemme' : (mineral?.group || 'Mineral'),
         'Propriétaire': item.ownerType === 'personal' ? 'Personnel' : 'Client',
         'Nom Client': item.clientName || '',
         'Quantité (SCU)': item.quantitySCU,
         'Quantité (cSCU)': Math.round(item.quantitySCU * 100),
         'Valeur aUEC/cSCU': unitValue,
         'Valeur Totale aUEC': totalValue,
-        'Dernière M.À.J': new Date(item.lastUpdated).toLocaleString('fr-FR'),
-        'Notes': item.notes || ''
+        'Notes': item.notes || '',
+        'Dernière Mise à Jour': item.lastUpdated
       };
     });
 
@@ -64,15 +68,16 @@ export class ImportExportService {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Stock Minerais');
 
-    // Auto width for columns
-    const maxCols = 10;
-    const colWidths = Array(maxCols).fill({ wch: 18 });
-    colWidths[1] = { wch: 22 }; // Minerai
-    colWidths[3] = { wch: 25 }; // Nom client
-    colWidths[9] = { wch: 35 }; // Notes
-    worksheet['!cols'] = colWidths;
-
-    XLSX.writeFile(workbook, filename);
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   // =========================================================================
@@ -89,7 +94,7 @@ export class ImportExportService {
       return {
         success: false,
         data: [],
-        errors: ['Format de fichier non pris en charge. Veuillez utiliser un fichier .csv ou .xlsx.'],
+        errors: [`Format de fichier non supporté (.${extension}). Utilisez un fichier .xlsx ou .csv.`],
         totalRows: 0
       };
     }
@@ -174,28 +179,22 @@ export class ImportExportService {
       const mineralId = matchedMineral ? matchedMineral.id : cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_');
       const mineralName = matchedMineral ? matchedMineral.name : cleanName;
 
-      // Quantity parsing (supports French comma format e.g. "0,809")
-      let qty = 0;
-      const rawQty = row['Quantité'] || row['Quantite'] || row['Quantite_SCU'] || row['Quantité (SCU)'] || row['SCU'] || row['scu'] || row['quantity'] || row['Quantity'];
-      if (rawQty !== undefined && rawQty !== null) {
-        qty = parseFloat(String(rawQty).replace(',', '.'));
-      } else {
-        const rawCscu = row['Quantite_cSCU'] || row['Quantité (cSCU)'] || row['cSCU'] || row['cscu'];
-        if (rawCscu !== undefined) {
-          qty = parseFloat(String(rawCscu).replace(',', '.')) / 100;
-        }
-      }
-
-      if (isNaN(qty) || qty <= 0) {
-        errors.push(`Ligne ${idx + 2} (${cleanName}) : Quantité invalide (${rawQty}).`);
-        return;
-      }
-
       // Quality & Type parsing
       let rawType = (row['Type'] || row['type'] || row['Catégorie'] || row['Categorie'] || row['Catégorie_Minerai'] || row['Group'] || row['group'] || '') as string;
       const rawQuality = (row['Qualité'] || row['Qualite'] || row['Quality'] || row['quality'] || '') as string;
 
-      // Transform any "minage géo", "minage geo", "géo", "geo", "minable géo", "minable geo", "fps" into "Gemme"
+      // Clean Notes
+      let cleanNotes = (row['Notes'] || row['notes'] || row['Commentaire'] || Object.values(row)[4] || '') as string;
+      if (cleanNotes && typeof cleanNotes === 'string') {
+        cleanNotes = cleanNotes
+          .replace(/minage g[ée]o/gi, 'Gemme')
+          .replace(/minable g[ée]o/gi, 'Gemme')
+          .replace(/g[ée]o\s*fps/gi, 'Gemme')
+          .trim();
+      }
+
+      const isGem = isGemMineral(cleanName, cleanNotes, rawType || matchedMineral?.group, matchedMineral?.isFpsMineable);
+
       if (rawType) {
         const lowerType = rawType.toLowerCase();
         if (
@@ -210,23 +209,36 @@ export class ImportExportService {
         ) {
           rawType = 'Gemme';
         }
-      } else if (matchedMineral?.group === 'Gem' || matchedMineral?.isFpsMineable) {
+      } else if (isGem) {
         rawType = 'Gemme';
+      }
+
+      // Quantity parsing (supports French comma format e.g. "0,809" or gem counts in cSCU e.g. "85")
+      let qty = 0;
+      const rawCscu = row['Quantite_cSCU'] || row['Quantité (cSCU)'] || row['cSCU'] || row['cscu'];
+      const rawQty = row['Quantité'] || row['Quantite'] || row['Quantite_SCU'] || row['Quantité (SCU)'] || row['SCU'] || row['scu'] || row['quantity'] || row['Quantity'];
+
+      if (rawCscu !== undefined && rawCscu !== null && String(rawCscu).trim() !== '') {
+        qty = parseFloat(String(rawCscu).replace(',', '.')) / 100;
+      } else if (rawQty !== undefined && rawQty !== null) {
+        const parsedVal = parseFloat(String(rawQty).replace(',', '.'));
+        // If it is a gem and quantity was given as a whole count >= 1 (e.g. 85 units = 85 cSCU = 0.85 SCU)
+        if (isGem && parsedVal >= 1) {
+          qty = parsedVal / 100;
+        } else {
+          qty = parsedVal;
+        }
+      }
+
+      if (isNaN(qty) || qty <= 0) {
+        errors.push(`Ligne ${idx + 2} (${cleanName}) : Quantité invalide (${rawQty ?? rawCscu}).`);
+        return;
       }
 
       // Owner Type & Client Name
       const rawOwner = String(row['Type_Proprietaire'] || row['Propriétaire'] || row['Owner'] || row['owner'] || 'Personnel').toLowerCase();
       const isClient = rawOwner.includes('client') || rawOwner.includes('depot') || rawOwner.includes('dépôt');
       const clientName = (row['Nom_Client'] || row['Nom Client'] || row['Client'] || row['client'] || '') as string;
-
-      let cleanNotes = (row['Notes'] || row['notes'] || row['Commentaire'] || Object.values(row)[4] || '') as string;
-      if (cleanNotes && typeof cleanNotes === 'string') {
-        cleanNotes = cleanNotes
-          .replace(/minage g[ée]o/gi, 'Gemme')
-          .replace(/minable g[ée]o/gi, 'Gemme')
-          .replace(/g[ée]o\s*fps/gi, 'Gemme')
-          .trim();
-      }
 
       const notesParts = [
         cleanNotes && typeof cleanNotes === 'string' ? cleanNotes.trim() : '',
@@ -240,7 +252,7 @@ export class ImportExportService {
         id,
         mineralId,
         mineralName,
-        quantitySCU: Number(qty.toFixed(3)),
+        quantitySCU: Number(qty.toFixed(4)),
         ownerType: isClient ? 'client' : 'personal',
         clientName: isClient ? clientName.trim() || 'Client Inconnu' : undefined,
         lastUpdated: new Date().toISOString(),

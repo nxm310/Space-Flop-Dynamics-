@@ -3,6 +3,7 @@ import { Modal } from '../common/Modal';
 import { Badge } from '../common/Badge';
 import { Blueprint, RefinedStockItem } from '../../types';
 import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
+import { isStockItemCraftEligible } from '../../services/mineralUtils';
 import {
   Scroll,
   Clock,
@@ -44,12 +45,19 @@ export const BlueprintDetailsModal: React.FC<BlueprintDetailsModalProps> = ({
     const mineral = STAR_CITIZEN_MINERALS.find(m => m.id === ing.resourceId || m.name.toLowerCase() === ing.resourceName.toLowerCase());
     const totalRequired = ing.quantitySCU * craftQuantity;
 
-    // Personal stock available
-    const personalStockItem = stock.find(s => s.ownerType === 'personal' && (s.mineralId === ing.resourceId || s.mineralName.toLowerCase() === ing.resourceName.toLowerCase()));
-    const personalAvailable = personalStockItem ? personalStockItem.quantitySCU : 0;
+    // Personal stock available (Quality >= 500 eligible for craft)
+    const personalStockItems = stock.filter(s =>
+      s.ownerType === 'personal' &&
+      (s.mineralId === ing.resourceId || s.mineralName.toLowerCase() === ing.resourceName.toLowerCase()) &&
+      isStockItemCraftEligible(s)
+    );
+    const personalAvailable = personalStockItems.reduce((acc, s) => acc + s.quantitySCU, 0);
 
     // Client stock available
-    const clientStockItems = stock.filter(s => s.ownerType === 'client' && (s.mineralId === ing.resourceId || s.mineralName.toLowerCase() === ing.resourceName.toLowerCase()));
+    const clientStockItems = stock.filter(s =>
+      s.ownerType === 'client' &&
+      (s.mineralId === ing.resourceId || s.mineralName.toLowerCase() === ing.resourceName.toLowerCase())
+    );
     const clientAvailable = clientStockItems.reduce((acc, s) => acc + s.quantitySCU, 0);
 
     const totalAvailable = personalAvailable + clientAvailable;

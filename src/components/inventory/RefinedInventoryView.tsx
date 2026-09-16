@@ -1,6 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { RefinedStockItem, CustomerOrder } from '../../types';
 import { STAR_CITIZEN_MINERALS } from '../../data/mineralsData';
+import {
+  isGemMineral,
+  extractQuality,
+  isStockItemCraftEligible,
+  formatMineralQuantity
+} from '../../services/mineralUtils';
 import { AdjustStockModal } from './AdjustStockModal';
 import { EditStockModal } from './EditStockModal';
 import { MineralsChartsView } from './MineralsChartsView';
@@ -59,6 +65,7 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('all');
   const [selectedExtractionType, setSelectedExtractionType] = useState('all');
+  const [selectedQualityFilter, setSelectedQualityFilter] = useState<'all' | 'craftable' | 'substandard'>('all');
   const [sortBy, setSortBy] = useState<
     | 'name_asc'
     | 'name_desc'
@@ -86,14 +93,13 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
 
   // Helper to extract quality number from item
   const getItemQuality = (item: RefinedStockItem): number => {
-    if (!item.notes) return 0;
-    const match = item.notes.match(/Qualit[eé]:?\s*(\d+)/i);
-    return match ? parseInt(match[1], 10) : 0;
+    return extractQuality(item) ?? 0;
   };
 
   // Helper to extract extraction type from item
   const getItemExtractionType = (item: RefinedStockItem): string => {
-    if (item.notes?.includes('Gemme') || item.notes?.includes('Gemmes') || item.notes?.includes('Minable Geo') || item.notes?.includes('Minage Géo') || item.notes?.includes('Minage Geo')) return 'Gemme';
+    const isGem = isGemMineral(item.mineralId || item.mineralName, item.notes);
+    if (isGem) return 'Gemme';
     if (item.notes?.includes('Minable Vaisseaux') || item.notes?.includes('Minage Vaisseau')) return 'Minable Vaisseaux';
     const mineral = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId);
     if (mineral?.group === 'Gem' || mineral?.isFpsMineable) return 'Gemme';
@@ -146,6 +152,15 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
         if (selectedExtractionType === 'ship' && extType !== 'Minable Vaisseaux') return false;
       }
 
+      // Quality filter
+      if (selectedQualityFilter === 'craftable') {
+        const qual = getItemQuality(item);
+        if (qual > 0 && qual < 500) return false;
+      } else if (selectedQualityFilter === 'substandard') {
+        const qual = getItemQuality(item);
+        if (qual === 0 || qual >= 500) return false;
+      }
+
       // Search filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -162,7 +177,7 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
 
       return true;
     });
-  }, [stock, activeTab, selectedGroup, selectedExtractionType, searchQuery]);
+  }, [stock, activeTab, selectedGroup, selectedExtractionType, selectedQualityFilter, searchQuery]);
 
   // Sorted items
   const sortedStock = useMemo(() => {
@@ -219,18 +234,19 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
     filteredStock.forEach(item => {
       const min = STAR_CITIZEN_MINERALS.find(m => m.id === item.mineralId);
       const qual = getItemQuality(item);
+      const isGem = isGemMineral(item.mineralId || item.mineralName, item.notes);
 
       if (!map.has(item.mineralId)) {
         map.set(item.mineralId, {
           mineralId: item.mineralId,
           mineralName: item.mineralName,
-          group: min?.group || 'Mineral',
+          group: min?.group || (isGem ? 'Gem' : 'Mineral'),
           rarity: min?.rarity || 'Common',
           totalSCU: 0,
           lotCount: 0,
           avgQuality: 0,
           maxQuality: 0,
-          isGeo: min?.group === 'Gem' || min?.isFpsMineable || item.notes?.includes('Gemme') || item.notes?.includes('Minable Geo') || false,
+          isGeo: isGem,
           items: []
         });
       }
@@ -262,6 +278,8 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
 
   // KPI Calculations
   const totalPersonalSCU = stock.filter(s => s.ownerType === 'personal').reduce((acc, s) => acc + s.quantitySCU, 0);
+  const totalPersonalCraftSCU = stock.filter(isStockItemCraftEligible).reduce((acc, s) => acc + s.quantitySCU, 0);
+  const personalCraftLotsCount = stock.filter(isStockItemCraftEligible).length;
   const totalClientSCU = stock.filter(s => s.ownerType === 'client').reduce((acc, s) => acc + s.quantitySCU, 0);
   const totalLotsCount = stock.length;
 
@@ -459,9 +477,9 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
             accent="cyan"
           />
           <StatCard
-            title="Mon Stock Personnel"
-            value={`${totalPersonalSCU.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} SCU`}
-            subValue={`${Math.round(totalPersonalSCU * 100).toLocaleString('fr-FR')} cSCU en réserve`}
+            title="Mon Stock Personnel (Craft)"
+            value={`${totalPersonalCraftSCU.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} SCU`}
+            subValue={`Qualité ≥ 500 (${personalCraftLotsCount} lots) • ${totalPersonalSCU.toFixed(1)} SCU total`}
             icon={<ShieldCheck className="w-5 h-5" />}
             accent="cyan"
           />
@@ -575,30 +593,59 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
 
         {/* Category & Extraction Filter Tags */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80 text-[11px] font-mono">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-slate-500 mr-1" />
-            <span className="text-slate-500 uppercase">Extraction :</span>
-            {[
-              { id: 'all', label: 'Tous' },
-              { id: 'ship', label: '🚀 Minable Vaisseaux' },
-              { id: 'geo', label: '💎 Gemmes' }
-            ].map(type => (
-              <button
-                key={type.id}
-                onClick={() => {
-                  audio.playClick();
-                  setSelectedExtractionType(type.id);
-                  setCurrentPage(1);
-                }}
-                className={`px-2.5 py-0.5 rounded transition-colors ${
-                  selectedExtractionType === type.id
-                    ? 'bg-sc-cyan/20 border border-sc-cyan/40 text-sc-cyan font-bold'
-                    : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800'
-                }`}
-              >
-                {type.label}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Extraction Type */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-slate-500 mr-1" />
+              <span className="text-slate-500 uppercase">Extraction :</span>
+              {[
+                { id: 'all', label: 'Tous' },
+                { id: 'ship', label: '🚀 Minable Vaisseaux' },
+                { id: 'geo', label: '💎 Gemmes' }
+              ].map(type => (
+                <button
+                  key={type.id}
+                  onClick={() => {
+                    audio.playClick();
+                    setSelectedExtractionType(type.id);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-2.5 py-0.5 rounded transition-colors ${
+                    selectedExtractionType === type.id
+                      ? 'bg-sc-cyan/20 border border-sc-cyan/40 text-sc-cyan font-bold'
+                      : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800'
+                  }`}
+                >
+                  {type.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Quality Filter */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-slate-500 uppercase">Qualité :</span>
+              {[
+                { id: 'all', label: 'Toutes' },
+                { id: 'craftable', label: '✓ Craft (≥ 500)' },
+                { id: 'substandard', label: '⚠️ Vente (< 500)' }
+              ].map(q => (
+                <button
+                  key={q.id}
+                  onClick={() => {
+                    audio.playClick();
+                    setSelectedQualityFilter(q.id as any);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-2.5 py-0.5 rounded transition-colors ${
+                    selectedQualityFilter === q.id
+                      ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold'
+                      : 'text-slate-400 hover:text-slate-200 bg-slate-900/60 border border-slate-800'
+                  }`}
+                >
+                  {q.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
@@ -746,15 +793,24 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
                         {/* Quality Score */}
                         <td className="py-3 px-4 text-center">
                           {quality > 0 ? (
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${
-                              quality >= 800
-                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                                : quality >= 600
-                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                                : 'bg-slate-800 text-slate-300 border border-slate-700'
-                            }`}>
-                              Q: {quality}
-                            </span>
+                            <div className="flex flex-col items-center gap-1">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${
+                                quality >= 800
+                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                  : quality >= 600
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                  : quality >= 500
+                                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                                  : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                              }`}>
+                                Q: {quality}
+                              </span>
+                              {quality >= 500 ? (
+                                <span className="text-[9px] font-mono text-emerald-400">✓ Craft (≥500)</span>
+                              ) : (
+                                <span className="text-[9px] font-mono text-rose-400">⚠️ Vente (&lt;500)</span>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-slate-600">—</span>
                           )}
@@ -762,12 +818,20 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
 
                         {/* Quantity */}
                         <td className="py-3 px-4 text-right">
-                          <span className="font-bold text-sc-cyan text-sm">
-                            {item.quantitySCU.toLocaleString('fr-FR', { maximumFractionDigits: 3 })}
-                          </span>
-                          <span className="text-slate-400 ml-1 text-xs">
-                            {extType === 'Gemme' || mineral?.group === 'Gem' ? 'unités' : 'SCU'}
-                          </span>
+                          {(() => {
+                            const isGem = extType === 'Gemme' || isGemMineral(item.mineralId || item.mineralName, item.notes);
+                            const formatted = formatMineralQuantity(item.quantitySCU, isGem);
+                            return (
+                              <div className="flex flex-col items-end">
+                                <span className="font-bold text-sc-cyan text-sm">
+                                  {formatted.primary}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  ({formatted.secondary})
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </td>
 
                         {/* Notes / Date */}
@@ -909,15 +973,22 @@ export const RefinedInventoryView: React.FC<RefinedInventoryViewProps> = ({
 
                 {/* Quantities & Averages */}
                 <div className="mt-3 p-3 rounded-lg bg-[#090e18] border border-slate-800/80 flex items-center justify-between font-mono">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block uppercase">Volume Global</span>
-                    <span className="text-2xl font-bold text-sc-cyan">
-                      {m.totalSCU.toLocaleString('fr-FR', { maximumFractionDigits: 3 })}
-                    </span>
-                    <span className="text-xs text-slate-400 ml-1">
-                      {m.isGeo ? 'unités' : 'SCU'}
-                    </span>
-                  </div>
+                  {(() => {
+                    const formatted = formatMineralQuantity(m.totalSCU, m.isGeo);
+                    return (
+                      <div>
+                        <span className="text-[10px] text-slate-400 block uppercase">Volume Global</span>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-2xl font-bold text-sc-cyan">
+                            {formatted.primary}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 block">
+                          équiv. {formatted.secondary}
+                        </span>
+                      </div>
+                    );
+                  })()}
 
                   <div className="text-right">
                     <span className="text-[10px] text-slate-400 block uppercase">Répartition</span>

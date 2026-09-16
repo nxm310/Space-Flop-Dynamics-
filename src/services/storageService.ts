@@ -11,6 +11,7 @@ import {
 } from '../types';
 import { STAR_CITIZEN_BLUEPRINTS } from '../data/blueprintsData';
 import { STAR_CITIZEN_MINERALS } from '../data/mineralsData';
+import { normalizeStockList } from './mineralUtils';
 
 const STORAGE_KEYS = {
   RAW_CARGO: 'sc_raw_cargo_v4',
@@ -70,14 +71,18 @@ export class StorageService {
     this.init();
     try {
       const data = localStorage.getItem(STORAGE_KEYS.REFINED_STOCK);
-      return data ? JSON.parse(data) : [];
+      if (!data) return [];
+      const parsed: RefinedStockItem[] = JSON.parse(data);
+      const normalized = normalizeStockList(parsed);
+      return normalized;
     } catch {
       return [];
     }
   }
 
   static saveRefinedStock(items: RefinedStockItem[]) {
-    localStorage.setItem(STORAGE_KEYS.REFINED_STOCK, JSON.stringify(items));
+    const normalized = normalizeStockList(items);
+    localStorage.setItem(STORAGE_KEYS.REFINED_STOCK, JSON.stringify(normalized));
   }
 
   // Refinery Jobs
